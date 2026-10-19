@@ -14,6 +14,7 @@ import {
   failedTx,
   sellForWsolTx,
 } from './fixtures/helius';
+import devnetPump from './fixtures/helius-devnet-pump.json';
 
 describe('parseTransactions', () => {
   it('reads a pump.fun launch', () => {
@@ -93,5 +94,44 @@ describe('parseTransactions', () => {
       tokenAmount: 1,
     });
     expect(parseTransactions([tx]).launches.map((l) => l.mint)).toEqual([MINT_A]);
+  });
+});
+
+// Real pump.fun transactions captured from Helius devnet (trimmed), so the parser is
+// pinned to what Helius actually sends, not just to our hand-written fixtures.
+
+describe('parseTransactions: real Helius devnet pump.fun payloads', () => {
+  const [createWithBuy, createOnly, buy, sell, unknown] = devnetPump;
+  const parse = (tx: unknown) => parseTransactions([tx]);
+
+  it('finds the mint of a create with a dev buy', () => {
+    expect(parse(createWithBuy).launches).toMatchObject([
+      {
+        mint: 'GEtph2tD2kxEKFJqwKYBa8hua8mQDQ3ttsGxhAQziUT5',
+        creator: 'A1Qx18n8YWDHHNfH9GU4jJmmP1XtN52RcqCSQjCRMY6q',
+        launchSource: 'PUMP_FUN',
+      },
+    ]);
+  });
+
+  it('finds the mint of a create with no token transfers, from balance changes', () => {
+    expect(parse(createOnly).launches.map((l) => l.mint)).toEqual([
+      'E8NT2qghrktonV3RSSAc9nRmhhNxganaFo7ZWZpAFdCf',
+    ]);
+  });
+
+  it('sizes a buy from the SOL the trader spent', () => {
+    expect(parse(buy).swaps).toMatchObject([
+      { mint: 'GEtph2tD2kxEKFJqwKYBa8hua8mQDQ3ttsGxhAQziUT5', volumeSol: 0.01286504 },
+    ]);
+  });
+
+  it('sizes a sell from the SOL the trader received, which is not a transfer', () => {
+    // nativeTransfers only holds a 0.00005 SOL fee; the proceeds are a balance change.
+    expect(parse(sell).swaps[0]?.volumeSol).toBeCloseTo(0.004744959, 9);
+  });
+
+  it('ignores pump.fun transactions Helius cannot classify', () => {
+    expect(parse(unknown)).toEqual({ launches: [], swaps: [], invalid: 0 });
   });
 });

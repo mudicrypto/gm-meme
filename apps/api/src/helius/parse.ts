@@ -2,7 +2,7 @@ import { LAMPORTS_PER_SOL, QUOTE_MINTS, WSOL_MINT, isSolanaAddress } from '@sift
 import type { SwapRecord, TokenRecord } from '../tokens/repository';
 import { type EnhancedTransaction, enhancedTransactionSchema } from './schema';
 
-/** Helius transaction types that create a token (pump.fun reports CREATE). */
+/** Helius transaction types that create a token (pump.fun reports CREATE; checked on devnet). */
 const LAUNCH_TYPES = new Set(['CREATE', 'TOKEN_MINT']);
 const SWAP_TYPE = 'SWAP';
 
@@ -42,10 +42,15 @@ export function parseTransactions(items: readonly unknown[]): ParsedBatch {
 
 function parseLaunch(tx: EnhancedTransaction): TokenRecord[] {
   const transfers = tx.tokenTransfers ?? [];
-  const tradedMints = uniqueTokenMints(transfers.map((t) => t.mint));
-  // Prefer mints that were minted in this transaction (sent from no account).
+  // Prefer mints that were minted in this transaction (sent from no account), then any
+  // traded mint (pump.fun's create-and-buy). A create with no dev buy has no token
+  // transfers at all; its mint only shows up in the balance changes.
   const minted = uniqueTokenMints(transfers.filter((t) => !t.fromUserAccount).map((t) => t.mint));
-  const mints = minted.length > 0 ? minted : tradedMints;
+  const traded = uniqueTokenMints(transfers.map((t) => t.mint));
+  const balanceChanged = uniqueTokenMints(
+    (tx.accountData ?? []).flatMap((a) => (a.tokenBalanceChanges ?? []).map((c) => c.mint)),
+  );
+  const mints = [minted, traded, balanceChanged].find((list) => list.length > 0) ?? [];
 
   return mints.map((mint) => ({
     mint,
@@ -73,12 +78,16 @@ function parseSwap(tx: EnhancedTransaction): SwapRecord[] {
 }
 
 /**
- * Trade size in SOL: the largest single SOL movement to or from the trader, native
- * or wrapped. Taking the largest ignores the small fee and tip transfers alongside it.
- * Undefined for token-for-token swaps with no SOL leg.
+ * Trade size in SOL. The trader's own SOL balance change is the most reliable signal:
+ * pump.fun pays sellers by moving lamports directly, which never shows up as a
+ * transfer. Swaps paid in wrapped SOL leave the balance almost unchanged (just the
+ * fee), so also consider the largest SOL transfer to or from the trader and take the
+ * bigger of the two. Undefined for token-for-token swaps with no SOL leg.
  */
 function swapVolumeSol(tx: EnhancedTransaction, trader: string): number | undefined {
   const amounts: number[] = [];
+  const balanceChange = tx.accountData?.find((a) => a.account === trader)?.nativeBalanceChange;
+  if (balanceChange) amounts.push(Math.abs(balanceChange) / LAMPORTS_PER_SOL);
   for (const t of tx.nativeTransfers ?? []) {
     if (t.fromUserAccount === trader || t.toUserAccount === trader) {
       amounts.push(t.amount / LAMPORTS_PER_SOL);

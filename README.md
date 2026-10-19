@@ -89,8 +89,8 @@ Set `HELIUS_API_KEY`, then pick one:
 
 Both paths are idempotent, so redelivered or overlapping transactions are stored once.
 
-> **Devnet note:** very few meme coins launch on devnet, so the feeds will be sparse there.
-> Real launches happen on mainnet.
+> **Devnet note:** pump.fun runs on devnet too, so the feeds fill up, but much of the activity
+> is test bots (expect lots of near-identical tokens). Real launches happen on mainnet.
 
 ## Scripts
 

@@ -1,7 +1,8 @@
-import type { TokenSummary, TrendingToken } from '@sift/shared';
+import type { RiskLevel, TokenSummary, TrendingToken } from '@sift/shared';
 import { createClient } from '@supabase/supabase-js';
 import {
   type StoredToken,
+  type PricedTrade,
   type SwapRecord,
   type TokenActivity,
   type TokenRecord,
@@ -25,6 +26,8 @@ interface TokenRow {
   image_url: string | null;
   launched_at: string | Date | null;
   first_seen_at: string | Date;
+  risk_level?: RiskLevel | null;
+  risk_checked_at?: string | Date | null;
 }
 
 interface FullTokenRow extends TokenRow {
@@ -92,6 +95,8 @@ export class SupabaseTokenRepository implements TokenRepository {
       trader: s.trader,
       volume_sol: s.volumeSol ?? null,
       block_time: s.blockTime,
+      side: s.side ?? null,
+      token_amount: s.tokenAmount ?? null,
     }));
     await this.call('record_swaps', { rows });
   }
@@ -104,7 +109,34 @@ export class SupabaseTokenRepository implements TokenRepository {
 
   async listNew(limit: number): Promise<TokenSummary[]> {
     const rows = await this.call<TokenRow>('new_tokens', { max_rows: limit });
-    return rows.map(toSummary);
+    return this.withRiskLevels(rows.map(toSummary));
+  }
+
+  async setRiskLevel(mint: string, level: RiskLevel, checkedAt: string): Promise<void> {
+    await this.call('set_token_risk', { token_mint: mint, level, checked_at: checkedAt });
+  }
+
+  async getRiskLevels(mints: readonly string[]): Promise<Map<string, RiskLevel>> {
+    if (mints.length === 0) return new Map();
+    const rows = await this.call<{ mint: string; risk_level: RiskLevel }>('risk_levels', {
+      mints: [...mints],
+    });
+    return new Map(rows.map((row) => [row.mint, row.risk_level]));
+  }
+
+  async getTrades(mint: string, since: Date, limit: number): Promise<PricedTrade[]> {
+    const rows = await this.call<{
+      block_time: string | Date;
+      side: 'buy' | 'sell' | null;
+      price_sol: number | string;
+      volume_sol: number | string;
+    }>('token_trades', { token_mint: mint, since: since.toISOString(), max_rows: limit });
+    return rows.map((row) => ({
+      blockTime: toIso(row.block_time),
+      side: row.side ?? undefined,
+      priceSol: Number(row.price_sol),
+      volumeSol: Number(row.volume_sol),
+    }));
   }
 
   async getActivity(mint: string, since: Date): Promise<TokenActivity> {
@@ -125,12 +157,31 @@ export class SupabaseTokenRepository implements TokenRepository {
       since: since.toISOString(),
       max_rows: limit,
     });
-    return rows.map((row) => ({
-      ...toSummary(row),
-      swapCount: Number(row.swap_count),
-      uniqueTraders: Number(row.unique_traders),
-      volumeSol: Number(row.volume_sol),
-    }));
+    return this.withRiskLevels(
+      rows.map((row) => ({
+        ...toSummary(row),
+        swapCount: Number(row.swap_count),
+        uniqueTraders: Number(row.unique_traders),
+        volumeSol: Number(row.volume_sol),
+      })),
+    );
+  }
+
+  /** The feed functions predate stored risk levels, so merge them in with one lookup. */
+  private async withRiskLevels<T extends TokenSummary>(tokens: T[]): Promise<T[]> {
+    if (tokens.length === 0) return tokens;
+    const rows = await this.call<{
+      mint: string;
+      risk_level: RiskLevel;
+      risk_checked_at: string | Date;
+    }>('risk_levels', { mints: tokens.map((t) => t.mint) });
+    const byMint = new Map(rows.map((row) => [row.mint, row]));
+    return tokens.map((token) => {
+      const risk = byMint.get(token.mint);
+      return risk
+        ? { ...token, riskLevel: risk.risk_level, riskCheckedAt: toIso(risk.risk_checked_at) }
+        : token;
+    });
   }
 
   private async call<Row>(fn: string, args: Record<string, unknown>): Promise<Row[]> {
@@ -148,6 +199,8 @@ function toSummary(row: TokenRow): TokenSummary {
     imageUrl: row.image_url ?? undefined,
     launchedAt: row.launched_at ? toIso(row.launched_at) : undefined,
     firstSeenAt: toIso(row.first_seen_at),
+    riskLevel: row.risk_level ?? undefined,
+    riskCheckedAt: row.risk_checked_at ? toIso(row.risk_checked_at) : undefined,
   };
 }
 

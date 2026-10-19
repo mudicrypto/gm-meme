@@ -24,6 +24,13 @@ export interface HeliusClient {
   getMint(mint: string): Promise<MintInfo | null>;
   /** Largest token accounts (up to 20) with their owner and the owner's program. */
   getLargestTokenAccounts(mint: string): Promise<TokenAccountHolding[]>;
+  /** Fungible tokens (first 100, non-zero) and SOL held by a wallet. */
+  getWalletHoldings(owner: string): Promise<WalletHoldings>;
+}
+
+export interface WalletHoldings {
+  lamports: number;
+  tokens: Array<AssetMetadata & { amount: number }>;
 }
 
 export interface TokenAccountHolding {
@@ -120,6 +127,15 @@ const accountOwners = z.object({
   value: z.array(z.object({ owner: z.string() }).nullable()),
 });
 
+const ownerAssets = z.object({
+  items: z.array(z.unknown()),
+  nativeBalance: z.looseObject({ lamports: z.number() }).nullish(),
+});
+
+const tokenBalance = z.looseObject({
+  token_info: z.looseObject({ balance: z.number(), decimals: z.number() }),
+});
+
 const assetBatchResponse = z.object({
   result: z.array(z.unknown().nullable()).nullish(),
   error: z.object({ message: z.string() }).nullish(),
@@ -207,6 +223,39 @@ export function createHeliusClient(options: HeliusClientOptions): HeliusClient {
         tokenProgram,
         extensions: info.extensions ?? [],
       };
+    },
+
+    async getWalletHoldings(owner) {
+      // DAS takes named params, unlike the positional Solana RPC methods.
+      const body = rpcResponse.parse(
+        await request(rpcUrl, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            jsonrpc: '2.0',
+            id: 'sift',
+            method: 'getAssetsByOwner',
+            params: {
+              ownerAddress: owner,
+              page: 1,
+              limit: 100,
+              options: { showFungible: true, showNativeBalance: true, showZeroBalance: false },
+            },
+          }),
+        }),
+      );
+      if (body.error) throw new HeliusError(`Helius getAssetsByOwner: ${body.error.message}`);
+      const result = ownerAssets.parse(body.result);
+
+      const tokens = result.items.flatMap((raw) => {
+        const asset = assetSchema.safeParse(raw);
+        const balance = tokenBalance.safeParse(raw);
+        if (!asset.success || !balance.success) return [];
+        const { balance: units, decimals } = balance.data.token_info;
+        if (units <= 0) return [];
+        return [{ ...toMetadata(asset.data), amount: units / 10 ** decimals }];
+      });
+      return { lamports: result.nativeBalance?.lamports ?? 0, tokens };
     },
 
     async getLargestTokenAccounts(mint) {

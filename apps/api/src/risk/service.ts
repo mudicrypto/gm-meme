@@ -13,6 +13,8 @@ export interface RiskServiceOptions extends GatherDeps {
   now?: () => Date;
   /** Cap on cached mints, so a flood of lookups can't grow memory without bound. */
   maxEntries?: number;
+  /** Called with every new score, e.g. to store the level for the feeds. */
+  onScored?: (score: RiskScore) => Promise<void>;
 }
 
 export function createRiskService(options: RiskServiceOptions): RiskService {
@@ -35,12 +37,16 @@ export function createRiskService(options: RiskServiceOptions): RiskService {
       inputs.sellTest,
     ].includes(undefined);
     if (incomplete) entry.expiresAt = Math.min(entry.expiresAt, now().getTime() + partialTtlMs);
-    return {
+    const score: RiskScore = {
       mint,
       ...scoreRisk(inputs),
       checkedAt: now().toISOString(),
       disclaimer: RISK_DISCLAIMER,
     };
+    await options
+      .onScored?.(score)
+      .catch((err: unknown) => options.log.warn({ err, mint }, 'storing risk level failed'));
+    return score;
   };
 
   return {

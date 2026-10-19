@@ -145,6 +145,67 @@ describe.each(implementations)('TokenRepository: %s', (_name, create) => {
     });
   });
 
+  it('stores risk levels, keeps the newest, and shows them in the feeds', async () => {
+    await repo.upsertTokens([
+      { mint: MINT_A, launchedAt: at(1) },
+      { mint: MINT_B, launchedAt: at(2) },
+    ]);
+    await repo.setRiskLevel(MINT_A, 'red', at(10));
+    await repo.setRiskLevel(MINT_A, 'green', at(5)); // older result: ignored
+    await repo.setRiskLevel(MINT_C, 'amber', at(10)); // unknown token: ignored
+    await repo.upsertTokens([{ mint: MINT_A, symbol: 'AAA' }]); // later upsert keeps the level
+
+    const tokens = await repo.listNew(10);
+    expect(tokens.find((t) => t.mint === MINT_A)).toMatchObject({
+      riskLevel: 'red',
+      riskCheckedAt: at(10),
+    });
+    expect(tokens.find((t) => t.mint === MINT_B)?.riskLevel).toBeUndefined();
+    expect(await repo.getRiskLevels([MINT_A, MINT_B, MINT_C])).toEqual(new Map([[MINT_A, 'red']]));
+
+    await repo.recordSwaps([{ signature: 'r1', mint: MINT_A, trader: ALICE, blockTime: at(30) }]);
+    const [trending] = await repo.listTrending({ since: new Date(at(0)), limit: 10 });
+    expect(trending?.riskLevel).toBe('red');
+  });
+
+  it('returns priced trades oldest first, skipping ones without a price', async () => {
+    await repo.upsertTokens([{ mint: MINT_A }]);
+    await repo.recordSwaps([
+      {
+        signature: 'p2',
+        mint: MINT_A,
+        trader: BOB,
+        volumeSol: 3,
+        tokenAmount: 1000,
+        side: 'sell',
+        blockTime: at(40),
+      },
+      {
+        signature: 'p1',
+        mint: MINT_A,
+        trader: ALICE,
+        volumeSol: 1,
+        tokenAmount: 500,
+        side: 'buy',
+        blockTime: at(30),
+      },
+      { signature: 'p3', mint: MINT_A, trader: CAROL, volumeSol: 1, blockTime: at(35) }, // no amount
+      {
+        signature: 'p0',
+        mint: MINT_A,
+        trader: CAROL,
+        volumeSol: 1,
+        tokenAmount: 1,
+        blockTime: at(1),
+      }, // too old
+    ]);
+    expect(await repo.getTrades(MINT_A, new Date(at(10)), 100)).toEqual([
+      { blockTime: at(30), side: 'buy', priceSol: 0.002, volumeSol: 1 },
+      { blockTime: at(40), side: 'sell', priceSol: 0.003, volumeSol: 3 },
+    ]);
+    expect(await repo.getTrades(MINT_A, new Date(at(10)), 1)).toHaveLength(1);
+  });
+
   it('ignores redelivered swaps', async () => {
     await repo.upsertTokens([{ mint: MINT_A }]);
     const swap = { signature: 's1', mint: MINT_A, trader: ALICE, volumeSol: 1, blockTime: at(30) };

@@ -3,14 +3,17 @@ import type { Config } from './config';
 import { type HeliusClient, createHeliusClient } from './helius/client';
 import { startHeliusPoller } from './helius/poller';
 import { type JupiterClient, createJupiterClient } from './risk/jupiter';
+import { createRiskQueue } from './risk/queue';
 import { createRiskService } from './risk/service';
 import { type SummaryModel, createClaudeSummaryModel } from './summary/claude';
 import { createSummaryService } from './summary/service';
 import { healthRoutes } from './routes/health';
+import { chartRoutes } from './routes/chart';
 import { heliusWebhookRoutes } from './routes/helius-webhook';
 import { riskRoutes } from './routes/risk';
 import { summaryRoutes } from './routes/summary';
 import { tokenRoutes } from './routes/tokens';
+import { walletRoutes } from './routes/wallets';
 import { createDiscoveryService } from './tokens/discovery';
 import { InMemoryTokenRepository } from './tokens/memory-repository';
 import type { TokenRepository } from './tokens/repository';
@@ -58,10 +61,12 @@ export function buildApp(config: Config, deps: AppDeps = {}) {
         : null;
   if (!helius) app.log.warn('HELIUS_API_KEY not set: tokens will be stored without metadata');
 
-  const discovery = createDiscoveryService({ repository, helius, log: app.log, now });
-
   app.register(healthRoutes, { config });
   app.register(tokenRoutes, { repository, now });
+  app.register(chartRoutes, { repository, now });
+
+  // Newly launched tokens are scored in the background for the feeds' risk badges.
+  let onLaunched: ((mints: string[]) => void) | undefined;
 
   if (helius) {
     // Jupiter only routes mainnet, so on devnet the test sale is skipped.
@@ -71,8 +76,18 @@ export function buildApp(config: Config, deps: AppDeps = {}) {
         : config.SOLANA_CLUSTER === 'mainnet-beta'
           ? createJupiterClient({ baseUrl: config.JUPITER_API_URL, apiKey: config.JUPITER_API_KEY })
           : null;
-    const risk = createRiskService({ helius, jupiter, repository, log: app.log, now });
+    const risk = createRiskService({
+      helius,
+      jupiter,
+      repository,
+      log: app.log,
+      now,
+      onScored: (score) => repository.setRiskLevel(score.mint, score.level, score.checkedAt),
+    });
+    const riskQueue = createRiskQueue({ risk, log: app.log });
+    onLaunched = (mints) => riskQueue.enqueue(mints);
     app.register(riskRoutes, { risk });
+    app.register(walletRoutes, { helius, repository });
 
     const summaryModel =
       deps.summaryModel !== undefined
@@ -95,6 +110,8 @@ export function buildApp(config: Config, deps: AppDeps = {}) {
   } else {
     app.log.warn('HELIUS_API_KEY not set: GET /tokens/:mint/risk and /summary are disabled');
   }
+
+  const discovery = createDiscoveryService({ repository, helius, log: app.log, now, onLaunched });
 
   if (config.HELIUS_WEBHOOK_SECRET) {
     app.register(heliusWebhookRoutes, { secret: config.HELIUS_WEBHOOK_SECRET, discovery });

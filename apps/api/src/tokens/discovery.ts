@@ -21,6 +21,8 @@ export interface DiscoveryDeps {
   helius: HeliusClient | null;
   log: Pick<FastifyBaseLogger, 'warn'>;
   now?: () => Date;
+  /** Called with the mints launched in each batch, after they are stored. */
+  onLaunched?: (mints: string[]) => void;
 }
 
 export function createDiscoveryService(deps: DiscoveryDeps): DiscoveryService {
@@ -56,6 +58,7 @@ export function createDiscoveryService(deps: DiscoveryDeps): DiscoveryService {
         ...metadata,
       ]);
       await deps.repository.recordSwaps(swaps);
+      if (launches.length > 0) deps.onLaunched?.([...new Set(launches.map((l) => l.mint))]);
 
       return { launches: launches.length, swaps: swaps.length, enriched: metadata.length, invalid };
     },

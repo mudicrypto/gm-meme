@@ -1,0 +1,79 @@
+{
+  "jsonrpc": "2.0",
+  "result": {
+    "last_indexed_slot": 512827751,
+    "total": 1,
+    "limit": 100,
+    "page": 1,
+    "items": [
+      {
+        "interface": "FungibleToken",
+        "id": "GEtph2tD2kxEKFJqwKYBa8hua8mQDQ3ttsGxhAQziUT5",
+        "content": {
+          "$schema": "https://schema.metaplex.com/nft1.0.json",
+          "json_uri": "ipfs://bafk166d1d365d01b926c70aeb0d7a53499bf0e40f1dc689b3a8b626",
+          "files": [],
+          "metadata": { "name": "Moon Cat", "symbol": "MOON" },
+          "links": {}
+        },
+        "authorities": [],
+        "compression": {
+          "eligible": false,
+          "compressed": false,
+          "data_hash": "",
+          "creator_hash": "",
+          "asset_hash": "",
+          "tree": "",
+          "seq": 0,
+          "leaf_id": 0
+        },
+        "grouping": [],
+        "royalty": {
+          "royalty_model": "creators",
+          "target": null,
+          "percent": 0.0,
+          "basis_points": 0,
+          "primary_sale_happened": false,
+          "locked": false
+        },
+        "creators": [],
+        "ownership": {
+          "frozen": false,
+          "delegated": false,
+          "delegate": null,
+          "ownership_model": "token",
+          "owner": "A1Qx18n8YWDHHNfH9GU4jJmmP1XtN52RcqCSQjCRMY6q"
+        },
+        "supply": null,
+        "mutable": true,
+        "burnt": false,
+        "mint_extensions": {
+          "metadata": {
+            "uri": "ipfs://bafk166d1d365d01b926c70aeb0d7a53499bf0e40f1dc689b3a8b626",
+            "mint": "GEtph2tD2kxEKFJqwKYBa8hua8mQDQ3ttsGxhAQziUT5",
+            "name": "Moon Cat",
+            "symbol": "MOON",
+            "update_authority": null,
+            "additional_metadata": []
+          },
+          "metadata_pointer": {
+            "authority": null,
+            "metadata_address": "GEtph2tD2kxEKFJqwKYBa8hua8mQDQ3ttsGxhAQziUT5"
+          }
+        },
+        "token_info": {
+          "token_accounts": [
+            { "address": "3ayth2hXTBkp6iw7jmyRDM75A1vfmtiYwRf3LDkNNHJq", "balance": 66285709815747 }
+          ],
+          "balance": 66285709815747,
+          "supply": 1000000000000000,
+          "decimals": 6,
+          "token_program": "TokenzQdBNbLqP5VEhdkAS6EPFLC1PHnBqCXEpPxuEb",
+          "associated_token_address": "3ayth2hXTBkp6iw7jmyRDM75A1vfmtiYwRf3LDkNNHJq"
+        }
+      }
+    ],
+    "nativeBalance": { "lamports": 0, "price_per_sol": 103.99919128417969, "total_price": 0.0 }
+  },
+  "id": 1
+}

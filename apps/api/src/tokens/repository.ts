@@ -1,4 +1,4 @@
-import type { TokenSummary, TrendingToken } from '@sift/shared';
+import type { RiskLevel, TokenSummary, TrendingToken } from '@sift/shared';
 
 /** Everything we store about a token. Optional fields may arrive in any order. */
 export interface TokenRecord {
@@ -15,6 +15,8 @@ export interface TokenRecord {
   launchedAt?: string;
   /** Set when Helius metadata was fetched. */
   enrichedAt?: string;
+  riskLevel?: RiskLevel;
+  riskCheckedAt?: string;
 }
 
 export interface SwapRecord {
@@ -23,6 +25,19 @@ export interface SwapRecord {
   trader: string;
   volumeSol?: number;
   blockTime: string;
+  /** From the trader's point of view; absent when the trader's side can't be told. */
+  side?: 'buy' | 'sell';
+  /** Whole tokens bought or sold. */
+  tokenAmount?: number;
+}
+
+/** A trade with a known price. */
+export interface PricedTrade {
+  blockTime: string;
+  side?: 'buy' | 'sell';
+  /** SOL per whole token. */
+  priceSol: number;
+  volumeSol: number;
 }
 
 /** A stored token with everything we know about it. */
@@ -50,6 +65,12 @@ export interface TokenRepository {
   listNew(limit: number): Promise<TokenSummary[]>;
   /** Swaps, distinct traders and SOL volume for one token since `since`. */
   getActivity(mint: string, since: Date): Promise<TokenActivity>;
+  /** Store a risk level, unless a newer one is already stored. */
+  setRiskLevel(mint: string, level: RiskLevel, checkedAt: string): Promise<void>;
+  /** Stored risk levels for the mints that have one. */
+  getRiskLevels(mints: readonly string[]): Promise<Map<string, RiskLevel>>;
+  /** Priced trades since `since`, oldest first. */
+  getTrades(mint: string, since: Date, limit: number): Promise<PricedTrade[]>;
   /** Tokens ranked by distinct traders since `since`. */
   listTrending(options: { since: Date; limit: number }): Promise<TrendingToken[]>;
 }

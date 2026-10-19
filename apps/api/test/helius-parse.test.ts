@@ -40,6 +40,8 @@ describe('parseTransactions', () => {
         trader: ALICE,
         volumeSol: 1.5,
         blockTime: '2026-10-19T10:00:00.000Z',
+        side: 'buy',
+        tokenAmount: 35_000.5,
       },
     ]);
   });
@@ -47,8 +49,22 @@ describe('parseTransactions', () => {
   it('reads a sell for wrapped SOL and never treats wSOL as the traded token', () => {
     const { swaps } = parseTransactions([sellForWsolTx(MINT_B, BOB, '0.25', T0)]);
     expect(swaps).toHaveLength(1);
-    expect(swaps[0]).toMatchObject({ mint: MINT_B, trader: BOB, volumeSol: 0.25 });
+    expect(swaps[0]).toMatchObject({
+      mint: MINT_B,
+      trader: BOB,
+      volumeSol: 0.25,
+      side: 'sell',
+      tokenAmount: 1000,
+    });
     expect(swaps.map((s) => s.mint)).not.toContain(WSOL_MINT);
+  });
+
+  it('leaves the side empty when the trader did not hold the tokens (routed elsewhere)', () => {
+    const tx = buyTx(MINT_A, ALICE, 1, T0);
+    tx.tokenTransfers = [{ ...tx.tokenTransfers[0]!, toUserAccount: addr('Router') }];
+    const [swap] = parseTransactions([tx]).swaps;
+    expect(swap?.side).toBeUndefined();
+    expect(swap?.tokenAmount).toBeUndefined();
   });
 
   it('leaves volume empty for token-to-token swaps', () => {
@@ -122,8 +138,12 @@ describe('parseTransactions: real Helius devnet pump.fun payloads', () => {
 
   it('sizes a buy from the SOL the trader spent', () => {
     expect(parse(buy).swaps).toMatchObject([
-      { mint: 'GEtph2tD2kxEKFJqwKYBa8hua8mQDQ3ttsGxhAQziUT5', volumeSol: 0.01286504 },
+      { mint: 'GEtph2tD2kxEKFJqwKYBa8hua8mQDQ3ttsGxhAQziUT5', volumeSol: 0.01286504, side: 'buy' },
     ]);
+  });
+
+  it('tells a sell from a buy by which way the tokens moved', () => {
+    expect(parse(sell).swaps[0]).toMatchObject({ side: 'sell', tokenAmount: 13_099_030.561217 });
   });
 
   it('sizes a sell from the SOL the trader received, which is not a transfer', () => {

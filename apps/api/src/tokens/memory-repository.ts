@@ -1,6 +1,7 @@
-import type { TokenSummary, TrendingToken } from '@sift/shared';
+import type { RiskLevel, TokenSummary, TrendingToken } from '@sift/shared';
 import {
   type StoredToken,
+  type PricedTrade,
   type SwapRecord,
   type TokenActivity,
   type TokenRecord,
@@ -30,7 +31,12 @@ export class InMemoryTokenRepository implements TokenRepository {
       this.tokens.set(
         record.mint,
         existing
-          ? { ...mergeTokenRecord(existing, record), firstSeenAt: existing.firstSeenAt }
+          ? {
+              ...mergeTokenRecord(existing, record),
+              firstSeenAt: existing.firstSeenAt,
+              riskLevel: existing.riskLevel,
+              riskCheckedAt: existing.riskCheckedAt,
+            }
           : { ...record, firstSeenAt: this.now().toISOString() },
       );
     }
@@ -53,6 +59,41 @@ export class InMemoryTokenRepository implements TokenRepository {
       .sort((a, b) => Date.parse(b.launchedAt!) - Date.parse(a.launchedAt!))
       .slice(0, limit)
       .map(toSummary);
+  }
+
+  async setRiskLevel(mint: string, level: RiskLevel, checkedAt: string): Promise<void> {
+    const token = this.tokens.get(mint);
+    if (!token) return;
+    if (token.riskCheckedAt && Date.parse(token.riskCheckedAt) >= Date.parse(checkedAt)) return;
+    this.tokens.set(mint, { ...token, riskLevel: level, riskCheckedAt: checkedAt });
+  }
+
+  async getRiskLevels(mints: readonly string[]): Promise<Map<string, RiskLevel>> {
+    const levels = new Map<string, RiskLevel>();
+    for (const mint of mints) {
+      const level = this.tokens.get(mint)?.riskLevel;
+      if (level) levels.set(mint, level);
+    }
+    return levels;
+  }
+
+  async getTrades(mint: string, since: Date, limit: number): Promise<PricedTrade[]> {
+    return [...this.swaps.values()]
+      .filter(
+        (s) =>
+          s.mint === mint &&
+          Date.parse(s.blockTime) >= since.getTime() &&
+          (s.tokenAmount ?? 0) > 0 &&
+          (s.volumeSol ?? 0) > 0,
+      )
+      .sort((a, b) => Date.parse(a.blockTime) - Date.parse(b.blockTime))
+      .slice(0, limit)
+      .map((s) => ({
+        blockTime: s.blockTime,
+        side: s.side,
+        priceSol: s.volumeSol! / s.tokenAmount!,
+        volumeSol: s.volumeSol!,
+      }));
   }
 
   async getActivity(mint: string, since: Date): Promise<TokenActivity> {
@@ -102,5 +143,7 @@ function toSummary(token: StoredToken): TokenSummary {
     imageUrl: token.imageUrl,
     launchedAt: token.launchedAt,
     firstSeenAt: token.firstSeenAt,
+    riskLevel: token.riskLevel,
+    riskCheckedAt: token.riskCheckedAt,
   };
 }

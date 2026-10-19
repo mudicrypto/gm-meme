@@ -65,7 +65,8 @@ function parseSwap(tx: EnhancedTransaction): SwapRecord[] {
   const trader = tx.feePayer;
   if (!trader || !isSolanaAddress(trader)) return [];
 
-  const mints = uniqueTokenMints((tx.tokenTransfers ?? []).map((t) => t.mint));
+  const transfers = tx.tokenTransfers ?? [];
+  const mints = uniqueTokenMints(transfers.map((t) => t.mint));
   const volumeSol = swapVolumeSol(tx, trader);
 
   return mints.map((mint) => ({
@@ -74,7 +75,26 @@ function parseSwap(tx: EnhancedTransaction): SwapRecord[] {
     trader,
     volumeSol,
     blockTime: blockTime(tx),
+    ...tradeDirection(transfers, mint, trader),
   }));
+}
+
+/** Buy or sell, and how many tokens, from the trader's net token flow. */
+function tradeDirection(
+  transfers: NonNullable<EnhancedTransaction['tokenTransfers']>,
+  mint: string,
+  trader: string,
+): Pick<SwapRecord, 'side' | 'tokenAmount'> {
+  let net = 0;
+  for (const t of transfers) {
+    if (t.mint !== mint) continue;
+    const amount = Number(t.tokenAmount);
+    if (!Number.isFinite(amount)) continue;
+    if (t.toUserAccount === trader) net += amount;
+    if (t.fromUserAccount === trader) net -= amount;
+  }
+  if (net === 0) return {};
+  return { side: net > 0 ? 'buy' : 'sell', tokenAmount: Math.abs(net) };
 }
 
 /**

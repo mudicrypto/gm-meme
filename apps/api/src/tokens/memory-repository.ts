@@ -2,6 +2,7 @@ import type { TokenSummary, TrendingToken } from '@sift/shared';
 import {
   type StoredToken,
   type SwapRecord,
+  type TokenActivity,
   type TokenRecord,
   type TokenRepository,
   dedupeTokenRecords,
@@ -52,6 +53,17 @@ export class InMemoryTokenRepository implements TokenRepository {
       .sort((a, b) => Date.parse(b.launchedAt!) - Date.parse(a.launchedAt!))
       .slice(0, limit)
       .map(toSummary);
+  }
+
+  async getActivity(mint: string, since: Date): Promise<TokenActivity> {
+    const swaps = [...this.swaps.values()].filter(
+      (swap) => swap.mint === mint && Date.parse(swap.blockTime) >= since.getTime(),
+    );
+    return {
+      swapCount: swaps.length,
+      uniqueTraders: new Set(swaps.map((swap) => swap.trader)).size,
+      volumeSol: swaps.reduce((total, swap) => total + (swap.volumeSol ?? 0), 0),
+    };
   }
 
   async listTrending({ since, limit }: { since: Date; limit: number }): Promise<TrendingToken[]> {

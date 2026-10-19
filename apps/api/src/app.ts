@@ -4,9 +4,12 @@ import { type HeliusClient, createHeliusClient } from './helius/client';
 import { startHeliusPoller } from './helius/poller';
 import { type JupiterClient, createJupiterClient } from './risk/jupiter';
 import { createRiskService } from './risk/service';
+import { type SummaryModel, createClaudeSummaryModel } from './summary/claude';
+import { createSummaryService } from './summary/service';
 import { healthRoutes } from './routes/health';
 import { heliusWebhookRoutes } from './routes/helius-webhook';
 import { riskRoutes } from './routes/risk';
+import { summaryRoutes } from './routes/summary';
 import { tokenRoutes } from './routes/tokens';
 import { createDiscoveryService } from './tokens/discovery';
 import { InMemoryTokenRepository } from './tokens/memory-repository';
@@ -20,6 +23,8 @@ export interface AppDeps {
   helius?: HeliusClient | null;
   /** Pass null to skip the Jupiter test sale. */
   jupiter?: JupiterClient | null;
+  /** Pass null for rules-only summaries. */
+  summaryModel?: SummaryModel | null;
   now?: () => Date;
 }
 
@@ -68,8 +73,27 @@ export function buildApp(config: Config, deps: AppDeps = {}) {
           : null;
     const risk = createRiskService({ helius, jupiter, repository, log: app.log, now });
     app.register(riskRoutes, { risk });
+
+    const summaryModel =
+      deps.summaryModel !== undefined
+        ? deps.summaryModel
+        : config.ANTHROPIC_API_KEY
+          ? createClaudeSummaryModel({
+              apiKey: config.ANTHROPIC_API_KEY,
+              model: config.SUMMARY_MODEL,
+            })
+          : null;
+    if (!summaryModel) app.log.warn('ANTHROPIC_API_KEY not set: summaries are rules-based, not AI');
+    const summary = createSummaryService({
+      risk,
+      repository,
+      model: summaryModel,
+      log: app.log,
+      now,
+    });
+    app.register(summaryRoutes, { summary });
   } else {
-    app.log.warn('HELIUS_API_KEY not set: GET /tokens/:mint/risk is disabled');
+    app.log.warn('HELIUS_API_KEY not set: GET /tokens/:mint/risk and /summary are disabled');
   }
 
   if (config.HELIUS_WEBHOOK_SECRET) {

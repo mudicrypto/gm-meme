@@ -124,6 +124,27 @@ describe.each(implementations)('TokenRepository: %s', (_name, create) => {
     expect(trending[1]).toMatchObject({ swapCount: 5, uniqueTraders: 1, volumeSol: 250 });
   });
 
+  it("reports one token's activity since a time", async () => {
+    await repo.upsertTokens([{ mint: MINT_A }, { mint: MINT_B }]);
+    await repo.recordSwaps([
+      { signature: 'x1', mint: MINT_A, trader: ALICE, volumeSol: 1.5, blockTime: at(20) },
+      { signature: 'x2', mint: MINT_A, trader: ALICE, volumeSol: 0.5, blockTime: at(25) },
+      { signature: 'x3', mint: MINT_A, trader: BOB, blockTime: at(30) },
+      { signature: 'x4', mint: MINT_A, trader: CAROL, volumeSol: 9, blockTime: at(1) }, // too old
+      { signature: 'x5', mint: MINT_B, trader: CAROL, volumeSol: 9, blockTime: at(30) }, // other token
+    ]);
+    expect(await repo.getActivity(MINT_A, new Date(at(10)))).toEqual({
+      swapCount: 3,
+      uniqueTraders: 2,
+      volumeSol: 2,
+    });
+    expect(await repo.getActivity(MINT_C, new Date(at(0)))).toEqual({
+      swapCount: 0,
+      uniqueTraders: 0,
+      volumeSol: 0,
+    });
+  });
+
   it('ignores redelivered swaps', async () => {
     await repo.upsertTokens([{ mint: MINT_A }]);
     const swap = { signature: 's1', mint: MINT_A, trader: ALICE, volumeSol: 1, blockTime: at(30) };

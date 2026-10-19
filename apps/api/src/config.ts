@@ -54,6 +54,8 @@ const ConfigSchema = z
       .or(z.literal('').transform(() => undefined)),
     SUPABASE_SERVICE_ROLE_KEY: optionalSecret,
     ANTHROPIC_API_KEY: optionalSecret,
+    // Model for AI token summaries.
+    SUMMARY_MODEL: z.string().min(1).default('claude-opus-5-5'),
   })
   .refine((config) => !config.SUPABASE_URL === !config.SUPABASE_SERVICE_ROLE_KEY, {
     message: 'set both SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY, or neither',

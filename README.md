@@ -112,6 +112,21 @@ data source failed). The test sale uses Jupiter quotes, which only exist on main
 is skipped, except that pump.fun's bonding curve always buys tokens back. Full transaction
 simulation arrives with trading in Step 6.
 
+## AI summary (Step 4)
+
+`GET /tokens/:mint/summary` returns about three plain-language sentences plus a list of red
+flags, the risk level and the disclaimer. With `ANTHROPIC_API_KEY` set, Claude (`SUMMARY_MODEL`,
+default `claude-opus-5-5`) writes it from the risk checks and the last hour / 24 hours of
+trading activity; results are cached for 5 minutes. Safeguards:
+
+- The prompt forbids buy/sell/hold advice, price predictions and calling a token safe, and a
+  pattern check rejects answers that read as advice anyway.
+- Token names and symbols are creator-controlled: they are passed only inside an escaped
+  `<token_data>` JSON block that the model is told never to obey.
+- Only tokens Sift tracks get AI summaries, so arbitrary lookups can't run up the bill.
+- If Claude declines, fails or is not configured, a rules-based summary built from the risk
+  checks is returned instead (`"source": "rules"`).
+
 ## Scripts
 
 | Command           | What it does                                  |

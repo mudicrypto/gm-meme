@@ -13,6 +13,7 @@
     "helius:webhook": "tsx --env-file-if-exists=.env scripts/register-helius-webhook.ts"
   },
   "dependencies": {
+    "@anthropic-ai/sdk": "^0.135.0",
     "@sift/shared": "workspace:*",
     "@supabase/supabase-js": "^2.118.0",
     "fastify": "^5.12.7",

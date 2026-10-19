@@ -30,6 +30,13 @@ export interface StoredToken extends TokenRecord {
   firstSeenAt: string;
 }
 
+/** Trading activity for one token over a window. */
+export interface TokenActivity {
+  swapCount: number;
+  uniqueTraders: number;
+  volumeSol: number;
+}
+
 export interface TokenRepository {
   /** One token, or null if we've never seen it. */
   getToken(mint: string): Promise<StoredToken | null>;
@@ -41,6 +48,8 @@ export interface TokenRepository {
   enrichedMints(mints: readonly string[]): Promise<Set<string>>;
   /** Launched tokens, newest first. */
   listNew(limit: number): Promise<TokenSummary[]>;
+  /** Swaps, distinct traders and SOL volume for one token since `since`. */
+  getActivity(mint: string, since: Date): Promise<TokenActivity>;
   /** Tokens ranked by distinct traders since `since`. */
   listTrending(options: { since: Date; limit: number }): Promise<TrendingToken[]>;
 }

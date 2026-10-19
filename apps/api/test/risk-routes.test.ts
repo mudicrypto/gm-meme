@@ -1,5 +1,5 @@
-import type { RiskScore } from '@sift/shared';
-import { afterAll, describe, expect, it } from 'vitest';
+import type { RiskScore, TokenExplanation } from '@sift/shared';
+import { afterAll, describe, expect, it, vi } from 'vitest';
 import { buildApp } from '../src/app';
 import { loadConfig } from '../src/config';
 import { InMemoryTokenRepository } from '../src/tokens/memory-repository';
@@ -55,5 +55,41 @@ describe('risk route without Helius', () => {
       404,
     );
     await app.close();
+  });
+});
+
+describe('GET /tokens/:mint/summary', () => {
+  const helius = fakeHelius();
+  helius.getMint.mockImplementation(async (mint) => (mint === RISK_MINT ? cleanMint() : null));
+  const repository = new InMemoryTokenRepository();
+  const summarize = vi.fn(async () => ({
+    summary: 'One. Two. Three.',
+    redFlags: ['Thin trading'],
+  }));
+  const app = buildApp(loadConfig({ LOG_LEVEL: 'silent' }), {
+    tokenRepository: repository,
+    helius,
+    jupiter: null,
+    summaryModel: { summarize },
+  });
+  afterAll(() => app.close());
+
+  it('explains a tracked token with AI', async () => {
+    await repository.upsertTokens([{ mint: RISK_MINT, name: 'Moon Cat' }]);
+    const res = await app.inject({ method: 'GET', url: `/tokens/${RISK_MINT}/summary` });
+    expect(res.statusCode).toBe(200);
+    expect(res.headers['cache-control']).toBe('public, max-age=60');
+    expect(res.json<TokenExplanation>()).toMatchObject({
+      source: 'ai',
+      summary: 'One. Two. Three.',
+      redFlags: ['Thin trading'],
+    });
+  });
+
+  it('validates the address and 404s for non-mints', async () => {
+    expect((await app.inject({ method: 'GET', url: '/tokens/bad!/summary' })).statusCode).toBe(400);
+    expect(
+      (await app.inject({ method: 'GET', url: `/tokens/${addr('Nobody')}/summary` })).statusCode,
+    ).toBe(404);
   });
 });

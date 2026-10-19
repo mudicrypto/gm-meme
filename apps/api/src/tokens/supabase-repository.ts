@@ -3,6 +3,7 @@ import { createClient } from '@supabase/supabase-js';
 import {
   type StoredToken,
   type SwapRecord,
+  type TokenActivity,
   type TokenRecord,
   type TokenRepository,
   dedupeTokenRecords,
@@ -104,6 +105,19 @@ export class SupabaseTokenRepository implements TokenRepository {
   async listNew(limit: number): Promise<TokenSummary[]> {
     const rows = await this.call<TokenRow>('new_tokens', { max_rows: limit });
     return rows.map(toSummary);
+  }
+
+  async getActivity(mint: string, since: Date): Promise<TokenActivity> {
+    const [row] = await this.call<{
+      swap_count: number;
+      unique_traders: number;
+      volume_sol: number | string;
+    }>('token_activity', { token_mint: mint, since: since.toISOString() });
+    return {
+      swapCount: Number(row?.swap_count ?? 0),
+      uniqueTraders: Number(row?.unique_traders ?? 0),
+      volumeSol: Number(row?.volume_sol ?? 0),
+    };
   }
 
   async listTrending({ since, limit }: { since: Date; limit: number }): Promise<TrendingToken[]> {

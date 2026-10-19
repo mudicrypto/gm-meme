@@ -3,12 +3,33 @@ import type { RiskLevel } from './risk';
 /** A token as shown in the discovery feed. */
 export interface TokenSummary {
   mint: string;
-  symbol: string;
-  name: string;
+  /** Absent until Helius metadata has been fetched. */
+  symbol?: string;
+  name?: string;
   imageUrl?: string;
   priceUsd?: number;
   marketCapUsd?: number;
   /** Absent until the risk check has run. */
   riskLevel?: RiskLevel;
-  createdAt: string;
+  /** When the launch transaction landed. Absent if Sift first saw the token through a swap. */
+  launchedAt?: string;
+  /** When Sift first saw the token. */
+  firstSeenAt: string;
+}
+
+/** A token in the trending feed, with the activity it was ranked on. */
+export interface TrendingToken extends TokenSummary {
+  swapCount: number;
+  /** Distinct wallets that swapped it in the window: the main ranking signal. */
+  uniqueTraders: number;
+  volumeSol: number;
+}
+
+export interface TokenListResponse<T extends TokenSummary = TokenSummary> {
+  tokens: T[];
+}
+
+export interface TrendingResponse extends TokenListResponse<TrendingToken> {
+  /** Look-back window the ranking covers. */
+  windowMinutes: number;
 }

@@ -23,3 +23,31 @@ describe('loadConfig', () => {
     expect(() => loadConfig({ PORT: 'abc' })).toThrow(/PORT/);
   });
 });
+
+describe('loadConfig: discovery settings', () => {
+  it('watches the pump.fun program by default', () => {
+    expect(loadConfig({}).HELIUS_WATCH_ADDRESSES).toEqual([
+      '6EF8rrecthR5Dkzon8Nwu78hRvfCKubJ14M5uBEwF6P',
+    ]);
+  });
+
+  it('parses a comma-separated watch list and rejects bad addresses', () => {
+    const a = 'So11111111111111111111111111111111111111112';
+    expect(loadConfig({ HELIUS_WATCH_ADDRESSES: ` ${a} ,` }).HELIUS_WATCH_ADDRESSES).toEqual([a]);
+    expect(() => loadConfig({ HELIUS_WATCH_ADDRESSES: 'nope' })).toThrow(/not a Solana address/);
+  });
+
+  it('requires a long webhook secret', () => {
+    expect(() => loadConfig({ HELIUS_WEBHOOK_SECRET: 'short' })).toThrow(/24 characters/);
+  });
+
+  it('requires both Supabase settings or neither', () => {
+    expect(() => loadConfig({ SUPABASE_URL: 'https://x.supabase.co' })).toThrow(/SUPABASE/);
+    expect(() => loadConfig({ SUPABASE_SERVICE_ROLE_KEY: 'key' })).toThrow(/SUPABASE/);
+  });
+
+  it('rejects a poll interval that would hammer Helius', () => {
+    expect(() => loadConfig({ HELIUS_POLL_INTERVAL_MS: '500' })).toThrow(/2000/);
+    expect(loadConfig({ HELIUS_POLL_INTERVAL_MS: '5000' }).HELIUS_POLL_INTERVAL_MS).toBe(5000);
+  });
+});

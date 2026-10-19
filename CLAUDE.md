@@ -28,6 +28,7 @@ one step at a time and stop after each step for the user to test.
 | `apps/mobile`     | Expo (React Native, TypeScript), iOS + Android |
 | `apps/api`        | Node.js + Fastify API (TypeScript, ESM)        |
 | `packages/shared` | Types and helpers shared by app and API        |
+| `supabase/`       | Postgres migrations (applied to Supabase)      |
 
 External services: Helius (Solana data), Supabase (Postgres), Jupiter (swap routing),
 Claude API (summaries).
@@ -55,6 +56,12 @@ read `apps/mobile/AGENTS.md` before touching Expo APIs.
   routes are Fastify plugins in `src/routes/`, tested with `app.inject()` in `apps/api/test/`.
 - Mock every external service (Helius, Supabase, Jupiter, Claude) in tests; tests never hit the
   network.
+- Database: never edit an applied migration; add a new file in `supabase/migrations/`. Tables get
+  RLS with no policies; logic lives in SQL functions granted only to `service_role`, which the
+  API calls through `rpc()`. `test/token-repository.test.ts` runs the same contract against the
+  in-memory store and the real SQL (PGlite), so keep both in step.
+- Data from Helius (names, symbols, image URLs) is attacker-controlled: validate it with zod,
+  cap lengths, and only pass on `https:` URLs.
 - Types used by both app and API live in `packages/shared`. It ships TypeScript source; the API
   bundles it with tsup and Metro resolves it directly.
 - The risk score is the core of the product: keep it in our own code, each check pure and unit

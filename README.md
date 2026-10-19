@@ -15,6 +15,8 @@ apps/
   mobile/    Expo app for iOS and Android
 packages/
   shared/    Types and helpers used by both
+supabase/
+  migrations/  Database schema (SQL)
 docs/
   PLAN.md    Concept and step-by-step build plan
 ```
@@ -37,6 +39,9 @@ pnpm dev:mobile   # scan the QR code with Expo Go
 When testing on a real phone, set `EXPO_PUBLIC_API_URL` in `apps/mobile/.env` to your computer's
 LAN IP (for example `http://192.168.1.20:3000`), since `localhost` on the phone is the phone.
 
+Without any keys the API still runs: it keeps tokens in memory and stores them without
+names or images. Add keys as you go.
+
 ### Accounts you'll need
 
 Free tiers are enough for development:
@@ -47,6 +52,45 @@ Free tiers are enough for development:
 - [Expo](https://expo.dev): mobile builds
 
 Keys go in the `.env` files, which are gitignored. Never commit them.
+
+## Token discovery (Step 2)
+
+The API learns about tokens from Helius and serves two feeds:
+
+- `GET /tokens/new?limit=50`: tokens launched on the watched programs, newest first
+- `GET /tokens/trending?limit=50&windowMinutes=60`: tokens ranked by **distinct traders** in the
+  window (then swap count, then SOL volume). Ranking by traders, not raw volume, makes it harder
+  for one wallet to wash-trade a token onto the list.
+
+By default it watches the pump.fun program (`HELIUS_WATCH_ADDRESSES`).
+
+### 1. Database (Supabase)
+
+Run `supabase/migrations/20261019000000_token_discovery.sql` once: paste it into the Supabase
+dashboard's SQL editor, or use `supabase db push` with the Supabase CLI. Then set `SUPABASE_URL`
+and `SUPABASE_SERVICE_ROLE_KEY` in `apps/api/.env` (Project Settings → API). The tables have row
+level security on with no policies and the functions are granted only to `service_role`, so
+nothing is readable with the public anon key.
+
+### 2. Getting transactions from Helius
+
+Set `HELIUS_API_KEY`, then pick one:
+
+- **Locally: polling.** Set `HELIUS_POLL_INTERVAL_MS=10000`. The API fetches the latest
+  transactions every 10 seconds. No public URL needed.
+- **Deployed: webhook.** Set `HELIUS_WEBHOOK_SECRET` to a long random string, deploy the API (or
+  expose it with a tunnel such as `cloudflared tunnel --url http://localhost:3000`), then:
+
+  ```bash
+  pnpm --filter @sift/api helius:webhook https://<public-host>/webhooks/helius
+  ```
+
+  Helius sends the secret back in the `Authorization` header; requests without it get a 401.
+
+Both paths are idempotent, so redelivered or overlapping transactions are stored once.
+
+> **Devnet note:** very few meme coins launch on devnet, so the feeds will be sparse there.
+> Real launches happen on mainnet.
 
 ## Scripts
 

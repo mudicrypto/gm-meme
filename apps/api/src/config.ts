@@ -1,3 +1,4 @@
+import { PUMP_FUN_PROGRAM_ID, isSolanaAddress } from '@sift/shared';
 import { z } from 'zod';
 
 const optionalSecret = z
@@ -5,20 +6,56 @@ const optionalSecret = z
   .optional()
   .transform((value) => (value ? value : undefined));
 
-const ConfigSchema = z.object({
-  PORT: z.coerce.number().int().min(1).max(65535).default(3000),
-  HOST: z.string().default('0.0.0.0'),
-  LOG_LEVEL: z.enum(['fatal', 'error', 'warn', 'info', 'debug', 'trace', 'silent']).default('info'),
-  SOLANA_CLUSTER: z.enum(['devnet', 'mainnet-beta']).default('devnet'),
-  // External service keys are optional until the step that needs them.
-  HELIUS_API_KEY: optionalSecret,
-  SUPABASE_URL: z
-    .url()
-    .optional()
-    .or(z.literal('').transform(() => undefined)),
-  SUPABASE_SERVICE_ROLE_KEY: optionalSecret,
-  ANTHROPIC_API_KEY: optionalSecret,
-});
+const addressList = z
+  .string()
+  .optional()
+  .transform((value, ctx) => {
+    const addresses = (value || PUMP_FUN_PROGRAM_ID)
+      .split(',')
+      .map((part) => part.trim())
+      .filter(Boolean);
+    for (const address of addresses) {
+      if (!isSolanaAddress(address)) {
+        ctx.addIssue({ code: 'custom', message: `not a Solana address: ${address}` });
+      }
+    }
+    return addresses;
+  });
+
+const ConfigSchema = z
+  .object({
+    PORT: z.coerce.number().int().min(1).max(65535).default(3000),
+    HOST: z.string().default('0.0.0.0'),
+    LOG_LEVEL: z
+      .enum(['fatal', 'error', 'warn', 'info', 'debug', 'trace', 'silent'])
+      .default('info'),
+    SOLANA_CLUSTER: z.enum(['devnet', 'mainnet-beta']).default('devnet'),
+    // External service keys are optional until the step that needs them.
+    HELIUS_API_KEY: optionalSecret,
+    // Shared secret Helius sends in the Authorization header of every webhook delivery.
+    HELIUS_WEBHOOK_SECRET: optionalSecret.refine((value) => !value || value.length >= 24, {
+      message: 'must be at least 24 characters',
+    }),
+    // Programs/accounts whose transactions we watch for launches and swaps.
+    HELIUS_WATCH_ADDRESSES: addressList,
+    // Poll Helius instead of (or as well as) receiving webhooks. 0 = off. Handy locally,
+    // where Helius can't reach a webhook on localhost.
+    HELIUS_POLL_INTERVAL_MS: z.coerce
+      .number()
+      .int()
+      .refine((ms) => ms === 0 || ms >= 2000, { message: 'must be 0 (off) or at least 2000' })
+      .default(0),
+    SUPABASE_URL: z
+      .url()
+      .optional()
+      .or(z.literal('').transform(() => undefined)),
+    SUPABASE_SERVICE_ROLE_KEY: optionalSecret,
+    ANTHROPIC_API_KEY: optionalSecret,
+  })
+  .refine((config) => !config.SUPABASE_URL === !config.SUPABASE_SERVICE_ROLE_KEY, {
+    message: 'set both SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY, or neither',
+    path: ['SUPABASE_URL'],
+  });
 
 export type Config = z.infer<typeof ConfigSchema>;
 

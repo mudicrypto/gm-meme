@@ -1,15 +1,12 @@
 import type { TokenSummary, TrendingToken } from '@sift/shared';
 import {
+  type StoredToken,
   type SwapRecord,
   type TokenRecord,
   type TokenRepository,
   dedupeTokenRecords,
   mergeTokenRecord,
 } from './repository';
-
-interface StoredToken extends TokenRecord {
-  firstSeenAt: string;
-}
 
 /**
  * In-process store with the same behaviour as the Supabase one. Used in tests and
@@ -20,6 +17,11 @@ export class InMemoryTokenRepository implements TokenRepository {
   private readonly swaps = new Map<string, SwapRecord>();
 
   constructor(private readonly now: () => Date = () => new Date()) {}
+
+  async getToken(mint: string): Promise<StoredToken | null> {
+    const token = this.tokens.get(mint);
+    return token ? { ...token } : null;
+  }
 
   async upsertTokens(records: readonly TokenRecord[]): Promise<void> {
     for (const record of dedupeTokenRecords(records)) {

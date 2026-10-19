@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { worstRiskLevel } from './risk';
+import { sortBySeverity, worstRiskLevel } from './risk';
 
 describe('worstRiskLevel', () => {
   it('is green when there are no checks', () => {
@@ -16,5 +16,17 @@ describe('worstRiskLevel', () => {
 
   it('picks red over everything', () => {
     expect(worstRiskLevel(['amber', 'red', 'green'])).toBe('red');
+  });
+});
+
+describe('sortBySeverity', () => {
+  it('puts red first and keeps order within a level', () => {
+    const items = [
+      { id: 1, level: 'green' as const },
+      { id: 2, level: 'red' as const },
+      { id: 3, level: 'amber' as const },
+      { id: 4, level: 'red' as const },
+    ];
+    expect(sortBySeverity(items).map((i) => i.id)).toEqual([2, 4, 3, 1]);
   });
 });

@@ -1,5 +1,6 @@
 import { vi } from 'vitest';
-import type { AssetMetadata, HeliusClient } from '../../src/helius/client';
+import type { AssetMetadata, HeliusClient, TokenAccountHolding } from '../../src/helius/client';
+import type { MintInfo } from '../../src/risk/inputs';
 
 /** A Helius client that answers from a fixed metadata table. */
 export function fakeHelius(metadata: Record<string, Omit<AssetMetadata, 'mint'>> = {}) {
@@ -7,7 +8,11 @@ export function fakeHelius(metadata: Record<string, Omit<AssetMetadata, 'mint'>>
     getAssetBatch: vi.fn(async (mints: readonly string[]) =>
       mints.filter((mint) => metadata[mint]).map((mint) => ({ mint, ...metadata[mint] })),
     ),
-    getAddressTransactions: vi.fn(async () => [] as unknown[]),
+    getAddressTransactions: vi.fn(
+      async (_address: string, _options?: { limit?: number; type?: string }) => [] as unknown[],
+    ),
+    getMint: vi.fn(async (_mint: string): Promise<MintInfo | null> => null),
+    getLargestTokenAccounts: vi.fn(async (_mint: string): Promise<TokenAccountHolding[]> => []),
   } satisfies HeliusClient;
 }
 

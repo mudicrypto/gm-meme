@@ -69,6 +69,28 @@ describe.each(implementations)('TokenRepository: %s', (_name, create) => {
     expect(await repo.listNew(10)).toMatchObject([{ mint: MINT_A, symbol: 'AAA' }]);
   });
 
+  it('gets one token with everything stored about it', async () => {
+    await repo.upsertTokens([
+      {
+        mint: MINT_A,
+        symbol: 'AAA',
+        creator: DEV,
+        launchedAt: at(1),
+        decimals: 6,
+        launchSource: 'PUMP_FUN',
+      },
+    ]);
+    expect(await repo.getToken(MINT_A)).toMatchObject({
+      mint: MINT_A,
+      symbol: 'AAA',
+      creator: DEV,
+      decimals: 6,
+      launchSource: 'PUMP_FUN',
+      launchedAt: at(1),
+    });
+    expect(await repo.getToken(MINT_B)).toBeNull();
+  });
+
   it('reports which mints already have metadata', async () => {
     await repo.upsertTokens([{ mint: MINT_A, enrichedAt: at(0) }, { mint: MINT_B }]);
     expect(await repo.enrichedMints([MINT_A, MINT_B, MINT_C])).toEqual(new Set([MINT_A]));
@@ -123,15 +145,19 @@ describe('Supabase SQL permissions', () => {
     db = pg.db;
   });
 
-  it('only the service role can call the functions', async () => {
-    const { rows } = await db.query<{ role: string; allowed: boolean }>(`
-      select r as role, has_function_privilege(r, 'public.new_tokens(integer)', 'execute') as allowed
-      from unnest(array['anon', 'authenticated', 'service_role']) as r`);
-    expect(rows).toEqual([
-      { role: 'anon', allowed: false },
-      { role: 'authenticated', allowed: false },
-      { role: 'service_role', allowed: true },
-    ]);
+  it('only the service role can call any of the functions', async () => {
+    const { rows } = await db.query<{ fn: string; role: string; allowed: boolean }>(`
+      select p.proname as fn, r as role, has_function_privilege(r, p.oid, 'execute') as allowed
+      from pg_proc p cross join unnest(array['anon', 'authenticated', 'service_role']) as r
+      where p.pronamespace = 'public'::regnamespace`);
+    const functions = [...new Set(rows.map((row) => row.fn))];
+    expect(functions.length).toBeGreaterThanOrEqual(6);
+    for (const row of rows) {
+      expect({ ...row, allowed: row.allowed }).toEqual({
+        ...row,
+        allowed: row.role === 'service_role',
+      });
+    }
   });
 
   it('turns on row level security for every table', async () => {

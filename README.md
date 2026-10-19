@@ -92,6 +92,26 @@ Both paths are idempotent, so redelivered or overlapping transactions are stored
 > **Devnet note:** pump.fun runs on devnet too, so the feeds fill up, but much of the activity
 > is test bots (expect lots of near-identical tokens). Real launches happen on mainnet.
 
+## Risk score (Step 3)
+
+`GET /tokens/:mint/risk` returns a traffic-light level (the worst of its checks), one plain-language
+reason per check, and a not-financial-advice disclaimer. Checks:
+
+| Check                  | Red when                                                                                            |
+| ---------------------- | --------------------------------------------------------------------------------------------------- |
+| `mint_authority`       | someone can still mint more tokens                                                                  |
+| `freeze_authority`     | someone can freeze holders' tokens                                                                  |
+| `token_extensions`     | Token-2022 rules that can trap or take tokens (transfer hooks, permanent delegates, >10% fees, ...) |
+| `holder_concentration` | top 10 wallets hold 50%+ or one wallet 20%+ (pools and burns excluded)                              |
+| `liquidity`            | no liquidity pool found (green while on pump.fun's bonding curve)                                   |
+| `dev_history`          | the creator's wallet launched 5+ other tokens                                                       |
+| `sell_test`            | a test sale of 0.1% of supply finds no route or drops the price 30%+                                |
+
+Anything Sift couldn't verify is amber, never green. Results are cached for 60 seconds (10 when a
+data source failed). The test sale uses Jupiter quotes, which only exist on mainnet; on devnet it
+is skipped, except that pump.fun's bonding curve always buys tokens back. Full transaction
+simulation arrives with trading in Step 6.
+
 ## Scripts
 
 | Command           | What it does                                  |

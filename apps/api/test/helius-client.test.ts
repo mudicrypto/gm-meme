@@ -1,6 +1,8 @@
 import { describe, expect, it, vi } from 'vitest';
 import { HeliusError, createHeliusClient } from '../src/helius/client';
 import { MINT_A, MINT_B, addr, dasAsset } from './fixtures/helius';
+// Real responses captured from Helius devnet.
+import devnetRpc from './fixtures/helius-devnet-rpc.json';
 
 const API_KEY = 'test-key-123';
 
@@ -89,5 +91,100 @@ describe('Helius client', () => {
     expect(fetch.mock.calls[0]![0]).toBe(
       `https://api-mainnet.helius-rpc.com/v0/addresses/${MINT_A}/transactions?api-key=${API_KEY}&limit=25`,
     );
+  });
+});
+
+describe('Helius client: Solana RPC for the risk score', () => {
+  const MOON_CAT = 'GEtph2tD2kxEKFJqwKYBa8hua8mQDQ3ttsGxhAQziUT5';
+
+  it('getMint reads a Token-2022 pump.fun mint', async () => {
+    const fetch = mockFetch({ body: devnetRpc.getAccountInfo });
+    const mint = await createHeliusClient({ apiKey: API_KEY, cluster: 'devnet', fetch }).getMint(
+      MOON_CAT,
+    );
+    expect(mint).toMatchObject({
+      mintAuthority: null,
+      freezeAuthority: null,
+      supply: 1_000_000_000_000_000n,
+      decimals: 6,
+      tokenProgram: 'spl-token-2022',
+    });
+    expect(mint?.extensions.map((e) => e.extension)).toEqual(['metadataPointer', 'tokenMetadata']);
+    expect(JSON.parse(fetch.mock.calls[0]![1]!.body as string)).toMatchObject({
+      method: 'getAccountInfo',
+      params: [MOON_CAT, { encoding: 'jsonParsed' }],
+    });
+  });
+
+  it('getMint returns null for an address that is not a mint', async () => {
+    const wallet = {
+      result: { value: { owner: '11111111111111111111111111111111', data: ['', 'base64'] } },
+    };
+    const missing = { result: { value: null } };
+    const fetch = mockFetch({ body: wallet }, { body: missing });
+    const helius = createHeliusClient({ apiKey: API_KEY, cluster: 'devnet', fetch });
+    expect(await helius.getMint(MINT_A)).toBeNull();
+    expect(await helius.getMint(MINT_A)).toBeNull();
+  });
+
+  it('getLargestTokenAccounts resolves each holder and the program behind it', async () => {
+    const fetch = mockFetch(
+      { body: devnetRpc.getTokenLargestAccounts },
+      { body: devnetRpc.getMultipleAccounts_tokenAccounts },
+      { body: devnetRpc.getMultipleAccounts_owners },
+    );
+    const holdings = await createHeliusClient({
+      apiKey: API_KEY,
+      cluster: 'devnet',
+      fetch,
+    }).getLargestTokenAccounts(MOON_CAT);
+
+    expect(holdings).toHaveLength(7);
+    // The bonding curve PDA belongs to the pump.fun program; the rest are wallets.
+    expect(holdings[0]).toEqual({
+      owner: '2bV3dhEWoTqNsqijgpKVG8HEKpTaJLwfpX6jePNx7H1j',
+      ownerProgram: '6EF8rrecthR5Dkzon8Nwu78hRvfCKubJ14M5uBEwF6P',
+      amount: 879_732_848_938_038n,
+    });
+    expect(holdings[1]).toMatchObject({
+      owner: 'A1Qx18n8YWDHHNfH9GU4jJmmP1XtN52RcqCSQjCRMY6q',
+      ownerProgram: null,
+    });
+    expect(fetch).toHaveBeenCalledTimes(3);
+  });
+
+  it('getLargestTokenAccounts stops early for a token with no holders', async () => {
+    const fetch = mockFetch({ body: { result: { value: [] } } });
+    expect(
+      await createHeliusClient({
+        apiKey: API_KEY,
+        cluster: 'devnet',
+        fetch,
+      }).getLargestTokenAccounts(MINT_A),
+    ).toEqual([]);
+    expect(fetch).toHaveBeenCalledTimes(1);
+  });
+
+  it('surfaces RPC errors', async () => {
+    const fetch = mockFetch({
+      body: { error: { code: -32602, message: 'Invalid param: not a Token mint' } },
+    });
+    await expect(
+      createHeliusClient({ apiKey: API_KEY, cluster: 'devnet', fetch }).getLargestTokenAccounts(
+        MINT_A,
+      ),
+    ).rejects.toThrow('not a Token mint');
+  });
+
+  it('can filter address history by transaction type', async () => {
+    const fetch = mockFetch({ body: [] });
+    await createHeliusClient({ apiKey: API_KEY, cluster: 'devnet', fetch }).getAddressTransactions(
+      MINT_A,
+      {
+        type: 'CREATE',
+        limit: 1,
+      },
+    );
+    expect(fetch.mock.calls[0]![0]).toContain('&limit=1&type=CREATE');
   });
 });

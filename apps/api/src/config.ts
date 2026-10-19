@@ -45,6 +45,9 @@ const ConfigSchema = z
       .int()
       .refine((ms) => ms === 0 || ms >= 2000, { message: 'must be 0 (off) or at least 2000' })
       .default(0),
+    // Jupiter quotes power the risk score's test sale (mainnet only).
+    JUPITER_API_URL: z.url().default('https://lite-api.jup.ag/swap/v1'),
+    JUPITER_API_KEY: optionalSecret,
     SUPABASE_URL: z
       .url()
       .optional()

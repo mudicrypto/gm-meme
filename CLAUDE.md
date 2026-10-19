@@ -65,5 +65,7 @@ read `apps/mobile/AGENTS.md` before touching Expo APIs.
 - Types used by both app and API live in `packages/shared`. It ships TypeScript source; the API
   bundles it with tsup and Metro resolves it directly.
 - The risk score is the core of the product: keep it in our own code, each check pure and unit
-  tested, and every result explained with a plain-language reason.
+  tested, and every result explained with a plain-language reason. Checks live in
+  `apps/api/src/risk/checks.ts` as functions of `RiskInputs`; fetching lives in `gather.ts`. Missing
+  data must produce amber, never green.
 - Commit after each working step, with `pnpm check` passing.

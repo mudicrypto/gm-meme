@@ -2,8 +2,11 @@ import Fastify, { type FastifyBaseLogger, type FastifyError } from 'fastify';
 import type { Config } from './config';
 import { type HeliusClient, createHeliusClient } from './helius/client';
 import { startHeliusPoller } from './helius/poller';
+import { type JupiterClient, createJupiterClient } from './risk/jupiter';
+import { createRiskService } from './risk/service';
 import { healthRoutes } from './routes/health';
 import { heliusWebhookRoutes } from './routes/helius-webhook';
+import { riskRoutes } from './routes/risk';
 import { tokenRoutes } from './routes/tokens';
 import { createDiscoveryService } from './tokens/discovery';
 import { InMemoryTokenRepository } from './tokens/memory-repository';
@@ -15,6 +18,8 @@ export interface AppDeps {
   tokenRepository?: TokenRepository;
   /** Pass null to run without Helius. */
   helius?: HeliusClient | null;
+  /** Pass null to skip the Jupiter test sale. */
+  jupiter?: JupiterClient | null;
   now?: () => Date;
 }
 
@@ -52,6 +57,20 @@ export function buildApp(config: Config, deps: AppDeps = {}) {
 
   app.register(healthRoutes, { config });
   app.register(tokenRoutes, { repository, now });
+
+  if (helius) {
+    // Jupiter only routes mainnet, so on devnet the test sale is skipped.
+    const jupiter =
+      deps.jupiter !== undefined
+        ? deps.jupiter
+        : config.SOLANA_CLUSTER === 'mainnet-beta'
+          ? createJupiterClient({ baseUrl: config.JUPITER_API_URL, apiKey: config.JUPITER_API_KEY })
+          : null;
+    const risk = createRiskService({ helius, jupiter, repository, log: app.log, now });
+    app.register(riskRoutes, { risk });
+  } else {
+    app.log.warn('HELIUS_API_KEY not set: GET /tokens/:mint/risk is disabled');
+  }
 
   if (config.HELIUS_WEBHOOK_SECRET) {
     app.register(heliusWebhookRoutes, { secret: config.HELIUS_WEBHOOK_SECRET, discovery });

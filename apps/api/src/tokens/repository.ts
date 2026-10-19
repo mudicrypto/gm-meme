@@ -25,7 +25,14 @@ export interface SwapRecord {
   blockTime: string;
 }
 
+/** A stored token with everything we know about it. */
+export interface StoredToken extends TokenRecord {
+  firstSeenAt: string;
+}
+
 export interface TokenRepository {
+  /** One token, or null if we've never seen it. */
+  getToken(mint: string): Promise<StoredToken | null>;
   /** Insert or merge tokens (see mergeTokenRecord for the rules). */
   upsertTokens(tokens: readonly TokenRecord[]): Promise<void>;
   /** Record swaps; ones already stored (same signature and mint) are ignored. */

@@ -1,6 +1,7 @@
 import type { TokenSummary, TrendingToken } from '@sift/shared';
 import { createClient } from '@supabase/supabase-js';
 import {
+  type StoredToken,
   type SwapRecord,
   type TokenRecord,
   type TokenRepository,
@@ -25,6 +26,15 @@ interface TokenRow {
   first_seen_at: string | Date;
 }
 
+interface FullTokenRow extends TokenRow {
+  decimals: number | null;
+  supply: number | string | null;
+  creator: string | null;
+  launch_signature: string | null;
+  launch_source: string | null;
+  enriched_at: string | Date | null;
+}
+
 interface TrendingRow extends TokenRow {
   swap_count: number;
   unique_traders: number;
@@ -40,6 +50,20 @@ export function createSupabaseRpc(url: string, serviceRoleKey: string): RpcCalle
 
 export class SupabaseTokenRepository implements TokenRepository {
   constructor(private readonly rpc: RpcCaller) {}
+
+  async getToken(mint: string): Promise<StoredToken | null> {
+    const [row] = await this.call<FullTokenRow>('get_token', { token_mint: mint });
+    if (!row) return null;
+    return {
+      ...toSummary(row),
+      decimals: row.decimals ?? undefined,
+      supply: row.supply === null ? undefined : Number(row.supply),
+      creator: row.creator ?? undefined,
+      launchSignature: row.launch_signature ?? undefined,
+      launchSource: row.launch_source ?? undefined,
+      enrichedAt: row.enriched_at ? toIso(row.enriched_at) : undefined,
+    };
+  }
 
   async upsertTokens(records: readonly TokenRecord[]): Promise<void> {
     if (records.length === 0) return;

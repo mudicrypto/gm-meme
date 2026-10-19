@@ -1,5 +1,6 @@
 import type { SolanaCluster } from '@sift/shared';
 import { z } from 'zod';
+import type { MintInfo } from '../risk/inputs';
 
 /** Token metadata from Helius DAS, reduced to what discovery stores. */
 export interface AssetMetadata {
@@ -14,9 +15,29 @@ export interface AssetMetadata {
 export interface HeliusClient {
   /** Metadata for each mint DAS knows. Unknown mints are left out. */
   getAssetBatch(mints: readonly string[]): Promise<AssetMetadata[]>;
-  /** Latest enhanced transactions involving `address`, newest first. */
-  getAddressTransactions(address: string, options?: { limit?: number }): Promise<unknown[]>;
+  /** Latest enhanced transactions involving `address`, newest first, optionally of one type. */
+  getAddressTransactions(
+    address: string,
+    options?: { limit?: number; type?: string },
+  ): Promise<unknown[]>;
+  /** Mint account details; null if the address is not a token mint. */
+  getMint(mint: string): Promise<MintInfo | null>;
+  /** Largest token accounts (up to 20) with their owner and the owner's program. */
+  getLargestTokenAccounts(mint: string): Promise<TokenAccountHolding[]>;
 }
+
+export interface TokenAccountHolding {
+  owner: string;
+  /** Program that owns the owner account; null for plain wallets or accounts without data. */
+  ownerProgram: string | null;
+  amount: bigint;
+}
+
+const TOKEN_PROGRAMS: Record<string, MintInfo['tokenProgram']> = {
+  TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA: 'spl-token',
+  TokenzQdBNbLqP5VEhdkAS6EPFLC1PHnBqCXEpPxuEb: 'spl-token-2022',
+};
+const SYSTEM_PROGRAM = '11111111111111111111111111111111';
 
 export interface HeliusClientOptions {
   apiKey: string;
@@ -57,6 +78,48 @@ const assetSchema = z.looseObject({
     .nullish(),
 });
 
+const rpcResponse = z.object({
+  result: z.unknown().optional(),
+  error: z.object({ message: z.string() }).nullish(),
+});
+
+const parsedMintAccount = z.object({
+  owner: z.string(),
+  data: z.object({
+    parsed: z.object({
+      type: z.literal('mint'),
+      info: z.looseObject({
+        mintAuthority: z.string().nullable(),
+        freezeAuthority: z.string().nullable(),
+        supply: z.string(),
+        decimals: z.number(),
+        extensions: z
+          .array(
+            z.looseObject({
+              extension: z.string(),
+              state: z.record(z.string(), z.unknown()).optional(),
+            }),
+          )
+          .optional(),
+      }),
+    }),
+  }),
+});
+
+const largestAccounts = z.object({
+  value: z.array(z.object({ address: z.string(), amount: z.string() })),
+});
+
+const parsedTokenAccount = z.object({
+  data: z.object({
+    parsed: z.object({ info: z.looseObject({ owner: z.string() }) }),
+  }),
+});
+
+const accountOwners = z.object({
+  value: z.array(z.object({ owner: z.string() }).nullable()),
+});
+
 const assetBatchResponse = z.object({
   result: z.array(z.unknown().nullable()).nullish(),
   error: z.object({ message: z.string() }).nullish(),
@@ -78,6 +141,18 @@ export function createHeliusClient(options: HeliusClientOptions): HeliusClient {
       throw new HeliusError(`Helius HTTP ${res.status}`);
     }
     return res.json();
+  }
+
+  async function rpc(method: string, params: unknown[]): Promise<unknown> {
+    const body = rpcResponse.parse(
+      await request(rpcUrl, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ jsonrpc: '2.0', id: 'sift', method, params }),
+      }),
+    );
+    if (body.error) throw new HeliusError(`Helius ${method}: ${body.error.message}`);
+    return body.result;
   }
 
   return {
@@ -106,13 +181,76 @@ export function createHeliusClient(options: HeliusClientOptions): HeliusClient {
       return assets;
     },
 
-    async getAddressTransactions(address, { limit = 100 } = {}) {
+    async getAddressTransactions(address, { limit = 100, type } = {}) {
       const url =
         `${ENHANCED_API_URL[options.cluster]}/addresses/${encodeURIComponent(address)}/transactions` +
-        `?api-key=${encodeURIComponent(options.apiKey)}&limit=${limit}`;
+        `?api-key=${encodeURIComponent(options.apiKey)}&limit=${limit}` +
+        (type ? `&type=${encodeURIComponent(type)}` : '');
       const body = await request(url);
       if (!Array.isArray(body)) throw new HeliusError('Helius: expected an array of transactions');
       return body;
+    },
+
+    async getMint(mint) {
+      const result = z
+        .object({ value: z.unknown().nullable() })
+        .parse(await rpc('getAccountInfo', [mint, { encoding: 'jsonParsed' }]));
+      const account = parsedMintAccount.safeParse(result.value);
+      const tokenProgram = account.success ? TOKEN_PROGRAMS[account.data.owner] : undefined;
+      if (!account.success || !tokenProgram) return null;
+      const info = account.data.data.parsed.info;
+      return {
+        mintAuthority: info.mintAuthority,
+        freezeAuthority: info.freezeAuthority,
+        supply: BigInt(info.supply),
+        decimals: info.decimals,
+        tokenProgram,
+        extensions: info.extensions ?? [],
+      };
+    },
+
+    async getLargestTokenAccounts(mint) {
+      const largest = largestAccounts.parse(await rpc('getTokenLargestAccounts', [mint]));
+      if (largest.value.length === 0) return [];
+
+      // Token account -> owner wallet/PDA -> the program that owns that account.
+      const tokenAccounts = z
+        .object({ value: z.array(z.unknown().nullable()) })
+        .parse(
+          await rpc('getMultipleAccounts', [
+            largest.value.map((a) => a.address),
+            { encoding: 'jsonParsed' },
+          ]),
+        );
+      const owners = tokenAccounts.value.map((raw) => {
+        const parsed = parsedTokenAccount.safeParse(raw);
+        return parsed.success ? parsed.data.data.parsed.info.owner : null;
+      });
+      const knownOwners = [...new Set(owners.filter((o): o is string => o !== null))];
+      const ownerAccounts = accountOwners.parse(
+        await rpc('getMultipleAccounts', [
+          knownOwners,
+          { encoding: 'base64', dataSlice: { offset: 0, length: 0 } },
+        ]),
+      );
+      const programByOwner = new Map(
+        knownOwners.map((owner, i) => {
+          const program = ownerAccounts.value[i]?.owner ?? null;
+          return [owner, program === SYSTEM_PROGRAM ? null : program];
+        }),
+      );
+
+      return largest.value.flatMap((account, i) => {
+        const owner = owners[i];
+        if (!owner) return [];
+        return [
+          {
+            owner,
+            ownerProgram: programByOwner.get(owner) ?? null,
+            amount: BigInt(account.amount),
+          },
+        ];
+      });
     },
   };
 }

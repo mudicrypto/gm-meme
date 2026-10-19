@@ -223,4 +223,13 @@ describe('Step 5 routes', () => {
       400,
     );
   });
+
+  it('stores and scores holdings Sift has not checked, so the next view has badges', async () => {
+    await vi.waitFor(async () => {
+      const res = await app.inject({ method: 'GET', url: `/wallets/${ALICE}/holdings` });
+      const holding = res.json<HoldingsResponse>().holdings.find((h) => h.mint === MINT_B);
+      expect(holding?.riskLevel).toBe('red'); // fake mint has a freeze authority
+    });
+    expect(await repository.getToken(MINT_B)).toMatchObject({ mint: MINT_B });
+  });
 });

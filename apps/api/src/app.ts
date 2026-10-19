@@ -1,3 +1,4 @@
+import cors from '@fastify/cors';
 import Fastify, { type FastifyBaseLogger, type FastifyError } from 'fastify';
 import type { Config } from './config';
 import { type HeliusClient, createHeliusClient } from './helius/client';
@@ -42,6 +43,9 @@ export function buildApp(config: Config, deps: AppDeps = {}) {
   });
 
   // Don't leak internal error messages (database, upstream APIs) to clients.
+  // Only for the web build; GET-only, no cookies or credentials.
+  app.register(cors, { origin: config.CORS_ORIGINS, methods: ['GET'] });
+
   app.setErrorHandler<FastifyError>((error, request, reply) => {
     const statusCode = error.statusCode ?? 500;
     if (statusCode >= 500) {
@@ -87,7 +91,11 @@ export function buildApp(config: Config, deps: AppDeps = {}) {
     const riskQueue = createRiskQueue({ risk, log: app.log });
     onLaunched = (mints) => riskQueue.enqueue(mints);
     app.register(riskRoutes, { risk });
-    app.register(walletRoutes, { helius, repository });
+    app.register(walletRoutes, {
+      helius,
+      repository,
+      scoreLater: (mints) => riskQueue.enqueue(mints),
+    });
 
     const summaryModel =
       deps.summaryModel !== undefined

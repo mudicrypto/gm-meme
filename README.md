@@ -127,6 +127,23 @@ trading activity; results are cached for 5 minutes. Safeguards:
 - If Claude declines, fails or is not configured, a rules-based summary built from the risk
   checks is returned instead (`"source": "rules"`).
 
+## Mobile app (Step 5)
+
+Three screens, built with Expo Router (`apps/mobile/src/app/`):
+
+- **Discover**: Trending (most distinct traders in the last hour) and New launches, each with a
+  risk badge. New tokens are scored in the background as they're discovered.
+- **Token**: price and chart (from trades Sift recorded), the plain-language summary, the risk
+  checks, and Buy/Sell (disabled until wallet connection in Step 6).
+- **Portfolio**: watch any wallet address, read-only, with risk badges for its tokens.
+
+**Simple / Pro** (top right, remembered on the device): Simple shows the essentials in plain
+words; Pro adds every check, volumes and full addresses. Badges never say "safe": green reads
+"No red flags".
+
+Run it with `pnpm dev:api` and `pnpm dev:mobile`, then open it in Expo Go, or press `w` for the
+web version (the API allows `http://localhost:8081` via `CORS_ORIGINS`).
+
 ## Scripts
 
 | Command           | What it does                                  |

@@ -30,7 +30,10 @@ export function rulesSummary(input: SummaryInput): { summary: string; redFlags: 
     ? `The biggest concern: ${lowerFirst(firstSentence(top.message))}`
     : 'Like most meme coins, its price can still fall sharply.';
 
-  return { summary: `${trading} ${checks} ${risk}`, redFlags: flagged.map((r) => r.message) };
+  return {
+    summary: `${trading} ${checks} ${risk}`,
+    redFlags: flagged.map((r) => firstSentence(r.message)),
+  };
 }
 
 function count(n: number, noun: string): string {

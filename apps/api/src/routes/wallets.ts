@@ -9,11 +9,16 @@ const params = z.object({
   address: z.string().refine(isSolanaAddress, { message: 'not a Solana address' }),
 });
 
+/** Holdings without a stored risk level that get scored per request. */
+const MAX_SCORED_PER_REQUEST = 20;
+
 /** Read-only view of a wallet's tokens. Public chain data; no keys involved. */
 export const walletRoutes: FastifyPluginAsync<{
   helius: HeliusClient;
   repository: TokenRepository;
-}> = async (app, { helius, repository }) => {
+  /** Queue tokens for background risk scoring. */
+  scoreLater: (mints: string[]) => void;
+}> = async (app, { helius, repository, scoreLater }) => {
   app.get(
     '/wallets/:address/holdings',
     async (request, reply): Promise<HoldingsResponse | undefined> => {
@@ -21,6 +26,20 @@ export const walletRoutes: FastifyPluginAsync<{
       if (!p) return;
       const { lamports, tokens } = await helius.getWalletHoldings(p.address);
       const levels = await repository.getRiskLevels(tokens.map((t) => t.mint));
+
+      // Tokens Sift hasn't scored yet: store what DAS told us (risk levels attach to
+      // stored tokens), then score them in the background so the next view has badges.
+      const unscored = tokens.filter((t) => !levels.has(t.mint)).slice(0, MAX_SCORED_PER_REQUEST);
+      if (unscored.length > 0) {
+        await repository.upsertTokens(
+          unscored.map(({ amount: _amount, ...metadata }) => ({
+            ...metadata,
+            enrichedAt: new Date().toISOString(),
+          })),
+        );
+        scoreLater(unscored.map((t) => t.mint));
+      }
+
       reply.header('cache-control', 'private, max-age=15');
       return {
         address: p.address,

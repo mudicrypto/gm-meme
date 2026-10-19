@@ -17,3 +17,26 @@ describe('GET /health', () => {
     expect(res.statusCode).toBe(404);
   });
 });
+
+describe('CORS', () => {
+  const app = buildApp(loadConfig({ LOG_LEVEL: 'silent', CORS_ORIGINS: 'http://localhost:8081' }));
+  afterAll(() => app.close());
+
+  it('allows the configured web origin', async () => {
+    const res = await app.inject({
+      method: 'GET',
+      url: '/health',
+      headers: { origin: 'http://localhost:8081' },
+    });
+    expect(res.headers['access-control-allow-origin']).toBe('http://localhost:8081');
+  });
+
+  it('does not allow other origins', async () => {
+    const res = await app.inject({
+      method: 'GET',
+      url: '/health',
+      headers: { origin: 'https://evil.example' },
+    });
+    expect(res.headers['access-control-allow-origin']).toBeUndefined();
+  });
+});

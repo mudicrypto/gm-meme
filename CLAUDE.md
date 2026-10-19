@@ -62,6 +62,10 @@ read `apps/mobile/AGENTS.md` before touching Expo APIs.
   in-memory store and the real SQL (PGlite), so keep both in step.
 - Data from Helius (names, symbols, image URLs) is attacker-controlled: validate it with zod,
   cap lengths, and only pass on `https:` URLs.
+- Mobile: screens in `apps/mobile/src/app/` (Expo Router), components in `src/components/`, pure
+  logic in `src/lib/` with Vitest tests. Inside `<Link asChild>`, give the child one flat style
+  object (`StyleSheet.flatten`): on web it lands on an `<a>`, which can't take arrays or
+  functions. Never label a token "safe".
 - Types used by both app and API live in `packages/shared`. It ships TypeScript source; the API
   bundles it with tsup and Metro resolves it directly.
 - The risk score is the core of the product: keep it in our own code, each check pure and unit

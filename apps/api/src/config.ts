@@ -56,6 +56,16 @@ const ConfigSchema = z
     ANTHROPIC_API_KEY: optionalSecret,
     // Model for AI token summaries.
     SUMMARY_MODEL: z.string().min(1).default('claude-opus-5-5'),
+    // Browser origins allowed to call the API (the native app needs none). Comma-separated.
+    CORS_ORIGINS: z
+      .string()
+      .default('http://localhost:8081')
+      .transform((value) =>
+        value
+          .split(',')
+          .map((origin) => origin.trim())
+          .filter(Boolean),
+      ),
   })
   .refine((config) => !config.SUPABASE_URL === !config.SUPABASE_SERVICE_ROLE_KEY, {
     message: 'set both SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY, or neither',

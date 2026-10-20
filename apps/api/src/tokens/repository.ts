@@ -71,6 +71,8 @@ export interface TokenRepository {
   getRiskLevels(mints: readonly string[]): Promise<Map<string, RiskLevel>>;
   /** Priced trades since `since`, oldest first. */
   getTrades(mint: string, since: Date, limit: number): Promise<PricedTrade[]>;
+  /** Latest known price (SOL per whole token) for the mints that have one. */
+  getLatestPrices(mints: readonly string[]): Promise<Map<string, number>>;
   /** Tokens ranked by distinct traders since `since`. */
   listTrending(options: { since: Date; limit: number }): Promise<TrendingToken[]>;
 }

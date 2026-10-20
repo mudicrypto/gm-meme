@@ -206,6 +206,40 @@ describe.each(implementations)('TokenRepository: %s', (_name, create) => {
     expect(await repo.getTrades(MINT_A, new Date(at(10)), 1)).toHaveLength(1);
   });
 
+  it('gives the latest known price per token', async () => {
+    await repo.upsertTokens([{ mint: MINT_A }, { mint: MINT_B }]);
+    await repo.recordSwaps([
+      {
+        signature: 'l1',
+        mint: MINT_A,
+        trader: ALICE,
+        volumeSol: 1,
+        tokenAmount: 1000,
+        blockTime: at(30),
+      },
+      {
+        signature: 'l2',
+        mint: MINT_A,
+        trader: BOB,
+        volumeSol: 3,
+        tokenAmount: 1000,
+        blockTime: at(40),
+      },
+      { signature: 'l3', mint: MINT_A, trader: CAROL, volumeSol: 9, blockTime: at(50) }, // no amount
+      {
+        signature: 'l4',
+        mint: MINT_B,
+        trader: ALICE,
+        volumeSol: 1,
+        tokenAmount: 4,
+        blockTime: at(10),
+      },
+    ]);
+    const prices = await repo.getLatestPrices([MINT_A, MINT_B, MINT_C]);
+    expect(Object.fromEntries(prices)).toEqual({ [MINT_A]: 0.003, [MINT_B]: 0.25 });
+    expect((await repo.getLatestPrices([])).size).toBe(0);
+  });
+
   it('ignores redelivered swaps', async () => {
     await repo.upsertTokens([{ mint: MINT_A }]);
     const swap = { signature: 's1', mint: MINT_A, trader: ALICE, volumeSol: 1, blockTime: at(30) };
@@ -246,9 +280,17 @@ describe('Supabase SQL permissions', () => {
     const { rows } = await db.query<{ relname: string; relrowsecurity: boolean }>(`
       select relname, relrowsecurity from pg_class
       where relnamespace = 'public'::regnamespace and relkind = 'r' order by relname`);
-    expect(rows).toEqual([
-      { relname: 'token_swaps', relrowsecurity: true },
-      { relname: 'tokens', relrowsecurity: true },
+    expect(rows.map((row) => row.relname)).toEqual([
+      'follows',
+      'price_alerts',
+      'profiles',
+      'push_tokens',
+      'sessions',
+      'shared_trades',
+      'token_swaps',
+      'tokens',
+      'watchlist',
     ]);
+    expect(rows.every((row) => row.relrowsecurity)).toBe(true);
   });
 });

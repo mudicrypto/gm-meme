@@ -32,6 +32,20 @@ export interface TradeService {
   status(signature: string): Promise<TradeStatusResponse>;
 }
 
+/** A trade Sift relayed that the network confirmed. */
+export interface ConfirmedTrade {
+  signature: string;
+  wallet: string;
+  mint: string;
+  side: 'buy' | 'sell';
+  /** SOL into the curve (buy) or out of it (sell), as quoted. */
+  solLamports: number;
+  /** Base units. */
+  tokenAmount: string;
+  tokenDecimals: number;
+  at: string;
+}
+
 export interface TradeServiceOptions {
   connection: Connection;
   pump: PumpTrader;
@@ -43,6 +57,10 @@ export interface TradeServiceOptions {
   now?: () => Date;
   /** How long a quote can be signed and submitted; blockhashes expire after ~60–90s. */
   quoteTtlMs?: number;
+  /** Called once a relayed trade confirms (for the friends feed). Off when unset. */
+  onConfirmed?: (trade: ConfirmedTrade) => Promise<void> | void;
+  /** Wait between confirmation checks; injectable for tests. */
+  sleep?: (ms: number) => Promise<void>;
 }
 
 const SIGNATURE_FEE_LAMPORTS = 5000;
@@ -53,13 +71,37 @@ interface IssuedQuote {
   message: Uint8Array;
   wallet: string;
   expiresAt: number;
+  trade: Omit<ConfirmedTrade, 'signature' | 'at'>;
 }
+
+const CONFIRM_POLL_MS = 2000;
+const CONFIRM_POLLS = 45;
 
 export function createTradeService(options: TradeServiceOptions): TradeService {
   const now = options.now ?? (() => new Date());
   const ttlMs = options.quoteTtlMs ?? 75_000;
   const issued = new Map<string, IssuedQuote>();
   const { connection } = options;
+  const sleep = options.sleep ?? ((ms: number) => new Promise((r) => setTimeout(r, ms)));
+
+  // Follow a relayed trade until it confirms or fails, then report it once.
+  async function watchConfirmation(signature: string, trade: IssuedQuote['trade']) {
+    const onConfirmed = options.onConfirmed;
+    if (!onConfirmed) return;
+    try {
+      for (let i = 0; i < CONFIRM_POLLS; i++) {
+        await sleep(CONFIRM_POLL_MS);
+        const { value } = await connection.getSignatureStatuses([signature]);
+        const status = value[0];
+        if (!status || status.confirmationStatus === 'processed') continue;
+        if (status.err) return;
+        await onConfirmed({ ...trade, signature, at: now().toISOString() });
+        return;
+      }
+    } catch (err) {
+      options.log?.error({ err, signature }, 'could not follow trade confirmation');
+    }
+  }
 
   // Solana won't create an account below the rent-exempt minimum, so while the fee wallet
   // is empty, a small fee transfer would make every trade fail. Until it's funded we charge
@@ -247,6 +289,14 @@ export function createTradeService(options: TradeServiceOptions): TradeService {
         message: tx.message.serialize(),
         wallet: request.wallet,
         expiresAt: now().getTime() + ttlMs,
+        trade: {
+          wallet: request.wallet,
+          mint: request.mint,
+          side: request.side,
+          solLamports: expected,
+          tokenAmount: quote.tokenAmount,
+          tokenDecimals: quote.tokenDecimals,
+        },
       });
       return quote;
     },
@@ -285,7 +335,12 @@ export function createTradeService(options: TradeServiceOptions): TradeService {
 
       issued.delete(quoteId);
       try {
-        return await connection.sendRawTransaction(bytes, { skipPreflight: false, maxRetries: 3 });
+        const sent = await connection.sendRawTransaction(bytes, {
+          skipPreflight: false,
+          maxRetries: 3,
+        });
+        void watchConfirmation(sent, quote.trade);
+        return sent;
       } catch (err) {
         throw new TradeError(
           'SEND_FAILED',

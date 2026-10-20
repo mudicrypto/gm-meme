@@ -17,7 +17,7 @@ import {
   VersionedTransaction,
 } from '@solana/web3.js';
 import BN from 'bn.js';
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 import { TradeError } from '../src/trading/errors';
 import { createTradeService } from '../src/trading/service';
 import {
@@ -181,6 +181,50 @@ describe('submitting signed trades', () => {
     await expect(service.submit(q.quoteId, sign(q))).rejects.toMatchObject({
       code: 'QUOTE_NOT_FOUND',
     });
+  });
+
+  it('reports a relayed trade once it confirms, and not one that failed', async () => {
+    const confirmed: unknown[] = [];
+    const connection = fakeConnection();
+    const service = createTradeService({
+      connection: asConnection(connection),
+      pump: fakePumpTrader(),
+      estimatePriorityFee: async () => 50_000,
+      feeWallet: FEE_WALLET,
+      platformFeeBps: 50,
+      onConfirmed: (trade) => void confirmed.push(trade),
+      sleep: async () => {},
+      now: () => new Date('2026-10-20T10:00:00Z'),
+    });
+    const q = await service.quote(buyRequest);
+    const signature = await service.submit(q.quoteId, sign(q));
+    await vi.waitFor(() => expect(confirmed).toHaveLength(1));
+    expect(confirmed[0]).toEqual({
+      signature,
+      wallet,
+      mint: MINT.toBase58(),
+      side: 'buy',
+      solLamports: q.expectedLamports,
+      tokenAmount: q.tokenAmount,
+      tokenDecimals: 6,
+      at: '2026-10-20T10:00:00.000Z',
+    });
+
+    connection.getSignatureStatuses.mockResolvedValue({
+      context: { slot: 1 },
+      value: [
+        {
+          confirmationStatus: 'confirmed',
+          err: { InstructionError: [2, 'x'] },
+          slot: 1,
+          confirmations: 1,
+        },
+      ],
+    } as never);
+    const failed = await service.quote(buyRequest);
+    await service.submit(failed.quoteId, sign(failed));
+    await new Promise((r) => setTimeout(r, 20));
+    expect(confirmed).toHaveLength(1);
   });
 
   it('refuses a transaction signed by someone else', async () => {

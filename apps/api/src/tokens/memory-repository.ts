@@ -107,6 +107,28 @@ export class InMemoryTokenRepository implements TokenRepository {
     };
   }
 
+  async getLatestPrices(mints: readonly string[]): Promise<Map<string, number>> {
+    const wanted = new Set(mints);
+    const latest = new Map<string, { at: number; signature: string; price: number }>();
+    for (const swap of this.swaps.values()) {
+      if (!wanted.has(swap.mint) || !(swap.tokenAmount! > 0) || !(swap.volumeSol! > 0)) continue;
+      const at = Date.parse(swap.blockTime);
+      const current = latest.get(swap.mint);
+      if (
+        !current ||
+        at > current.at ||
+        (at === current.at && swap.signature < current.signature)
+      ) {
+        latest.set(swap.mint, {
+          at,
+          signature: swap.signature,
+          price: swap.volumeSol! / swap.tokenAmount!,
+        });
+      }
+    }
+    return new Map([...latest].map(([mint, entry]) => [mint, entry.price]));
+  }
+
   async listTrending({ since, limit }: { since: Date; limit: number }): Promise<TrendingToken[]> {
     const stats = new Map<string, { swapCount: number; traders: Set<string>; volumeSol: number }>();
     for (const swap of this.swaps.values()) {

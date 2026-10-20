@@ -152,6 +152,14 @@ export class SupabaseTokenRepository implements TokenRepository {
     };
   }
 
+  async getLatestPrices(mints: readonly string[]): Promise<Map<string, number>> {
+    if (mints.length === 0) return new Map();
+    const rows = await this.call<{ mint: string; price_sol: number | string }>('latest_prices', {
+      mints: [...mints],
+    });
+    return new Map(rows.map((row) => [row.mint, Number(row.price_sol)]));
+  }
+
   async listTrending({ since, limit }: { since: Date; limit: number }): Promise<TrendingToken[]> {
     const rows = await this.call<TrendingRow>('trending_tokens', {
       since: since.toISOString(),

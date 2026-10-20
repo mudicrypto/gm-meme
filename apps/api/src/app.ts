@@ -10,10 +10,18 @@ import { type SummaryModel, createClaudeSummaryModel } from './summary/claude';
 import { createSummaryService } from './summary/service';
 import { type Airdrop, createAirdrop, createDefaultTradeService } from './trading/factory';
 import type { TradeService } from './trading/service';
+import { createAuth } from './social/auth';
+import { startAlertChecker } from './social/alerts';
+import { InMemorySocialRepository } from './social/memory-repository';
+import { type PushSender, createExpoPushSender } from './social/push';
+import type { SocialRepository } from './social/repository';
+import { createSocialService } from './social/service';
+import { SupabaseSocialRepository } from './social/supabase-repository';
 import { healthRoutes } from './routes/health';
 import { chartRoutes } from './routes/chart';
 import { heliusWebhookRoutes } from './routes/helius-webhook';
 import { riskRoutes } from './routes/risk';
+import { socialRoutes } from './routes/social';
 import { summaryRoutes } from './routes/summary';
 import { tokenRoutes } from './routes/tokens';
 import { tradeRoutes } from './routes/trades';
@@ -26,6 +34,9 @@ import { SupabaseTokenRepository, createSupabaseRpc } from './tokens/supabase-re
 /** Overrides for tests. Anything left out is built from config. */
 export interface AppDeps {
   tokenRepository?: TokenRepository;
+  socialRepository?: SocialRepository;
+  /** Pass null to skip push notifications. */
+  push?: PushSender | null;
   /** Pass null to run without Helius. */
   helius?: HeliusClient | null;
   /** Pass null to skip the Jupiter test sale. */
@@ -49,11 +60,11 @@ export function buildApp(config: Config, deps: AppDeps = {}) {
   });
 
   // Don't leak internal error messages (database, upstream APIs) to clients.
-  // Only for the web build; GET-only, no cookies or credentials.
+  // Only for the web build. Sign-in uses bearer tokens, never cookies.
   app.register(cors, {
     origin: config.CORS_ORIGINS,
-    methods: ['GET', 'POST'],
-    allowedHeaders: ['content-type'],
+    methods: ['GET', 'POST', 'PUT', 'DELETE'],
+    allowedHeaders: ['content-type', 'authorization'],
   });
 
   app.setErrorHandler<FastifyError>((error, request, reply) => {
@@ -74,6 +85,36 @@ export function buildApp(config: Config, deps: AppDeps = {}) {
         ? createHeliusClient({ apiKey: config.HELIUS_API_KEY, cluster: config.SOLANA_CLUSTER })
         : null;
   if (!helius) app.log.warn('HELIUS_API_KEY not set: tokens will be stored without metadata');
+
+  const socialRepository = deps.socialRepository ?? createSocialRepository(config, app.log);
+  const auth = createAuth({ repository: socialRepository, now });
+  const social = createSocialService({ social: socialRepository, tokens: repository, now });
+  app.register(socialRoutes, { auth, social });
+
+  const push =
+    deps.push !== undefined
+      ? deps.push
+      : createExpoPushSender({ accessToken: config.EXPO_ACCESS_TOKEN });
+  if (config.ALERT_CHECK_INTERVAL_MS > 0) {
+    let stopAlerts: (() => void) | undefined;
+    app.addHook('onReady', async () => {
+      stopAlerts = startAlertChecker({
+        social: socialRepository,
+        tokens: repository,
+        push,
+        intervalMs: config.ALERT_CHECK_INTERVAL_MS,
+        log: app.log,
+        now,
+      });
+    });
+    app.addHook('onClose', async () => stopAlerts?.());
+  }
+  // Trades made in Sift go to followers' feeds, for people who opted in to sharing.
+  const recordTrade = (trade: Parameters<SocialRepository['recordTrade']>[0]) =>
+    socialRepository.recordTrade(trade).then(
+      () => undefined,
+      (err: unknown) => app.log.error({ err }, 'could not record shared trade'),
+    );
 
   app.register(healthRoutes, { config });
   app.register(tokenRoutes, { repository, now });
@@ -112,7 +153,7 @@ export function buildApp(config: Config, deps: AppDeps = {}) {
       deps.tradeService !== undefined
         ? deps.tradeService
         : tradingEnabled && config.HELIUS_API_KEY
-          ? createDefaultTradeService(config, config.HELIUS_API_KEY, app.log)
+          ? createDefaultTradeService(config, config.HELIUS_API_KEY, app.log, recordTrade)
           : null;
     if (!trades)
       app.log.warn('trading disabled (mainnet needs ALLOW_MAINNET_TRADING after Step 8)');
@@ -169,6 +210,16 @@ export function buildApp(config: Config, deps: AppDeps = {}) {
   }
 
   return app;
+}
+
+function createSocialRepository(config: Config, log: FastifyBaseLogger): SocialRepository {
+  if (config.SUPABASE_URL && config.SUPABASE_SERVICE_ROLE_KEY) {
+    return new SupabaseSocialRepository(
+      createSupabaseRpc(config.SUPABASE_URL, config.SUPABASE_SERVICE_ROLE_KEY),
+    );
+  }
+  log.warn('Supabase not configured: profiles and sign-ins are in memory (lost on restart)');
+  return new InMemorySocialRepository();
 }
 
 function createTokenRepository(config: Config, log: FastifyBaseLogger): TokenRepository {

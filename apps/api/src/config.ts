@@ -70,6 +70,14 @@ const ConfigSchema = z
       .enum(['true', 'false'])
       .default('false')
       .transform((value) => value === 'true'),
+    // How often to check price alerts. 0 = off.
+    ALERT_CHECK_INTERVAL_MS: z.coerce
+      .number()
+      .int()
+      .refine((ms) => ms === 0 || ms >= 10_000, { message: 'must be 0 (off) or at least 10000' })
+      .default(60_000),
+    // Optional: Expo push access token, if "enhanced push security" is on for the project.
+    EXPO_ACCESS_TOKEN: optionalSecret,
     // Browser origins allowed to call the API (the native app needs none). Comma-separated.
     CORS_ORIGINS: z
       .string()

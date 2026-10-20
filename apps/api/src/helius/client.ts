@@ -145,10 +145,15 @@ export class HeliusError extends Error {
   override name = 'HeliusError';
 }
 
+/** Helius' Solana RPC endpoint for a cluster. Carries the API key: never log it. */
+export function heliusRpcUrl(cluster: SolanaCluster, apiKey: string): string {
+  return `${RPC_URL[cluster]}?api-key=${encodeURIComponent(apiKey)}`;
+}
+
 export function createHeliusClient(options: HeliusClientOptions): HeliusClient {
   const fetchFn = options.fetch ?? fetch;
   const timeoutMs = options.timeoutMs ?? 10_000;
-  const rpcUrl = `${RPC_URL[options.cluster]}?api-key=${encodeURIComponent(options.apiKey)}`;
+  const rpcUrl = heliusRpcUrl(options.cluster, options.apiKey);
 
   async function request(url: string, init?: RequestInit): Promise<unknown> {
     const res = await fetchFn(url, { ...init, signal: AbortSignal.timeout(timeoutMs) });

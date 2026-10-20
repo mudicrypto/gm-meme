@@ -8,12 +8,15 @@ import { createRiskQueue } from './risk/queue';
 import { createRiskService } from './risk/service';
 import { type SummaryModel, createClaudeSummaryModel } from './summary/claude';
 import { createSummaryService } from './summary/service';
+import { type Airdrop, createAirdrop, createDefaultTradeService } from './trading/factory';
+import type { TradeService } from './trading/service';
 import { healthRoutes } from './routes/health';
 import { chartRoutes } from './routes/chart';
 import { heliusWebhookRoutes } from './routes/helius-webhook';
 import { riskRoutes } from './routes/risk';
 import { summaryRoutes } from './routes/summary';
 import { tokenRoutes } from './routes/tokens';
+import { tradeRoutes } from './routes/trades';
 import { walletRoutes } from './routes/wallets';
 import { createDiscoveryService } from './tokens/discovery';
 import { InMemoryTokenRepository } from './tokens/memory-repository';
@@ -29,6 +32,9 @@ export interface AppDeps {
   jupiter?: JupiterClient | null;
   /** Pass null for rules-only summaries. */
   summaryModel?: SummaryModel | null;
+  /** Pass null to disable trading. */
+  tradeService?: TradeService | null;
+  airdrop?: Airdrop;
   now?: () => Date;
 }
 
@@ -44,7 +50,11 @@ export function buildApp(config: Config, deps: AppDeps = {}) {
 
   // Don't leak internal error messages (database, upstream APIs) to clients.
   // Only for the web build; GET-only, no cookies or credentials.
-  app.register(cors, { origin: config.CORS_ORIGINS, methods: ['GET'] });
+  app.register(cors, {
+    origin: config.CORS_ORIGINS,
+    methods: ['GET', 'POST'],
+    allowedHeaders: ['content-type'],
+  });
 
   app.setErrorHandler<FastifyError>((error, request, reply) => {
     const statusCode = error.statusCode ?? 500;
@@ -95,6 +105,23 @@ export function buildApp(config: Config, deps: AppDeps = {}) {
       helius,
       repository,
       scoreLater: (mints) => riskQueue.enqueue(mints),
+    });
+
+    const tradingEnabled = config.SOLANA_CLUSTER === 'devnet' || config.ALLOW_MAINNET_TRADING;
+    const trades =
+      deps.tradeService !== undefined
+        ? deps.tradeService
+        : tradingEnabled && config.HELIUS_API_KEY
+          ? createDefaultTradeService(config, config.HELIUS_API_KEY)
+          : null;
+    if (!trades)
+      app.log.warn('trading disabled (mainnet needs ALLOW_MAINNET_TRADING after Step 8)');
+    app.register(tradeRoutes, {
+      trades,
+      cluster: config.SOLANA_CLUSTER,
+      platformFeeBps: config.FEE_WALLET ? config.PLATFORM_FEE_BPS : 0,
+      feeWallet: config.FEE_WALLET ?? null,
+      airdrop: config.SOLANA_CLUSTER === 'devnet' ? (deps.airdrop ?? createAirdrop(config)) : null,
     });
 
     const summaryModel =

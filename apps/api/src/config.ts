@@ -57,6 +57,20 @@ const ConfigSchema = z
     // Model for AI token summaries.
     SUMMARY_MODEL: z.string().min(1).default('claude-opus-5-5'),
     // Browser origins allowed to call the API (the native app needs none). Comma-separated.
+    // Platform fee: a public address you control (never a key). Unset = no fee.
+    FEE_WALLET: z
+      .string()
+      .optional()
+      .transform((value) => (value ? value : undefined))
+      .refine((value) => value === undefined || isSolanaAddress(value), {
+        message: 'not a Solana address',
+      }),
+    PLATFORM_FEE_BPS: z.coerce.number().int().min(0).max(100).default(50),
+    // Trading stays devnet-only until the security review (Step 8) sets this.
+    ALLOW_MAINNET_TRADING: z
+      .enum(['true', 'false'])
+      .default('false')
+      .transform((value) => value === 'true'),
     CORS_ORIGINS: z
       .string()
       .default('http://localhost:8081')

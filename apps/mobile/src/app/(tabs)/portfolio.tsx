@@ -12,7 +12,8 @@ import { api } from '../../lib/api';
 import { formatCompact, shortAddress } from '../../lib/format';
 import { useMode } from '../../lib/mode';
 import { RISK_COLORS, usePalette } from '../../lib/theme';
-import { useWallet } from '../../lib/wallet';
+import { cancelPhantomRequest, isCancelled } from '../../lib/phantom';
+import { type WalletKind, useWallet } from '../../lib/wallet';
 
 const WATCH_KEY = 'sift.watchedWallet';
 
@@ -35,8 +36,8 @@ export default function PortfolioScreen() {
   if (wallet.status === 'loading') return <Loading />;
   return (
     <ScrollView contentContainerStyle={styles.screen}>
-      {wallet.address ? (
-        <OwnWallet address={wallet.address} />
+      {wallet.address && wallet.kind ? (
+        <OwnWallet address={wallet.address} kind={wallet.kind} />
       ) : (
         <>
           <CreateWallet />
@@ -77,18 +78,95 @@ function CreateWallet() {
       >
         <Text style={[styles.buttonText, { color: palette.accentText }]}>Create wallet</Text>
       </Pressable>
-      <Text style={{ color: palette.muted, fontSize: 13 }}>Connecting Phantom is coming next.</Text>
+      <ConnectPhantom />
     </Card>
   );
 }
 
-function OwnWallet({ address }: { address: string }) {
+function ConnectPhantom({ secondary = true }: { secondary?: boolean }) {
   const palette = usePalette();
   const wallet = useWallet();
+  const config = useQuery({ queryKey: ['config'], queryFn: api.config, staleTime: Infinity });
+  const connect = useMutation({
+    mutationFn: () => wallet.connectPhantom(config.data?.cluster ?? 'devnet'),
+  });
+  if (!wallet.phantomAvailable) {
+    return (
+      <Text style={{ color: palette.muted, fontSize: 13 }}>
+        Phantom connects in the Sift mobile app.
+      </Text>
+    );
+  }
+  return (
+    <>
+      <Pressable
+        disabled={connect.isPending}
+        onPress={() => connect.mutate()}
+        style={[
+          secondary ? styles.secondary : styles.button,
+          secondary ? { borderColor: palette.border } : { backgroundColor: palette.accent },
+          { opacity: connect.isPending ? 0.5 : 1 },
+        ]}
+      >
+        <Text
+          style={
+            secondary
+              ? { color: palette.text, fontWeight: '600' }
+              : [styles.buttonText, { color: palette.accentText }]
+          }
+        >
+          {connect.isPending ? 'Waiting for Phantom…' : 'Connect Phantom'}
+        </Text>
+      </Pressable>
+      {connect.isPending ? (
+        <Pressable onPress={cancelPhantomRequest}>
+          <Text style={[styles.center, { color: palette.muted }]}>Cancel</Text>
+        </Pressable>
+      ) : null}
+      {connect.isError && !isCancelled(connect.error) ? (
+        <Text style={{ color: palette.down }}>{connect.error.message}</Text>
+      ) : null}
+    </>
+  );
+}
+
+function WalletSwitch({ kind }: { kind: WalletKind }) {
+  const palette = usePalette();
+  const wallet = useWallet();
+  if (!wallet.embeddedAddress || !wallet.phantomAddress) return null;
+  const options: { kind: WalletKind; label: string }[] = [
+    { kind: 'embedded', label: 'This phone' },
+    { kind: 'phantom', label: 'Phantom' },
+  ];
+  return (
+    <View style={[styles.switch, { borderColor: palette.border }]}>
+      {options.map((option) => (
+        <Pressable
+          key={option.kind}
+          onPress={() => wallet.use(option.kind)}
+          style={[
+            styles.switchOption,
+            option.kind === kind ? { backgroundColor: palette.accent } : null,
+          ]}
+        >
+          <Text
+            style={{
+              color: option.kind === kind ? palette.accentText : palette.text,
+              fontWeight: '600',
+            }}
+          >
+            {option.label}
+          </Text>
+        </Pressable>
+      ))}
+    </View>
+  );
+}
+
+function OwnWallet({ address, kind }: { address: string; kind: WalletKind }) {
+  const palette = usePalette();
   const queryClient = useQueryClient();
   const config = useQuery({ queryKey: ['config'], queryFn: api.config, staleTime: Infinity });
-  const [secret, setSecret] = useState<string | null>(null);
-  const [confirmRemove, setConfirmRemove] = useState(false);
   const airdrop = useMutation({
     mutationFn: () => api.airdrop(address),
     onSuccess: () =>
@@ -100,7 +178,8 @@ function OwnWallet({ address }: { address: string }) {
 
   return (
     <>
-      <Holdings address={address} title="Your wallet" />
+      <WalletSwitch kind={kind} />
+      <Holdings address={address} title={kind === 'phantom' ? 'Phantom wallet' : 'Your wallet'} />
 
       {config.data?.cluster === 'devnet' ? (
         <Card title="Test SOL">
@@ -125,6 +204,55 @@ function OwnWallet({ address }: { address: string }) {
           {airdrop.isError ? (
             <Text style={{ color: palette.down }}>{airdrop.error.message}</Text>
           ) : null}
+        </Card>
+      ) : null}
+
+      {kind === 'phantom' ? <PhantomWallet /> : <EmbeddedWallet />}
+    </>
+  );
+}
+
+function PhantomWallet() {
+  const palette = usePalette();
+  const wallet = useWallet();
+  return (
+    <>
+      <Card title="Connected with Phantom">
+        <Text style={{ color: palette.muted }}>
+          Your keys stay in Phantom. Sift shows you the full cost first, then Phantom asks you to
+          approve each trade.
+        </Text>
+      </Card>
+      {!wallet.embeddedAddress ? (
+        <Pressable onPress={() => void wallet.create()}>
+          <Text style={[styles.center, { color: palette.accent }]}>
+            Also create a wallet on this phone
+          </Text>
+        </Pressable>
+      ) : null}
+      <Pressable onPress={() => void wallet.disconnectPhantom()}>
+        <Text style={[styles.center, { color: palette.down }]}>Disconnect Phantom</Text>
+      </Pressable>
+      <Text style={{ color: palette.muted, fontSize: 13, textAlign: 'center' }}>
+        Your wallet and funds stay in Phantom.
+      </Text>
+    </>
+  );
+}
+
+function EmbeddedWallet() {
+  const palette = usePalette();
+  const wallet = useWallet();
+  const [secret, setSecret] = useState<string | null>(null);
+  const [confirmRemove, setConfirmRemove] = useState(false);
+  return (
+    <>
+      {!wallet.phantomAddress && wallet.phantomAvailable ? (
+        <Card title="Use Phantom instead">
+          <Text style={{ color: palette.muted }}>
+            Already have Phantom? Connect it to trade from that wallet. Your keys stay in Phantom.
+          </Text>
+          <ConnectPhantom />
         </Card>
       ) : null}
 
@@ -303,6 +431,8 @@ function HoldingRow({ item }: { item: Holding }) {
 }
 
 const styles = StyleSheet.create({
+  switch: { flexDirection: 'row', borderWidth: 1, borderRadius: 12, padding: 3 },
+  switchOption: { flex: 1, alignItems: 'center', paddingVertical: 8, borderRadius: 9 },
   screen: { padding: 16, gap: 12, paddingBottom: 40 },
   input: {
     borderWidth: 1,

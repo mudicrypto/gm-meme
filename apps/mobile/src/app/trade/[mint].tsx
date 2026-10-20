@@ -29,6 +29,7 @@ import { formatCompact, shortAddress } from '../../lib/format';
 import { useMode } from '../../lib/mode';
 import { RISK_COLORS, usePalette } from '../../lib/theme';
 import { checkQuote } from '../../lib/trade-check';
+import { cancelPhantomRequest, isCancelled } from '../../lib/phantom';
 import { useWallet } from '../../lib/wallet';
 
 const BUY_PRESETS = ['0.01', '0.05', '0.1', '0.5'];
@@ -123,10 +124,10 @@ export default function TradeScreen() {
   if (!wallet.address) {
     return (
       <View style={styles.screen}>
-        <Card title="Create a wallet to trade">
+        <Card title="Set up a wallet to trade">
           <Text style={{ color: palette.muted }}>
-            Sift needs a wallet on this phone to sign trades. Your key is created here and never
-            leaves the device.
+            Create a wallet on this phone or connect Phantom. Either way, your key never leaves your
+            device.
           </Text>
           <Link href="/portfolio" asChild>
             <Pressable
@@ -179,7 +180,8 @@ export default function TradeScreen() {
       const { signature } = await api.submit(quote.quoteId, signed);
       setStage({ name: 'pending', quote, signature });
     } catch (err) {
-      setStage({ name: 'failed', message: (err as Error).message });
+      if (isCancelled(err)) setStage({ name: 'edit' });
+      else setStage({ name: 'failed', message: (err as Error).message });
     }
   };
 
@@ -316,10 +318,17 @@ export default function TradeScreen() {
         <Card>
           <ActivityIndicator color={palette.accent} />
           <Text style={[styles.center, { color: palette.text }]}>
-            {stage.name === 'sending'
-              ? 'Signing on this phone and sending…'
-              : 'Waiting for the network to confirm…'}
+            {stage.name === 'pending'
+              ? 'Waiting for the network to confirm…'
+              : wallet.kind === 'phantom'
+                ? 'Approve the trade in Phantom…'
+                : 'Signing on this phone and sending…'}
           </Text>
+          {stage.name === 'sending' && wallet.kind === 'phantom' ? (
+            <Pressable onPress={cancelPhantomRequest}>
+              <Text style={[styles.center, { color: palette.muted }]}>Cancel</Text>
+            </Pressable>
+          ) : null}
         </Card>
       ) : null}
 

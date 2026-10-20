@@ -151,7 +151,13 @@ Non-custodial, devnet only for now:
 - **Embedded wallet** (Portfolio → Create wallet): a key generated on the phone and kept in the
   iOS Keychain / Android Keystore (this device only, not in backups). It never leaves the
   phone; "Show private key" exports it in the format Phantom and Solflare import. The web build
-  keeps the key in memory only, for testing. Phantom connection comes next.
+  keeps the key in memory only, for testing.
+- **Phantom** (Portfolio → Connect Phantom, iOS and Android, works in Expo Go): Phantom's
+  deeplinks (`https://phantom.com/ul/v1/…`) with an encrypted channel (x25519 / TweetNaCl box).
+  Phantom keeps the keys; Sift stores only the session token and its own channel key, in secure
+  storage. After Phantom signs, the app checks it returned exactly the transaction you reviewed,
+  validly signed by your wallet, before sending. With both wallets, Portfolio switches between
+  them. `EXPO_PUBLIC_APP_URL` sets the web page Phantom shows on its connect screen.
 - **Trading** on pump.fun's bonding curve through `@pump-fun/pump-sdk`:
   1. `POST /trades/quote` builds an unsigned transaction and simulates it, then returns the full
      cost: tokens, Sift fee (0.5% with `FEE_WALLET` set), priority fee, network fee, one-off
@@ -159,7 +165,7 @@ Non-custodial, devnet only for now:
   2. The app checks the transaction on the phone (`verifyTradeTransaction` in
      `packages/shared`): only the quoted trade, your own token account, and one fee transfer to
      the fee wallet built into the app. Anything else and it refuses to sign.
-  3. The phone signs; `POST /trades/submit` relays only the exact transaction quoted.
+  3. The phone (or Phantom) signs; `POST /trades/submit` relays only the exact transaction quoted.
 - Tokens that left the bonding curve trade through Jupiter, which turns on with mainnet.
 - Test SOL: Portfolio → "Get 1 test SOL" (Solana's public faucet, often rate-limited), or
   https://faucet.solana.com.

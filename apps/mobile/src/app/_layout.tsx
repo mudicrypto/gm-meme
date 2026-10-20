@@ -26,6 +26,7 @@ export default function RootLayout() {
             <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
             <Stack.Screen name="token/[mint]" options={{ title: 'Token' }} />
             <Stack.Screen name="trade/[mint]" options={{ title: 'Trade', presentation: 'modal' }} />
+            <Stack.Screen name="phantom-callback/[action]" options={{ title: 'Phantom' }} />
           </Stack>
           <StatusBar style="auto" />
         </WalletProvider>

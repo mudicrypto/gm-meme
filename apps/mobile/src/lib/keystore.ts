@@ -1,42 +1,49 @@
 import * as SecureStore from 'expo-secure-store';
 import { Platform } from 'react-native';
 
-const KEY = 'sift.wallet.seed';
-
 /**
- * Where the embedded wallet's 32-byte seed lives: the iOS Keychain / Android Keystore,
- * readable only while unlocked and never included in backups or synced to other devices.
+ * Secrets kept on this phone: the iOS Keychain / Android Keystore, readable only while
+ * unlocked and never included in backups or synced to other devices.
  *
- * The web build has no secure storage, so there the key only lives in memory for the
- * session ("preview" wallets, devnet testing only). It is never written to localStorage.
+ * The web build has no secure storage, so there secrets only live in memory for the
+ * session ("preview" wallets, devnet testing only). They are never written to localStorage.
  */
-export interface KeyStore {
+export interface SecretItem {
   readonly persistent: boolean;
   load(): Promise<string | null>;
-  save(seedBase64: string): Promise<void>;
+  save(value: string): Promise<void>;
   remove(): Promise<void>;
 }
 
-const native: KeyStore = {
-  persistent: true,
-  load: () => SecureStore.getItemAsync(KEY),
-  save: (value) =>
-    SecureStore.setItemAsync(KEY, value, {
-      keychainAccessible: SecureStore.WHEN_UNLOCKED_THIS_DEVICE_ONLY,
-    }),
-  remove: () => SecureStore.deleteItemAsync(KEY),
-};
+function nativeItem(key: string): SecretItem {
+  return {
+    persistent: true,
+    load: () => SecureStore.getItemAsync(key),
+    save: (value) =>
+      SecureStore.setItemAsync(key, value, {
+        keychainAccessible: SecureStore.WHEN_UNLOCKED_THIS_DEVICE_ONLY,
+      }),
+    remove: () => SecureStore.deleteItemAsync(key),
+  };
+}
 
-let memory: string | null = null;
-const sessionOnly: KeyStore = {
-  persistent: false,
-  load: async () => memory,
-  save: async (value) => {
-    memory = value;
-  },
-  remove: async () => {
-    memory = null;
-  },
-};
+const memory = new Map<string, string>();
+function sessionOnlyItem(key: string): SecretItem {
+  return {
+    persistent: false,
+    load: async () => memory.get(key) ?? null,
+    save: async (value) => {
+      memory.set(key, value);
+    },
+    remove: async () => {
+      memory.delete(key);
+    },
+  };
+}
 
-export const keyStore: KeyStore = Platform.OS === 'web' ? sessionOnly : native;
+const secretItem = Platform.OS === 'web' ? sessionOnlyItem : nativeItem;
+
+/** The embedded wallet's 32-byte seed (base64). */
+export const keyStore = secretItem('sift.wallet.seed');
+/** The Phantom connection (JSON): session token and this app's encryption key, no wallet keys. */
+export const phantomStore = secretItem('sift.phantom.session');

@@ -9,7 +9,7 @@ one step at a time and stop after each step for the user to test.
 
 - **Non-custodial only.** Sift never holds, receives, stores or logs private keys or seed
   phrases. Transactions are built server-side at most, and are always signed on the user's
-  device (Phantom via Mobile Wallet Adapter, or the embedded wallet).
+  device (Phantom via its encrypted deeplinks, or the embedded wallet).
 - **Devnet until Step 8.** Default `SOLANA_CLUSTER` is `devnet`. Don't point anything at mainnet
   before the security review is done.
 - **Secrets stay in `.env`**, which is gitignored. Only `.env.example` files are committed.

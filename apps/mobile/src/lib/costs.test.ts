@@ -34,7 +34,7 @@ describe('costLines', () => {
       ['Sift fee (0.5%)', '0.0001 SOL'],
       ['Priority fee', '0.000006 SOL'],
       ['Network fee', '0.000005 SOL'],
-      ['Token account (one-off)', '0.0016 SOL'],
+      ['New accounts (one-off)', '0.0016 SOL'],
       ['Expected total', '0.0216 SOL'],
       ['Most you can pay (5% slippage)', '0.0226 SOL'],
     ]);
@@ -52,7 +52,7 @@ describe('costLines', () => {
     const labels = costLines(sell).map((l) => l.label);
     expect(labels).toContain('Sale proceeds');
     expect(labels).toContain('Minimum received (5% slippage)');
-    expect(labels).not.toContain('Token account (one-off)');
+    expect(labels).not.toContain('New accounts (one-off)');
     expect(costLines(sell).find((l) => l.label === 'Expected to receive')?.value).toBe(
       '0.0144 SOL',
     );

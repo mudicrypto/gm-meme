@@ -21,6 +21,7 @@ import {
   VersionedTransaction,
 } from '@solana/web3.js';
 import BN from 'bn.js';
+import type { FastifyBaseLogger } from 'fastify';
 import { TradeError } from './errors';
 import type { PumpTrade, PumpTrader } from './pump-trader';
 
@@ -38,6 +39,7 @@ export interface TradeServiceOptions {
   /** Null disables the platform fee. */
   feeWallet: string | null;
   platformFeeBps: number;
+  log?: Pick<FastifyBaseLogger, 'error'>;
   now?: () => Date;
   /** How long a quote can be signed and submitted; blockhashes expire after ~60–90s. */
   quoteTtlMs?: number;
@@ -46,9 +48,6 @@ export interface TradeServiceOptions {
 const SIGNATURE_FEE_LAMPORTS = 5000;
 const SIMULATION_COMPUTE_UNITS = 400_000;
 const MIN_COMPUTE_UNITS = 60_000;
-// Rent-exempt size of an associated token account (Token-2022 adds an extension).
-const TOKEN_ACCOUNT_SPACE = { spl: 165, token2022: 170 } as const;
-const TOKEN_2022 = 'TokenzQdBNbLqP5VEhdkAS6EPFLC1PHnBqCXEpPxuEb';
 
 interface IssuedQuote {
   message: Uint8Array;
@@ -59,9 +58,32 @@ interface IssuedQuote {
 export function createTradeService(options: TradeServiceOptions): TradeService {
   const now = options.now ?? (() => new Date());
   const ttlMs = options.quoteTtlMs ?? 75_000;
-  const feeBps = options.feeWallet ? options.platformFeeBps : 0;
   const issued = new Map<string, IssuedQuote>();
   const { connection } = options;
+
+  // Solana won't create an account below the rent-exempt minimum, so while the fee wallet
+  // is empty, a small fee transfer would make every trade fail. Until it's funded we charge
+  // no fee (and the quote says so) rather than block users over a setup mistake.
+  let feeWalletFunded = false;
+  let feeWalletCheckedAt = -Infinity;
+  async function feeBpsNow(): Promise<number> {
+    if (!options.feeWallet || options.platformFeeBps === 0) return 0;
+    if (!feeWalletFunded && now().getTime() - feeWalletCheckedAt > 60_000) {
+      feeWalletCheckedAt = now().getTime();
+      const [balance, minimum] = await Promise.all([
+        connection.getBalance(new PublicKey(options.feeWallet)),
+        connection.getMinimumBalanceForRentExemption(0),
+      ]);
+      feeWalletFunded = balance >= minimum;
+      if (!feeWalletFunded) {
+        options.log?.error(
+          { feeWallet: options.feeWallet, balance, minimum },
+          'FEE_WALLET holds less than the rent-exempt minimum: fund it with at least 0.001 SOL. Charging no fee until then.',
+        );
+      }
+    }
+    return feeWalletFunded ? options.platformFeeBps : 0;
+  }
 
   function prune() {
     const at = now().getTime();
@@ -105,6 +127,7 @@ export function createTradeService(options: TradeServiceOptions): TradeService {
     async quote(request) {
       const user = new PublicKey(request.wallet);
       const amount = new BN(request.amount);
+      const feeBps = await feeBpsNow();
       const platformFee = (lamports: BN) => lamports.muln(feeBps).divn(10_000);
 
       // The fee comes out of a buy budget, and out of the guaranteed minimum of a sell.
@@ -140,17 +163,16 @@ export function createTradeService(options: TradeServiceOptions): TradeService {
       }
 
       const microLamports = await options.estimatePriorityFee(PUMP_PROGRAM);
-      const [{ blockhash }, balance, rent] = await Promise.all([
+      const [{ blockhash }, balance, rents] = await Promise.all([
         connection.getLatestBlockhash('confirmed'),
         connection.getBalance(user),
-        trade.createsTokenAccount
-          ? connection.getMinimumBalanceForRentExemption(
-              trade.tokenProgram.toBase58() === TOKEN_2022
-                ? TOKEN_ACCOUNT_SPACE.token2022
-                : TOKEN_ACCOUNT_SPACE.spl,
-            )
-          : Promise.resolve(0),
+        Promise.all(
+          trade.newAccountSpaces.map((space) =>
+            connection.getMinimumBalanceForRentExemption(space),
+          ),
+        ),
       ]);
+      const rent = rents.reduce((total, lamports) => total + lamports, 0);
       // Before simulating: a wallet that never held SOL doesn't exist on chain, and the
       // simulation would only say "AccountNotFound".
       if (balance === 0) {

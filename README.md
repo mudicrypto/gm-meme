@@ -165,7 +165,12 @@ Non-custodial, devnet only for now:
   https://faucet.solana.com.
 
 To charge the fee, set the same public address in `FEE_WALLET` (API) and `EXPO_PUBLIC_FEE_WALLET`
-(app). If they differ, the app refuses every trade.
+(app); if they differ, the app refuses every trade. Fund the fee wallet once with at least
+0.001 SOL: Solana won't open an account from a fee smaller than its rent deposit, so until then
+the API charges no fee (and logs an error) rather than fail every trade.
+
+Verified on devnet: a first buy and full sell from a fresh wallet matched the quoted totals to the
+lamport, including the 0.5% fee and the deposits for new accounts.
 
 ## Scripts
 

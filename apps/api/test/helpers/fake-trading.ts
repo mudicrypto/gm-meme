@@ -82,6 +82,8 @@ export function fakePumpTrader(): PumpTrader & {
       tokenProgram: TOKEN_2022,
       decimals: 6,
       createsTokenAccount: createsAta,
+      // A first buy opens the token account (170 bytes) and pump.fun's volume tracker (137).
+      newAccountSpaces: createsAta ? [170, 137] : [],
       priceImpactPct: 1.5,
     };
   };
@@ -108,8 +110,9 @@ export function fakeConnection(
       blockhash: 'GHtXQBsoZHVnNFa9YevAzFr17DJjgHXk3ycTKD5xD3Zi',
       lastValidBlockHeight: 1,
     })),
-    getBalance: vi.fn(async () => overrides.balance ?? 5_000_000_000),
-    getMinimumBalanceForRentExemption: vi.fn(async () => 2_074_080),
+    getBalance: vi.fn(async (_key: PublicKey) => overrides.balance ?? 5_000_000_000),
+    // Devnet's rate today: 5,080 lamports per byte, with 128 bytes of account overhead.
+    getMinimumBalanceForRentExemption: vi.fn(async (space: number) => (128 + space) * 5080),
     simulateTransaction: vi.fn(async () => ({
       context: { slot: 1 },
       value: overrides.simulationError

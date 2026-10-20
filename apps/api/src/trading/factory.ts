@@ -1,12 +1,17 @@
 import { LAMPORTS_PER_SOL } from '@sift/shared';
 import { Connection, PublicKey } from '@solana/web3.js';
+import type { FastifyBaseLogger } from 'fastify';
 import type { Config } from '../config';
 import { heliusRpcUrl } from '../helius/client';
 import { createPriorityFeeEstimator } from './priority';
 import { createPumpTrader } from './pump-trader';
 import { type TradeService, createTradeService } from './service';
 
-export function createDefaultTradeService(config: Config, apiKey: string): TradeService {
+export function createDefaultTradeService(
+  config: Config,
+  apiKey: string,
+  log: Pick<FastifyBaseLogger, 'error'>,
+): TradeService {
   const rpcUrl = heliusRpcUrl(config.SOLANA_CLUSTER, apiKey);
   const connection = new Connection(rpcUrl, 'confirmed');
   return createTradeService({
@@ -15,6 +20,7 @@ export function createDefaultTradeService(config: Config, apiKey: string): Trade
     estimatePriorityFee: createPriorityFeeEstimator({ rpcUrl }),
     feeWallet: config.FEE_WALLET ?? null,
     platformFeeBps: config.PLATFORM_FEE_BPS,
+    log,
   });
 }
 

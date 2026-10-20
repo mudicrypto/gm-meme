@@ -112,7 +112,7 @@ export function buildApp(config: Config, deps: AppDeps = {}) {
       deps.tradeService !== undefined
         ? deps.tradeService
         : tradingEnabled && config.HELIUS_API_KEY
-          ? createDefaultTradeService(config, config.HELIUS_API_KEY)
+          ? createDefaultTradeService(config, config.HELIUS_API_KEY, app.log)
           : null;
     if (!trades)
       app.log.warn('trading disabled (mainnet needs ALLOW_MAINNET_TRADING after Step 8)');

@@ -32,9 +32,9 @@ export function costLines(quote: TradeQuote): CostLine[] {
   ];
   if (fees.accountRentLamports > 0) {
     lines.push({
-      label: 'Token account (one-off)',
+      label: 'New accounts (one-off)',
       value: sol(fees.accountRentLamports),
-      note: 'Opens your account for this token. Refundable if you later close it.',
+      note: 'Solana requires a deposit to open accounts: your account for this token and, on your first pump.fun buy, pump.fun’s account for your wallet.',
     });
   }
   lines.push(

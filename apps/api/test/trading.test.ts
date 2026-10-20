@@ -78,7 +78,8 @@ describe('trade quotes', () => {
     expect(q.limitLamports).toBe(104_475_000); // +5% slippage
     expect(q.fees.priorityLamports).toBe(Math.ceil((108_000 * 50_000) / 1e6)); // 90k units × 1.2
     expect(q.fees.networkLamports).toBe(5000);
-    expect(q.fees.accountRentLamports).toBe(2_074_080);
+    // Token account (170 bytes) + pump.fun's volume tracker (137 bytes) on a first buy.
+    expect(q.fees.accountRentLamports).toBe(1_513_840 + 1_346_200);
     const fees = q.fees.platformLamports + q.fees.priorityLamports + q.fees.networkLamports;
     expect(q.expectedTotalLamports).toBe(q.expectedLamports + fees + q.fees.accountRentLamports);
     expect(q.worstCaseLamports).toBe(q.limitLamports + fees + q.fees.accountRentLamports);
@@ -104,6 +105,37 @@ describe('trade quotes', () => {
     expect(q.fees).toMatchObject({ platformLamports: 0, platformBps: 0 });
     expect(q.expectedLamports).toBe(100_000_000);
     expect(verifyTradeTransaction(base64ToBytes(q.transaction), q, null).ok).toBe(true);
+  });
+
+  it('charges no fee while the fee wallet is too empty to receive one, and says so', async () => {
+    const connection = fakeConnection();
+    let feeWalletBalance = 0;
+    connection.getBalance.mockImplementation(async (key: PublicKey) =>
+      key.toBase58() === FEE_WALLET ? feeWalletBalance : 5_000_000_000,
+    );
+    const errors: unknown[] = [];
+    let clock = Date.parse('2026-10-20T10:00:00Z');
+    const service = createTradeService({
+      connection: asConnection(connection),
+      pump: fakePumpTrader(),
+      estimatePriorityFee: async () => 50_000,
+      feeWallet: FEE_WALLET,
+      platformFeeBps: 50,
+      log: { error: (...args: unknown[]) => errors.push(args) },
+      now: () => new Date(clock),
+    });
+
+    const unfunded = await service.quote(buyRequest);
+    expect(unfunded.fees).toMatchObject({ platformLamports: 0, platformBps: 0 });
+    expect(
+      verifyTradeTransaction(base64ToBytes(unfunded.transaction), unfunded, FEE_WALLET).ok,
+    ).toBe(true);
+    expect(errors).toHaveLength(1);
+
+    feeWalletBalance = 1_000_000; // funded; rechecked after a minute
+    clock += 61_000;
+    const funded = await service.quote(buyRequest);
+    expect(funded.fees).toMatchObject({ platformLamports: 500_000, platformBps: 50 });
   });
 
   it('refuses a buy the wallet cannot afford in the worst case', async () => {

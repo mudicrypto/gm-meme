@@ -16,6 +16,8 @@ export interface PumpTrade {
   decimals: number;
   /** A first buy opens the user's token account (rent paid by the user). */
   createsTokenAccount: boolean;
+  /** Byte sizes of every account this trade creates and the user pays rent for. */
+  newAccountSpaces: number[];
   priceImpactPct: number | null;
 }
 
@@ -35,6 +37,11 @@ export interface PumpTrader {
 }
 
 const GLOBAL_TTL_MS = 60_000;
+// Rent-exempt sizes of accounts a buy may open for the user. Token-2022 accounts carry an
+// extra extension; the volume tracker size was read from a real devnet account.
+const TOKEN_ACCOUNT_SPACE = { spl: 165, token2022: 170 } as const;
+const USER_VOLUME_ACCUMULATOR_SPACE = 137;
+const TOKEN_2022 = new PublicKey('TokenzQdBNbLqP5VEhdkAS6EPFLC1PHnBqCXEpPxuEb');
 // Offset of `decimals` in an SPL / Token-2022 mint account.
 const MINT_DECIMALS_OFFSET = 44;
 
@@ -94,8 +101,21 @@ export function createPumpTrader(connection: Connection): PumpTrader {
         config(),
         mintInfo(mintKey),
       ]);
-      const state = await loadState(() => sdk.fetchBuyState(mintKey, userKey, tokenProgram));
+      const [state, volumeAccumulator] = await Promise.all([
+        loadState(() => sdk.fetchBuyState(mintKey, userKey, tokenProgram)),
+        connection.getAccountInfo(pump.userVolumeAccumulatorPda(userKey)),
+      ]);
       assertTradable(state.bondingCurve, state.quoteMint);
+
+      // Accounts this buy opens for the user, whose rent the user pays on top of the budget.
+      const newAccountSpaces: number[] = [];
+      if (state.associatedUserAccountInfo === null) {
+        newAccountSpaces.push(
+          tokenProgram.equals(TOKEN_2022) ? TOKEN_ACCOUNT_SPACE.token2022 : TOKEN_ACCOUNT_SPACE.spl,
+        );
+      }
+      // pump.fun opens a per-wallet volume tracker on a wallet's first ever buy.
+      if (volumeAccumulator === null) newAccountSpaces.push(USER_VOLUME_ACCUMULATOR_SPACE);
 
       const tokenAmount = pump.getBuyTokenAmountFromSolAmount({
         global,
@@ -132,6 +152,7 @@ export function createPumpTrader(connection: Connection): PumpTrader {
         tokenProgram,
         decimals,
         createsTokenAccount: state.associatedUserAccountInfo === null,
+        newAccountSpaces,
         priceImpactPct: impact(state.bondingCurve, solLamports, tokenAmount, 'buy'),
       };
     },
@@ -181,6 +202,7 @@ export function createPumpTrader(connection: Connection): PumpTrader {
         tokenProgram,
         decimals,
         createsTokenAccount: false,
+        newAccountSpaces: [],
         priceImpactPct: impact(state.bondingCurve, expected, tokenAmount, 'sell'),
       };
     },

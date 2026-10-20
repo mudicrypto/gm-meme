@@ -120,6 +120,8 @@ describe('Helius getWalletHoldings (real devnet response)', () => {
       mint: 'GEtph2tD2kxEKFJqwKYBa8hua8mQDQ3ttsGxhAQziUT5',
       symbol: 'MOON',
       amount: 66_285_709.815747,
+      amountRaw: '66285709815747',
+      decimals: 6,
     });
     expect(JSON.parse(fetch.mock.calls[0]![1]!.body as string)).toMatchObject({
       method: 'getAssetsByOwner',
@@ -143,8 +145,8 @@ describe('Step 5 routes', () => {
   helius.getWalletHoldings.mockResolvedValue({
     lamports: 2_500_000_000,
     tokens: [
-      { mint: MINT_A, symbol: 'AAA', amount: 1234.5 },
-      { mint: MINT_B, amount: 1 },
+      { mint: MINT_A, symbol: 'AAA', amount: 1234.5, amountRaw: '1234500000', decimals: 6 },
+      { mint: MINT_B, amount: 1, amountRaw: '1000000', decimals: 6 },
     ],
   });
   const app = buildApp(loadConfig({ LOG_LEVEL: 'silent' }), {
@@ -215,8 +217,15 @@ describe('Step 5 routes', () => {
       address: ALICE,
       solBalance: 2.5,
       holdings: [
-        { mint: MINT_A, symbol: 'AAA', amount: 1234.5, riskLevel: 'red' },
-        { mint: MINT_B, amount: 1 },
+        {
+          mint: MINT_A,
+          symbol: 'AAA',
+          amount: 1234.5,
+          amountRaw: '1234500000',
+          decimals: 6,
+          riskLevel: 'red',
+        },
+        { mint: MINT_B, amount: 1, amountRaw: '1000000', decimals: 6 },
       ],
     });
     expect((await app.inject({ method: 'GET', url: '/wallets/nope/holdings' })).statusCode).toBe(

@@ -32,7 +32,7 @@ export const walletRoutes: FastifyPluginAsync<{
       const unscored = tokens.filter((t) => !levels.has(t.mint)).slice(0, MAX_SCORED_PER_REQUEST);
       if (unscored.length > 0) {
         await repository.upsertTokens(
-          unscored.map(({ amount: _amount, ...metadata }) => ({
+          unscored.map(({ amount: _amount, amountRaw: _raw, ...metadata }) => ({
             ...metadata,
             enrichedAt: new Date().toISOString(),
           })),
@@ -50,6 +50,8 @@ export const walletRoutes: FastifyPluginAsync<{
           name: t.name,
           imageUrl: t.imageUrl,
           amount: t.amount,
+          amountRaw: t.amountRaw,
+          decimals: t.decimals,
           riskLevel: levels.get(t.mint),
         })),
       };

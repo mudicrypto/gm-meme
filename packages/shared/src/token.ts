@@ -57,8 +57,11 @@ export interface Holding {
   symbol?: string;
   name?: string;
   imageUrl?: string;
-  /** Whole tokens. */
+  /** Whole tokens (rounded; for display). */
   amount: number;
+  /** Exact balance in base units, for selling. */
+  amountRaw: string;
+  decimals: number;
   riskLevel?: RiskLevel;
 }
 

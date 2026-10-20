@@ -144,6 +144,29 @@ words; Pro adds every check, volumes and full addresses. Badges never say "safe"
 Run it with `pnpm dev:api` and `pnpm dev:mobile`, then open it in Expo Go, or press `w` for the
 web version (the API allows `http://localhost:8081` via `CORS_ORIGINS`).
 
+## Wallet and trading (Step 6)
+
+Non-custodial, devnet only for now:
+
+- **Embedded wallet** (Portfolio → Create wallet): a key generated on the phone and kept in the
+  iOS Keychain / Android Keystore (this device only, not in backups). It never leaves the
+  phone; "Show private key" exports it in the format Phantom and Solflare import. The web build
+  keeps the key in memory only, for testing. Phantom connection comes next.
+- **Trading** on pump.fun's bonding curve through `@pump-fun/pump-sdk`:
+  1. `POST /trades/quote` builds an unsigned transaction and simulates it, then returns the full
+     cost: tokens, Sift fee (0.5% with `FEE_WALLET` set), priority fee, network fee, one-off
+     token account rent, slippage limit, expected total and worst case.
+  2. The app checks the transaction on the phone (`verifyTradeTransaction` in
+     `packages/shared`): only the quoted trade, your own token account, and one fee transfer to
+     the fee wallet built into the app. Anything else and it refuses to sign.
+  3. The phone signs; `POST /trades/submit` relays only the exact transaction quoted.
+- Tokens that left the bonding curve trade through Jupiter, which turns on with mainnet.
+- Test SOL: Portfolio → "Get 1 test SOL" (Solana's public faucet, often rate-limited), or
+  https://faucet.solana.com.
+
+To charge the fee, set the same public address in `FEE_WALLET` (API) and `EXPO_PUBLIC_FEE_WALLET`
+(app). If they differ, the app refuses every trade.
+
 ## Scripts
 
 | Command           | What it does                                  |

@@ -66,6 +66,11 @@ read `apps/mobile/AGENTS.md` before touching Expo APIs.
   logic in `src/lib/` with Vitest tests. Inside `<Link asChild>`, give the child one flat style
   object (`StyleSheet.flatten`): on web it lands on an `<a>`, which can't take arrays or
   functions. Never label a token "safe".
+- Trading: every transaction the API builds must pass `verifyTradeTransaction`
+  (`packages/shared/src/solana/verify-trade.ts`), which the phone runs before signing. Extend
+  its allow-list deliberately (with tamper tests in `apps/api/test/trading.test.ts`) when adding a
+  venue; never loosen it to make a transaction pass. The fee wallet the app trusts comes from
+  `EXPO_PUBLIC_FEE_WALLET`, never from the API. Keys: `apps/mobile/src/lib/keystore.ts` only.
 - Types used by both app and API live in `packages/shared`. It ships TypeScript source; the API
   bundles it with tsup and Metro resolves it directly.
 - The risk score is the core of the product: keep it in our own code, each check pure and unit

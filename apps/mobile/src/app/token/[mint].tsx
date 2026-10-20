@@ -1,8 +1,8 @@
 import { RISK_DISCLAIMER, isSolanaAddress } from '@sift/shared';
 import { useQuery } from '@tanstack/react-query';
-import { Stack, useLocalSearchParams } from 'expo-router';
+import { Link, Stack, useLocalSearchParams } from 'expo-router';
 import { useState } from 'react';
-import { ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { Card } from '../../components/Card';
 import { ModeToggle } from '../../components/ModeToggle';
 import { PriceChart } from '../../components/PriceChart';
@@ -157,30 +157,30 @@ export default function TokenScreen() {
 
       <View style={styles.actions}>
         {(['Buy', 'Sell'] as const).map((label) => (
-          <View
-            key={label}
-            style={[
-              styles.action,
-              {
-                backgroundColor: label === 'Buy' ? palette.accent : palette.card,
-                borderColor: palette.border,
-              },
-            ]}
-            accessibilityState={{ disabled: true }}
-          >
-            <Text
-              style={[
-                styles.actionText,
-                { color: label === 'Buy' ? palette.accentText : palette.text },
-              ]}
+          <Link key={label} href={`/trade/${mint}?side=${label.toLowerCase()}`} asChild>
+            <Pressable
+              style={StyleSheet.flatten([
+                styles.action,
+                {
+                  backgroundColor: label === 'Buy' ? palette.accent : palette.card,
+                  borderColor: palette.border,
+                },
+              ])}
             >
-              {label}
-            </Text>
-          </View>
+              <Text
+                style={[
+                  styles.actionText,
+                  { color: label === 'Buy' ? palette.accentText : palette.text },
+                ]}
+              >
+                {label}
+              </Text>
+            </Pressable>
+          </Link>
         ))}
       </View>
       <Text style={[styles.note, { color: palette.muted }]}>
-        Trading opens once wallet connection is added. You’ll see the full cost before confirming.
+        You’ll see the full cost, every fee included, before confirming.
       </Text>
       <Text style={[styles.note, { color: palette.muted }]}>
         {risk.data.disclaimer ?? RISK_DISCLAIMER}
@@ -213,7 +213,7 @@ const styles = StyleSheet.create({
   reason: { flexDirection: 'row', gap: 10, alignItems: 'flex-start' },
   reasonDot: { width: 10, height: 10, borderRadius: 5, marginTop: 5 },
   reasonName: { fontWeight: '600' },
-  actions: { flexDirection: 'row', gap: 12, opacity: 0.45 },
+  actions: { flexDirection: 'row', gap: 12 },
   action: {
     flex: 1,
     borderRadius: 12,

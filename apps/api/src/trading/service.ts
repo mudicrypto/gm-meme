@@ -151,6 +151,14 @@ export function createTradeService(options: TradeServiceOptions): TradeService {
             )
           : Promise.resolve(0),
       ]);
+      // Before simulating: a wallet that never held SOL doesn't exist on chain, and the
+      // simulation would only say "AccountNotFound".
+      if (balance === 0) {
+        throw new TradeError(
+          'INSUFFICIENT_SOL',
+          'This wallet has no SOL yet. Add some to pay for the trade and network fees.',
+        );
+      }
 
       // Simulate with room to spare, then size the compute limit (and so the priority
       // fee) to what the trade actually uses.
@@ -286,6 +294,7 @@ export function createTradeService(options: TradeServiceOptions): TradeService {
 
 /** A readable reason from simulation logs ("Error Message: ..." from Anchor programs). */
 function explain(logs: readonly string[], err: unknown): string {
+  if (err === 'AccountNotFound') return 'the wallet has no SOL';
   for (const line of [...logs].reverse()) {
     const anchor = line.match(/Error Message: (.+?)\.?$/);
     if (anchor) return anchor[1]!;

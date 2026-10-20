@@ -111,6 +111,16 @@ describe('trade quotes', () => {
     await expect(service.quote(buyRequest)).rejects.toMatchObject({ code: 'INSUFFICIENT_SOL' });
   });
 
+  it('says plainly when the wallet has no SOL at all, without simulating', async () => {
+    const connection = fakeConnection({ balance: 0 });
+    const { service } = setup(connection);
+    await expect(service.quote(buyRequest)).rejects.toMatchObject({
+      code: 'INSUFFICIENT_SOL',
+      message: expect.stringContaining('no SOL yet'),
+    });
+    expect(connection.simulateTransaction).not.toHaveBeenCalled();
+  });
+
   it('explains a trade that would fail on chain', async () => {
     const logs = [
       'Program log: AnchorError thrown. Error Code: TooLittleSolReceived. Error Message: slippage: Too little SOL received to sell the given amount of tokens.',
@@ -377,5 +387,36 @@ describe('on-device verification catches a malicious server', () => {
     expect(
       verifyTradeTransaction(Uint8Array.from([1, 2, 3]), {} as TradeQuote, FEE_WALLET).ok,
     ).toBe(false);
+  });
+});
+
+describe('phone-side signing is standard Solana', () => {
+  it('signs exactly like @solana/web3.js, and the exported key imports as the same wallet', async () => {
+    const {
+      base58Decode,
+      base58Encode,
+      publicKeyBytes,
+      solanaKeys,
+      withSignature,
+      decodeTransaction,
+    } = await import('@sift/shared');
+    const seed = Uint8Array.from({ length: 32 }, (_, i) => (i * 7 + 3) % 256);
+    const address = solanaKeys.publicKey(seed);
+    const official = Keypair.fromSeed(seed);
+    expect(address).toBe(official.publicKey.toBase58());
+
+    // The wallet's "Show private key" format: seed followed by public key, base58.
+    const exported = base58Encode(Uint8Array.from([...seed, ...publicKeyBytes(address)]));
+    expect(Keypair.fromSecretKey(base58Decode(exported)).publicKey.toBase58()).toBe(address);
+
+    // Sign a real quote both ways: ed25519 is deterministic, so the bytes must match.
+    const { service } = setup();
+    const q = await service.quote({ ...buyRequest, wallet: address });
+    const bytes = base64ToBytes(q.transaction);
+    const ours = withSignature(bytes, 0, solanaKeys.sign(decodeTransaction(bytes).message, seed));
+    const theirs = VersionedTransaction.deserialize(bytes);
+    theirs.sign([official]);
+    expect(bytesToBase64(ours)).toBe(bytesToBase64(theirs.serialize()));
+    expect(await service.submit(q.quoteId, bytesToBase64(ours))).toBe('5'.repeat(88));
   });
 });

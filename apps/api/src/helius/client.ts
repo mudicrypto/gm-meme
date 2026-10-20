@@ -30,7 +30,8 @@ export interface HeliusClient {
 
 export interface WalletHoldings {
   lamports: number;
-  tokens: Array<AssetMetadata & { amount: number }>;
+  /** `amount` in whole tokens; `amountRaw` exact, in base units. */
+  tokens: Array<AssetMetadata & { amount: number; amountRaw: string; decimals: number }>;
 }
 
 export interface TokenAccountHolding {
@@ -258,7 +259,14 @@ export function createHeliusClient(options: HeliusClientOptions): HeliusClient {
         if (!asset.success || !balance.success) return [];
         const { balance: units, decimals } = balance.data.token_info;
         if (units <= 0) return [];
-        return [{ ...toMetadata(asset.data), amount: units / 10 ** decimals }];
+        return [
+          {
+            ...toMetadata(asset.data),
+            amount: units / 10 ** decimals,
+            amountRaw: BigInt(units).toString(),
+            decimals,
+          },
+        ];
       });
       return { lamports: result.nativeBalance?.lamports ?? 0, tokens };
     },

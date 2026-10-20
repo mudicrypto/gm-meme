@@ -1,3 +1,4 @@
+import { SIFT_FEE_WALLET } from '@sift/shared';
 import type {
   SolanaCluster,
   TradeQuote,
@@ -95,4 +96,7 @@ export const api = {
  * against this, never against an address the API sends, so a compromised API can't
  * redirect fees.
  */
-export const FEE_WALLET: string | null = process.env.EXPO_PUBLIC_FEE_WALLET || null;
+// Unset: Sift's fee wallet. Set to empty: a build that accepts no fee at all.
+const configuredFeeWallet = process.env.EXPO_PUBLIC_FEE_WALLET;
+export const FEE_WALLET: string | null =
+  configuredFeeWallet === undefined ? SIFT_FEE_WALLET : configuredFeeWallet || null;

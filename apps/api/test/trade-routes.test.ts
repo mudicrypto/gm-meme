@@ -132,3 +132,11 @@ describe('trading switches', () => {
     expect(() => loadConfig({ FEE_WALLET: 'my-wallet' })).toThrow(/FEE_WALLET/);
   });
 });
+
+describe('fee wallet default', () => {
+  it("uses Sift's fee wallet unless overridden", () => {
+    expect(loadConfig({}).FEE_WALLET).toBe('9x6aHFQawRisd1JfPLNHwDHJU4HwHNqb5x5p6TEGHrtc');
+    expect(loadConfig({ FEE_WALLET: FEE }).FEE_WALLET).toBe(FEE);
+    expect(loadConfig({ FEE_WALLET: '' }).FEE_WALLET).toBeUndefined();
+  });
+});

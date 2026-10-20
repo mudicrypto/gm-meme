@@ -1,4 +1,4 @@
-import { PUMP_FUN_PROGRAM_ID, isSolanaAddress } from '@sift/shared';
+import { PUMP_FUN_PROGRAM_ID, SIFT_FEE_WALLET, isSolanaAddress } from '@sift/shared';
 import { z } from 'zod';
 
 const optionalSecret = z
@@ -56,11 +56,10 @@ const ConfigSchema = z
     ANTHROPIC_API_KEY: optionalSecret,
     // Model for AI token summaries.
     SUMMARY_MODEL: z.string().min(1).default('claude-opus-5-5'),
-    // Browser origins allowed to call the API (the native app needs none). Comma-separated.
-    // Platform fee: a public address you control (never a key). Unset = no fee.
+    // Platform fee wallet, a public address (never a key). Unset: Sift's. Empty: no fee.
     FEE_WALLET: z
       .string()
-      .optional()
+      .default(SIFT_FEE_WALLET)
       .transform((value) => (value ? value : undefined))
       .refine((value) => value === undefined || isSolanaAddress(value), {
         message: 'not a Solana address',
@@ -71,6 +70,7 @@ const ConfigSchema = z
       .enum(['true', 'false'])
       .default('false')
       .transform((value) => value === 'true'),
+    // Browser origins allowed to call the API (the native app needs none). Comma-separated.
     CORS_ORIGINS: z
       .string()
       .default('http://localhost:8081')

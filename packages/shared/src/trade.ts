@@ -1,3 +1,9 @@
+/**
+ * Sift's platform fee wallet: a public address, safe to publish. The app only accepts trades
+ * whose fee goes here, and never takes the fee address from the API.
+ */
+export const SIFT_FEE_WALLET = '9x6aHFQawRisd1JfPLNHwDHJU4HwHNqb5x5p6TEGHrtc';
+
 export type TradeSide = 'buy' | 'sell';
 
 /** Everything the user confirms before signing. Lamports are numbers; token base units are strings. */

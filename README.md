@@ -164,9 +164,10 @@ Non-custodial, devnet only for now:
 - Test SOL: Portfolio → "Get 1 test SOL" (Solana's public faucet, often rate-limited), or
   https://faucet.solana.com.
 
-To charge the fee, set the same public address in `FEE_WALLET` (API) and `EXPO_PUBLIC_FEE_WALLET`
-(app); if they differ, the app refuses every trade. Fund the fee wallet once with at least
-0.001 SOL: Solana won't open an account from a fee smaller than its rent deposit, so until then
+Fees go to Sift's fee wallet, `SIFT_FEE_WALLET` in `packages/shared`, built into both the app and
+the API. `FEE_WALLET` (API) and `EXPO_PUBLIC_FEE_WALLET` (app) override it and must match, or the
+app refuses every trade; set both empty for no fee. The fee wallet needs at least 0.001 SOL on
+each network it receives fees on: Solana won't open an account from a fee smaller than its rent deposit, so until then
 the API charges no fee (and logs an error) rather than fail every trade.
 
 Verified on devnet: a first buy and full sell from a fresh wallet matched the quoted totals to the

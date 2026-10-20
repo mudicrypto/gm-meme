@@ -47,3 +47,5 @@ const secretItem = Platform.OS === 'web' ? sessionOnlyItem : nativeItem;
 export const keyStore = secretItem('sift.wallet.seed');
 /** The Phantom connection (JSON): session token and this app's encryption key, no wallet keys. */
 export const phantomStore = secretItem('sift.phantom.session');
+/** The Sift sign-in session (JSON): a bearer token for the API, not a wallet key. */
+export const authStore = secretItem('sift.auth.session');

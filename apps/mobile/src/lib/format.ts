@@ -54,6 +54,12 @@ export function formatAge(iso: string | undefined, now: Date = new Date()): stri
   return `${Math.floor(seconds / 86_400)}d`;
 }
 
+/** "just now", "5m ago", "3h ago". */
+export function formatAgo(iso: string, now: Date = new Date()): string {
+  const age = formatAge(iso, now);
+  return age === 'just now' || age === '–' ? age : `${age} ago`;
+}
+
 /** "GEtph2tD…UFT5" style. */
 export function shortAddress(address: string, chars = 4): string {
   return address.length <= chars * 2 + 1

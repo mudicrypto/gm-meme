@@ -179,6 +179,23 @@ the API charges no fee (and logs an error) rather than fail every trade.
 Verified on devnet: a first buy and full sell from a fresh wallet matched the quoted totals to the
 lamport, including the 0.5% fee and the deposits for new accounts.
 
+## Friends, watchlist and alerts (Step 7)
+
+- **Sign in with your wallet** (Friends tab): the wallet signs a plain-text message (never a
+  transaction), proving you hold it. The API returns a 30-day session token; only its SHA-256
+  hash is stored. Phantom users approve the message in Phantom.
+- **Profiles**: a unique @handle and display name. Public profiles never include the wallet
+  address. **Sharing trades is opt-in** and off by default; turning it off deletes what you
+  shared.
+- **Friends feed**: follow people by @handle; trades they make in Sift appear once confirmed on
+  chain. Confirmed Sift trades are also recorded as price points for charts and alerts.
+- **Watchlist and price alerts** (token page → Watch and alerts; Watchlist tab): one-shot
+  alerts above or below a SOL price, checked every minute (`ALERT_CHECK_INTERVAL_MS`).
+  Notifications state the price and the alert you set, nothing more.
+- **Push notifications** need a development build with an EAS project ID (`eas init`): Expo Go
+  on Android can't receive remote pushes. Without one, alerts that went off show at the top of
+  the Watchlist tab.
+
 ## Scripts
 
 | Command           | What it does                                  |

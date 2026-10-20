@@ -25,6 +25,20 @@ export default function TabLayout() {
         }}
       />
       <Tabs.Screen
+        name="friends"
+        options={{
+          title: 'Friends',
+          tabBarIcon: ({ color }) => <TabIcon name="friends" color={color} />,
+        }}
+      />
+      <Tabs.Screen
+        name="watchlist"
+        options={{
+          title: 'Watchlist',
+          tabBarIcon: ({ color }) => <TabIcon name="watchlist" color={color} />,
+        }}
+      />
+      <Tabs.Screen
         name="portfolio"
         options={{
           title: 'Portfolio',

@@ -7,6 +7,7 @@ import { Card } from '../../components/Card';
 import { ModeToggle } from '../../components/ModeToggle';
 import { PriceChart } from '../../components/PriceChart';
 import { RiskBadge } from '../../components/RiskBadge';
+import { TokenWatch } from '../../components/TokenWatch';
 import { Segmented } from '../../components/Segmented';
 import { ErrorState, Loading } from '../../components/States';
 import { api } from '../../lib/api';
@@ -103,6 +104,8 @@ export default function TokenScreen() {
           </Text>
         ) : null}
       </Card>
+
+      <TokenWatch mint={mint} priceSol={lastPrice} />
 
       <Card title="In plain words" right={summary.data?.source === 'ai' ? <Tag text="AI" /> : null}>
         {summary.isPending ? (

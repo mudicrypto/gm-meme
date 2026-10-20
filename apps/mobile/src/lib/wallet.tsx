@@ -20,7 +20,7 @@ import {
 } from 'react';
 import { Platform } from 'react-native';
 import { keyStore, phantomStore } from './keystore';
-import { type PhantomSession, phantomConnect, phantomSign } from './phantom';
+import { type PhantomSession, phantomConnect, phantomSign, phantomSignMessage } from './phantom';
 import type { PhantomCluster } from './phantom-protocol';
 
 export type WalletKind = 'embedded' | 'phantom';
@@ -44,6 +44,8 @@ interface WalletState {
   use(kind: WalletKind): void;
   /** Sign a transaction (base64) whose only signer is the active wallet. */
   signTransaction(transactionBase64: string): Promise<string>;
+  /** Sign a plain-text message (sign-in) with the active wallet. */
+  signMessage(message: Uint8Array): Promise<Uint8Array>;
   /** The embedded wallet's private key in the base58 format Phantom and Solflare import. */
   exportPrivateKey(): Promise<string>;
 }
@@ -137,6 +139,17 @@ export function WalletProvider({ children }: { children: ReactNode }) {
     [address, kind, phantom, seed],
   );
 
+  const signMessage = useCallback(
+    async (message: Uint8Array) => {
+      // A signed message must never be something that could pass as a transaction.
+      if (message[0] === undefined || message[0] < 0x20) throw new Error('Not a text message.');
+      if (kind === 'phantom' && phantom) return phantomSignMessage(phantom, message);
+      if (!seed) throw new Error('No wallet on this device.');
+      return solanaKeys.sign(message, seed);
+    },
+    [kind, phantom, seed],
+  );
+
   const exportPrivateKey = useCallback(async () => {
     if (!seed || !embeddedAddress) throw new Error('No wallet on this device.');
     const secret = new Uint8Array(64);
@@ -160,6 +173,7 @@ export function WalletProvider({ children }: { children: ReactNode }) {
       disconnectPhantom,
       use,
       signTransaction,
+      signMessage,
       exportPrivateKey,
     }),
     [
@@ -174,6 +188,7 @@ export function WalletProvider({ children }: { children: ReactNode }) {
       disconnectPhantom,
       use,
       signTransaction,
+      signMessage,
       exportPrivateKey,
     ],
   );

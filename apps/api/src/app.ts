@@ -1,4 +1,5 @@
 import cors from '@fastify/cors';
+import { LAMPORTS_PER_SOL } from '@sift/shared';
 import Fastify, { type FastifyBaseLogger, type FastifyError } from 'fastify';
 import type { Config } from './config';
 import { type HeliusClient, createHeliusClient } from './helius/client';
@@ -9,7 +10,7 @@ import { createRiskService } from './risk/service';
 import { type SummaryModel, createClaudeSummaryModel } from './summary/claude';
 import { createSummaryService } from './summary/service';
 import { type Airdrop, createAirdrop, createDefaultTradeService } from './trading/factory';
-import type { TradeService } from './trading/service';
+import type { ConfirmedTrade, TradeService } from './trading/service';
 import { createAuth } from './social/auth';
 import { startAlertChecker } from './social/alerts';
 import { InMemorySocialRepository } from './social/memory-repository';
@@ -109,12 +110,29 @@ export function buildApp(config: Config, deps: AppDeps = {}) {
     });
     app.addHook('onClose', async () => stopAlerts?.());
   }
-  // Trades made in Sift go to followers' feeds, for people who opted in to sharing.
-  const recordTrade = (trade: Parameters<SocialRepository['recordTrade']>[0]) =>
-    socialRepository.recordTrade(trade).then(
-      () => undefined,
-      (err: unknown) => app.log.error({ err }, 'could not record shared trade'),
-    );
+  // A confirmed Sift trade is a price point (charts, alerts), and goes to followers' feeds
+  // if its trader opted in to sharing.
+  const recordTrade = async (trade: ConfirmedTrade) => {
+    try {
+      await repository.upsertTokens([{ mint: trade.mint }]);
+      await Promise.all([
+        repository.recordSwaps([
+          {
+            signature: trade.signature,
+            mint: trade.mint,
+            trader: trade.wallet,
+            side: trade.side,
+            volumeSol: trade.solLamports / LAMPORTS_PER_SOL,
+            tokenAmount: Number(trade.tokenAmount) / 10 ** trade.tokenDecimals,
+            blockTime: trade.at,
+          },
+        ]),
+        socialRepository.recordTrade(trade),
+      ]);
+    } catch (err) {
+      app.log.error({ err }, 'could not record confirmed trade');
+    }
+  };
 
   app.register(healthRoutes, { config });
   app.register(tokenRoutes, { repository, now });

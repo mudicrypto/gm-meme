@@ -6,7 +6,9 @@ import {
   connectUrl,
   newDappKeypair,
   parseConnect,
+  parseSignMessage,
   parseSignTransaction,
+  signMessageUrl,
   signTransactionUrl,
 } from './phantom-protocol';
 
@@ -58,6 +60,13 @@ function fakePhantom() {
       const message = tx.subarray(65);
       const signed = withSignature(tx, 0, solanaKeys.sign(message, walletSeed));
       return respond(q.dapp_encryption_public_key!, { transaction: base58Encode(signed) });
+    },
+    signMessage(url: string) {
+      const q = read(url);
+      const payload = openPayload(q);
+      expect(payload.display).toBe('utf8');
+      const signature = solanaKeys.sign(base58Decode(payload.message!), walletSeed);
+      return respond(q.dapp_encryption_public_key!, { signature: base58Encode(signature) });
     },
     payloadOf: (url: string) => openPayload(read(url)),
   };
@@ -176,6 +185,29 @@ describe('Phantom deeplinks', () => {
     });
     const someoneElse = { ...session, publicKey: solanaKeys.publicKey(random(32)) };
     expect(() => parseSignTransaction(phantom.sign(url), someoneElse, tx)).toThrow(/signature/);
+  });
+
+  it('signs a sign-in message and checks the signature', () => {
+    const phantom = fakePhantom();
+    const dapp = newDappKeypair(random);
+    const session = parseConnect(
+      phantom.connect(
+        connectUrl({
+          dappPublicKey: dapp.publicKey,
+          cluster: 'devnet',
+          appUrl: 'https://x.org',
+          redirectLink: REDIRECT,
+        }),
+      ),
+      dapp.secretKey,
+    );
+    const message = Uint8Array.from('Sign in to Sift', (c) => c.charCodeAt(0));
+    const url = signMessageUrl({ session, message, redirectLink: REDIRECT, nonce: random(24) });
+    expect(url.startsWith('https://phantom.com/ul/v1/signMessage?')).toBe(true);
+    const answer = phantom.signMessage(url);
+    expect(parseSignMessage(answer, session, message)).toHaveLength(64);
+    const other = Uint8Array.from('Something else', (c) => c.charCodeAt(0));
+    expect(() => parseSignMessage(answer, session, other)).toThrow(/signature/);
   });
 
   it('turns Phantom errors into plain messages', () => {

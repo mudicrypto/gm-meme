@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from 'vitest';
-import { ApiError, apiUrl, getJson } from './api';
+import { ApiError, apiUrl, authed, getJson } from './api';
 
 describe('apiUrl', () => {
   it('joins base and path', () => {
@@ -38,5 +38,26 @@ describe('getJson', () => {
       status: 0,
       message: expect.stringContaining("Can't reach Sift"),
     });
+  });
+});
+
+describe('authed', () => {
+  it('sends the bearer token and JSON body, and accepts empty 204 replies', async () => {
+    const fetchFn = vi.fn(async () => new Response(null, { status: 204 }));
+    await expect(
+      authed('tok', 'PUT', '/me/profile', { handle: 'a' }, fetchFn as typeof fetch),
+    ).resolves.toBeUndefined();
+    const [, init] = fetchFn.mock.calls[0] as unknown as [string, RequestInit];
+    expect(init.method).toBe('PUT');
+    expect(new Headers(init.headers).get('authorization')).toBe('Bearer tok');
+    expect(init.body).toBe('{"handle":"a"}');
+  });
+
+  it('sends no authorization header when signed out', async () => {
+    const fetchFn = vi.fn(async () => new Response('{"profiles":[]}'));
+    await authed(null, 'GET', '/profiles?q=a', undefined, fetchFn as typeof fetch);
+    const [, init] = fetchFn.mock.calls[0] as unknown as [string, RequestInit];
+    expect(new Headers(init.headers).has('authorization')).toBe(false);
+    expect(init.body).toBeUndefined();
   });
 });

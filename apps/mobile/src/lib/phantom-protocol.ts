@@ -128,6 +128,46 @@ export function parseSignTransaction(
   return signed;
 }
 
+/** Ask Phantom to sign a plain-text message (sign-in). Can't move funds. */
+export function signMessageUrl(opts: {
+  session: PhantomSession;
+  message: Uint8Array;
+  redirectLink: string;
+  nonce: Uint8Array;
+}): string {
+  const payload = encrypt(
+    { message: base58Encode(opts.message), session: opts.session.session, display: 'utf8' },
+    opts.session,
+    opts.nonce,
+  );
+  return `${BASE}/signMessage?${new URLSearchParams({
+    dapp_encryption_public_key: dappPublicKey(opts.session),
+    nonce: base58Encode(opts.nonce),
+    redirect_link: opts.redirectLink,
+    payload,
+  })}`;
+}
+
+/** Phantom's answer to `signMessage`: a signature we check against the connected wallet. */
+export function parseSignMessage(
+  params: Record<string, string | undefined>,
+  session: PhantomSession,
+  message: Uint8Array,
+): Uint8Array {
+  throwIfError(params);
+  const data = decrypt(
+    params,
+    sharedSecret(session.phantomEncryptionPublicKey, session.dappSecretKey),
+  ) as { signature?: unknown };
+  if (typeof data.signature !== 'string')
+    throw new PhantomError('BAD_RESPONSE', 'Phantom sent an unexpected response.');
+  const signature = base58Decode(data.signature);
+  if (signature.length !== 64 || !solanaKeys.verify(signature, message, session.publicKey)) {
+    throw new PhantomError('BAD_SIGNATURE', 'Phantom’s signature didn’t check out.');
+  }
+  return signature;
+}
+
 const ERROR_MESSAGES: Record<string, string> = {
   '4001': 'You declined the request in Phantom.',
   '4100': 'Phantom no longer recognises this connection. Connect again.',

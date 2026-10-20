@@ -7,7 +7,9 @@ import {
   connectUrl,
   newDappKeypair,
   parseConnect,
+  parseSignMessage,
   parseSignTransaction,
+  signMessageUrl,
   signTransactionUrl,
 } from './phantom-protocol';
 import { type RedirectParams, createRequestRegistry } from './phantom-requests';
@@ -58,6 +60,20 @@ export async function phantomSign(
     nonce: Crypto.getRandomBytes(24),
   });
   return parseSignTransaction(await ask('signTransaction', url), session, transaction);
+}
+
+/** Phantom signs a plain-text message (sign-in); we check the signature is the wallet's. */
+export async function phantomSignMessage(
+  session: PhantomSession,
+  message: Uint8Array,
+): Promise<Uint8Array> {
+  const url = signMessageUrl({
+    session,
+    message,
+    redirectLink: redirectLink('signMessage'),
+    nonce: Crypto.getRandomBytes(24),
+  });
+  return parseSignMessage(await ask('signMessage', url), session, message);
 }
 
 /** The user (or a newer request) called it off; nothing to report. */

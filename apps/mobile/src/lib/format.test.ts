@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import {
   formatAge,
+  formatAgo,
   formatCompact,
   formatPct,
   formatSol,
@@ -71,5 +72,13 @@ describe('helpers', () => {
     expect(priceChangePct([{ priceSol: 2 }, { priceSol: 3 }])).toBe(50);
     expect(priceChangePct([{ priceSol: 2 }])).toBeUndefined();
     expect(priceChangePct([])).toBeUndefined();
+  });
+});
+
+describe('formatAgo', () => {
+  const now = new Date('2026-10-20T10:00:00Z');
+  it('adds "ago" except for just now', () => {
+    expect(formatAgo('2026-10-20T09:59:30Z', now)).toBe('just now');
+    expect(formatAgo('2026-10-20T09:55:00Z', now)).toBe('5m ago');
   });
 });

@@ -5,6 +5,8 @@ import { useState } from 'react';
 import { ModeProvider } from '../lib/mode';
 import { usePalette } from '../lib/theme';
 import { WalletProvider } from '../lib/wallet';
+import { PushRegistration } from '../components/PushRegistration';
+import { SessionProvider } from '../lib/session';
 
 export default function RootLayout() {
   const palette = usePalette();
@@ -16,19 +18,26 @@ export default function RootLayout() {
     <QueryClientProvider client={queryClient}>
       <ModeProvider>
         <WalletProvider>
-          <Stack
-            screenOptions={{
-              headerStyle: { backgroundColor: palette.card },
-              headerTintColor: palette.text,
-              contentStyle: { backgroundColor: palette.background },
-            }}
-          >
-            <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
-            <Stack.Screen name="token/[mint]" options={{ title: 'Token' }} />
-            <Stack.Screen name="trade/[mint]" options={{ title: 'Trade', presentation: 'modal' }} />
-            <Stack.Screen name="phantom-callback/[action]" options={{ title: 'Phantom' }} />
-          </Stack>
-          <StatusBar style="auto" />
+          <SessionProvider>
+            <PushRegistration />
+            <Stack
+              screenOptions={{
+                headerStyle: { backgroundColor: palette.card },
+                headerTintColor: palette.text,
+                contentStyle: { backgroundColor: palette.background },
+              }}
+            >
+              <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
+              <Stack.Screen name="token/[mint]" options={{ title: 'Token' }} />
+              <Stack.Screen
+                name="trade/[mint]"
+                options={{ title: 'Trade', presentation: 'modal' }}
+              />
+              <Stack.Screen name="phantom-callback/[action]" options={{ title: 'Phantom' }} />
+              <Stack.Screen name="u/[handle]" options={{ title: 'Profile' }} />
+            </Stack>
+            <StatusBar style="auto" />
+          </SessionProvider>
         </WalletProvider>
       </ModeProvider>
     </QueryClientProvider>

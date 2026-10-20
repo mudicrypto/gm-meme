@@ -71,6 +71,10 @@ read `apps/mobile/AGENTS.md` before touching Expo APIs.
   its allow-list deliberately (with tamper tests in `apps/api/test/trading.test.ts`) when adding a
   venue; never loosen it to make a transaction pass. The fee wallet the app trusts comes from
   `EXPO_PUBLIC_FEE_WALLET`, never from the API. Keys: `apps/mobile/src/lib/keystore.ts` only.
+- Social: users are wallets, signed in by signing `signInMessage` (`packages/shared/src/social.ts`)
+  and holding a bearer token (stored hashed). Never put wallet addresses in public profile
+  responses, and keep trade sharing opt-in. Social data lives in `apps/api/src/social/`, with
+  the same in-memory/SQL contract test (`test/social-repository.test.ts`).
 - Types used by both app and API live in `packages/shared`. It ships TypeScript source; the API
   bundles it with tsup and Metro resolves it directly.
 - The risk score is the core of the product: keep it in our own code, each check pure and unit

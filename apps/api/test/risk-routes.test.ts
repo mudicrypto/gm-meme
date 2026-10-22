@@ -1,6 +1,7 @@
 import type { RiskScore, TokenExplanation } from '@sift/shared';
 import { afterAll, describe, expect, it, vi } from 'vitest';
 import { buildApp } from '../src/app';
+import { pumpBondingCurve } from '../src/risk/gather';
 import { loadConfig } from '../src/config';
 import { InMemoryTokenRepository } from '../src/tokens/memory-repository';
 import { addr } from './fixtures/helius';
@@ -12,9 +13,9 @@ describe('GET /tokens/:mint/risk', () => {
   helius.getMint.mockImplementation(async (mint) =>
     mint === RISK_MINT ? cleanMint({ mintAuthority: addr('Dev') }) : null,
   );
-  helius.getLargestTokenAccounts.mockResolvedValue([
+  helius.getLargestTokenAccounts.mockImplementation(async (mint) => [
     {
-      owner: addr('Curve'),
+      owner: pumpBondingCurve(mint),
       ownerProgram: '6EF8rrecthR5Dkzon8Nwu78hRvfCKubJ14M5uBEwF6P',
       amount: pct(90),
     },

@@ -329,6 +329,11 @@ describe('sell test (honeypot)', () => {
     expect(r).toMatchObject({ level: 'red', message: expect.stringContaining('no way to sell') });
   });
 
+  it('is red when no route to sell exists, even with an active bonding curve', () => {
+    const r = checkSellTest(cleanInputs({ sellTest: { status: 'no_route', reason: 'no route' } }));
+    expect(r.level).toBe('red');
+  });
+
   it('is green on an active bonding curve even without a quote (devnet)', () => {
     expect(checkSellTest(cleanInputs())).toMatchObject({
       level: 'green',

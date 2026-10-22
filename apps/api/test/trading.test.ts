@@ -459,6 +459,132 @@ describe('on-device verification catches a malicious server', () => {
     ).toContain('worst case cost is higher than shown');
   });
 
+  // A server that lies consistently: it changes the transaction AND the quote to match.
+  async function forged(
+    side: 'buy' | 'sell',
+    change: (ixs: TransactionInstruction[], q: TradeQuote) => TransactionInstruction[],
+    changeQuote: (q: TradeQuote) => TradeQuote,
+  ) {
+    const { service } = setup();
+    const q = await service.quote(
+      side === 'buy' ? buyRequest : { ...buyRequest, side: 'sell', amount: '50000000000' },
+    );
+    const tx = VersionedTransaction.deserialize(base64ToBytes(q.transaction));
+    const message = TransactionMessage.decompile(tx.message);
+    const rebuilt = new TransactionMessage({
+      payerKey: user.publicKey,
+      recentBlockhash: message.recentBlockhash,
+      instructions: change(message.instructions, q),
+    }).compileToV0Message();
+    return verifyTradeTransaction(
+      new VersionedTransaction(rebuilt).serialize(),
+      changeQuote(q),
+      FEE_WALLET,
+    ).problems.join('; ');
+  }
+  const withPump =
+    (side: 'buy' | 'sell', solLimit: number) => (ixs: TransactionInstruction[], q: TradeQuote) =>
+      ixs.map((ix) =>
+        isPump(ix)
+          ? pumpInstruction({
+              side,
+              user: user.publicKey,
+              amount: new BN(q.tokenAmount),
+              solLimit: new BN(solLimit),
+            })
+          : ix,
+      );
+
+  it('rejects numbers sent as text, which would switch off the comparisons', async () => {
+    const problems = await forged(
+      'buy',
+      withPump('buy', 10_000 * 1e9),
+      (q) =>
+        ({ ...q, limitLamports: '1e30', worstCaseLamports: '2000000' }) as unknown as TradeQuote,
+    );
+    expect(problems).toMatch(/limitLamports is not a whole number/);
+  });
+
+  it('rejects a priority price without a compute unit limit', async () => {
+    const problems = await forged(
+      'buy',
+      (ixs) => [
+        ComputeBudgetProgram.setComputeUnitPrice({ microLamports: 1_000_000_000_000 }),
+        ...ixs.filter((ix) => !ix.programId.equals(ComputeBudgetProgram.programId)),
+      ],
+      (q) => q,
+    );
+    expect(problems).toMatch(/no compute unit limit/);
+  });
+
+  it('rejects a buy limit wider than your slippage, even with a matching quote', async () => {
+    const problems = await forged(
+      'buy',
+      (ixs, q) => withPump('buy', q.expectedLamports * 2)(ixs, q),
+      (q) => ({
+        ...q,
+        limitLamports: q.expectedLamports * 2,
+        worstCaseLamports: q.worstCaseLamports + q.expectedLamports,
+      }),
+    );
+    expect(problems).toMatch(/slippage limit does not match/);
+  });
+
+  it('rejects a sell with no minimum payout, even with a matching quote', async () => {
+    const problems = await forged('sell', withPump('sell', 0), (q) => ({
+      ...q,
+      limitLamports: 0,
+      worstCaseLamports: 0,
+    }));
+    expect(problems).toMatch(/slippage limit does not match/);
+  });
+
+  it('rejects a fee above Sift’s rate, or one that doesn’t match the rate shown', async () => {
+    const budget = Number(buyRequest.amount);
+    const bigFee = budget * 0.9;
+    const steal = (ixs: TransactionInstruction[]) =>
+      ixs.map((ix) =>
+        isFee(ix)
+          ? SystemProgram.transfer({
+              fromPubkey: user.publicKey,
+              toPubkey: new PublicKey(FEE_WALLET),
+              lamports: bigFee,
+            })
+          : ix,
+      );
+    const shownAsHalfPercent = await forged('buy', steal, (q) => ({
+      ...q,
+      fees: { ...q.fees, platformLamports: bigFee },
+    }));
+    expect(shownAsHalfPercent).toMatch(/platform fee does not match its rate/);
+    const shownAs90 = await forged('buy', steal, (q) => ({
+      ...q,
+      fees: { ...q.fees, platformLamports: bigFee, platformBps: 9000 },
+    }));
+    expect(shownAs90).toMatch(/rate is higher than Sift/);
+  });
+
+  it('rejects totals that do not add up, and priority fees above the cap', async () => {
+    const lowTotal = await forged(
+      'buy',
+      (ixs) => ixs,
+      (q) => ({
+        ...q,
+        expectedTotalLamports: q.expectedTotalLamports - 1000,
+      }),
+    );
+    expect(lowTotal).toMatch(/expected total does not add up/);
+    const hugePriority = await forged(
+      'buy',
+      (ixs) => ixs,
+      (q) => ({
+        ...q,
+        fees: { ...q.fees, priorityLamports: 50_000_000 },
+      }),
+    );
+    expect(hugePriority).toMatch(/above the 0.01 SOL cap/);
+  });
+
   it('rejects bytes that are not a transaction', () => {
     expect(
       verifyTradeTransaction(Uint8Array.from([1, 2, 3]), {} as TradeQuote, FEE_WALLET).ok,

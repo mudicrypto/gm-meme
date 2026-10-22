@@ -2,6 +2,7 @@ import {
   type TradeQuote,
   type TradeQuoteRequest,
   base64ToBytes,
+  quoteShapeProblems,
   verifyTradeTransaction,
 } from '@sift/shared';
 
@@ -15,6 +16,9 @@ export function checkQuote(
   request: TradeQuoteRequest,
   feeWallet: string | null,
 ): string[] {
+  // A quote from the network is untrusted: check its types before any arithmetic.
+  const shape = quoteShapeProblems(quote);
+  if (shape.length > 0) return shape;
   const problems: string[] = [];
   if (quote.mint !== request.mint) problems.push('quote is for a different token');
   if (quote.wallet !== request.wallet) problems.push('quote is for a different wallet');

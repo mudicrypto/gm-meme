@@ -1,7 +1,7 @@
 import type { Holder, MintInfo, RiskInputs } from '../../src/risk/inputs';
 import { addr } from './helius';
 
-export const RISK_MINT = addr('RiskMint');
+export const RISK_MINT = 'E8NT2qghrktonV3RSSAc9nRmhhNxganaFo7ZWZpAFdCf';
 export const CREATOR = addr('Creator');
 export const SUPPLY = 1_000_000_000_000_000n; // 1B tokens at 6 decimals
 

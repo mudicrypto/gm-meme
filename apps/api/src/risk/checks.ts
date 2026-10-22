@@ -252,18 +252,19 @@ export const checkSellTest: Check = (inputs) => {
     );
   }
 
-  if (activeBondingCurve(inputs)) {
-    return reason(
-      'sell_test',
-      'green',
-      "Sales go to pump.fun's bonding curve, which buys tokens back at the curve price while the curve is active.",
-    );
-  }
+  // A failed test sale outweighs everything else, the curve included.
   if (sellTest?.status === 'no_route') {
     return reason(
       'sell_test',
       'red',
       `A test sale found no way to sell this token (${sellTest.reason}).`,
+    );
+  }
+  if (activeBondingCurve(inputs)) {
+    return reason(
+      'sell_test',
+      'green',
+      "Sales go to pump.fun's bonding curve, which buys tokens back at the curve price while the curve is active.",
     );
   }
   return reason(

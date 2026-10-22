@@ -280,7 +280,12 @@ export function createTradeService(options: TradeServiceOptions): TradeService {
       }
 
       // We build it, so it must pass the same check the app runs before signing.
-      const check = verifyTradeTransaction(tx.serialize(), quote, options.feeWallet);
+      const check = verifyTradeTransaction(
+        tx.serialize(),
+        quote,
+        options.feeWallet,
+        options.platformFeeBps,
+      );
       if (!check.ok)
         throw new Error(`built a trade that fails verification: ${check.problems.join('; ')}`);
 

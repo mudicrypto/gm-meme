@@ -7,6 +7,7 @@ import type {
 import { RISK_DISCLAIMER } from '@sift/shared';
 import { afterAll, describe, expect, it, vi } from 'vitest';
 import { buildApp } from '../src/app';
+import { pumpBondingCurve } from '../src/risk/gather';
 import { loadConfig } from '../src/config';
 import { createHeliusClient } from '../src/helius/client';
 import { createRiskQueue } from '../src/risk/queue';
@@ -135,9 +136,9 @@ describe('Step 5 routes', () => {
   const repository = new InMemoryTokenRepository(() => NOW);
   const helius = fakeHelius();
   helius.getMint.mockResolvedValue(cleanMint({ freezeAuthority: DEV }));
-  helius.getLargestTokenAccounts.mockResolvedValue([
+  helius.getLargestTokenAccounts.mockImplementation(async (mint) => [
     {
-      owner: addr('Curve'),
+      owner: pumpBondingCurve(mint),
       ownerProgram: '6EF8rrecthR5Dkzon8Nwu78hRvfCKubJ14M5uBEwF6P',
       amount: pct(90),
     },

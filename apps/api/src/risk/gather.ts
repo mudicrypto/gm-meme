@@ -1,3 +1,4 @@
+import { PUMP_PROGRAM, findProgramAddress, publicKeyBytes } from '@sift/shared';
 import type { FastifyBaseLogger } from 'fastify';
 import type { HeliusClient } from '../helius/client';
 import { parseTransactions } from '../helius/parse';
@@ -46,17 +47,29 @@ export async function gatherRiskInputs(mint: string, deps: GatherDeps): Promise<
   return { mint, mintInfo, holders, creatorHistory, sellTest };
 }
 
+/** pump.fun's bonding curve for `mint`: the only pump.fun account that is this token's curve. */
+export function pumpBondingCurve(mint: string): string {
+  return findProgramAddress(
+    [new TextEncoder().encode('bonding-curve'), publicKeyBytes(mint)],
+    PUMP_PROGRAM,
+  );
+}
+
 async function fetchHolders(mint: string, helius: HeliusClient): Promise<Holder[]> {
   const byOwner = new Map<string, Holder>();
+  const curve = pumpBondingCurve(mint);
   for (const account of await helius.getLargestTokenAccounts(mint)) {
     const existing = byOwner.get(account.owner);
     if (existing) {
       existing.amount += account.amount;
       continue;
     }
-    const venue =
+    let venue =
       POOL_AUTHORITIES.get(account.owner) ??
       (account.ownerProgram ? VENUE_PROGRAMS.get(account.ownerProgram) : undefined);
+    // Anyone can park tokens under another token's curve (or any pump.fun account), so
+    // only this mint's own curve counts as its curve.
+    if (venue === 'pump.fun bonding curve' && account.owner !== curve) venue = undefined;
     byOwner.set(account.owner, {
       owner: account.owner,
       amount: account.amount,

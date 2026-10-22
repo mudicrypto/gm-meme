@@ -3,6 +3,8 @@
  * whose fee goes here, and never takes the fee address from the API.
  */
 export const SIFT_FEE_WALLET = '9x6aHFQawRisd1JfPLNHwDHJU4HwHNqb5x5p6TEGHrtc';
+/** The most Sift charges per trade, in basis points (0.5%). The app refuses any higher fee. */
+export const SIFT_PLATFORM_FEE_BPS = 50;
 
 export type TradeSide = 'buy' | 'sell';
 

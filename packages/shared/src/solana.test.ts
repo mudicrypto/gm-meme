@@ -24,3 +24,12 @@ describe('isSolanaAddress', () => {
     expect(isSolanaAddress(`${'1'.repeat(31)}l`)).toBe(false);
   });
 });
+
+describe('decodeTransaction length prefixes', () => {
+  it('refuses non-canonical or oversized compact-u16 values', async () => {
+    const { decodeTransaction } = await import('./solana/transaction');
+    // 0x80 0x00 encodes 0 in two bytes (non-canonical); 0xff 0xff 0x7f is above 0xffff.
+    expect(() => decodeTransaction(Uint8Array.from([0x80, 0x00]))).toThrow(/compact-u16/);
+    expect(() => decodeTransaction(Uint8Array.from([0xff, 0xff, 0x7f]))).toThrow(/compact-u16/);
+  });
+});

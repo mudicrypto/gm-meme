@@ -40,12 +40,17 @@ class Reader {
     this.offset += n;
     return out;
   }
+  /** Solana's short_vec: canonical encodings of 0..0xffff only, as the runtime requires. */
   compactU16(): number {
     let value = 0;
     for (let shift = 0; shift < 21; shift += 7) {
       const byte = this.u8();
+      if (shift === 14 && byte > 0x03) throw new Error('bad compact-u16');
       value |= (byte & 0x7f) << shift;
-      if ((byte & 0x80) === 0) return value;
+      if ((byte & 0x80) === 0) {
+        if (byte === 0 && shift > 0) throw new Error('bad compact-u16');
+        return value;
+      }
     }
     throw new Error('bad compact-u16');
   }

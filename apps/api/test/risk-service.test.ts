@@ -1,5 +1,6 @@
 import { RISK_DISCLAIMER } from '@sift/shared';
 import { describe, expect, it, vi } from 'vitest';
+import { pumpBondingCurve } from '../src/risk/gather';
 import { createRiskService } from '../src/risk/service';
 import { InMemoryTokenRepository } from '../src/tokens/memory-repository';
 import { addr, createTx } from './fixtures/helius';
@@ -8,13 +9,14 @@ import { fakeHelius, silentLog } from './helpers/fake-helius';
 
 const PUMP_FUN = '6EF8rrecthR5Dkzon8Nwu78hRvfCKubJ14M5uBEwF6P';
 const T = Date.UTC(2026, 9, 19, 12) / 1000;
+const CURVE = pumpBondingCurve(RISK_MINT);
 
 /** Helius returning a clean pump.fun token whose creator launched `otherLaunches` other tokens. */
 function heliusFor({ otherLaunches = 0 } = {}) {
   const helius = fakeHelius();
   helius.getMint.mockResolvedValue(cleanMint());
   helius.getLargestTokenAccounts.mockResolvedValue([
-    { owner: addr('Curve'), ownerProgram: PUMP_FUN, amount: pct(80) },
+    { owner: CURVE, ownerProgram: PUMP_FUN, amount: pct(80) },
     { owner: CREATOR, ownerProgram: null, amount: pct(4) },
     { owner: addr('Buyer'), ownerProgram: null, amount: pct(1) },
     { owner: addr('Buyer'), ownerProgram: null, amount: pct(1) }, // second account, same owner
@@ -49,10 +51,33 @@ describe('risk service', () => {
     );
   });
 
+  it('derives the bonding curve like the pump.fun SDK', async () => {
+    const { pump } = await import('../src/trading/pump-sdk');
+    expect(CURVE).toBe(pump.bondingCurvePda(RISK_MINT).toBase58());
+  });
+
+  it("doesn't count another token's pump.fun curve as this token's liquidity", async () => {
+    // Attack: park 1% of supply under some other token's curve so the token looks like it's
+    // on pump.fun, and keep the rest in wallets.
+    const helius = heliusFor();
+    helius.getLargestTokenAccounts.mockResolvedValue([
+      {
+        owner: pumpBondingCurve('4wEjLrMqewYf5kkgAjS4htKoHmtpyXPn8Ye9BDS9vjgJ'),
+        ownerProgram: PUMP_FUN,
+        amount: pct(1),
+      },
+      { owner: CREATOR, ownerProgram: null, amount: pct(4) },
+    ]);
+    const score = await setup(helius).risk.getRisk(RISK_MINT);
+    expect(score?.reasons.find((r) => r.check === 'liquidity')?.level).toBe('red');
+    expect(score?.reasons.find((r) => r.check === 'sell_test')?.level).toBe('amber');
+    expect(score?.level).not.toBe('green');
+  });
+
   it('merges token accounts of the same owner before ranking holders', async () => {
     const helius = heliusFor();
     helius.getLargestTokenAccounts.mockResolvedValue([
-      { owner: addr('Curve'), ownerProgram: PUMP_FUN, amount: pct(60) },
+      { owner: CURVE, ownerProgram: PUMP_FUN, amount: pct(60) },
       ...Array.from({ length: 4 }, () => ({
         owner: addr('Whale'),
         ownerProgram: null,

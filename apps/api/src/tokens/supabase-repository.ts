@@ -116,12 +116,18 @@ export class SupabaseTokenRepository implements TokenRepository {
     await this.call('set_token_risk', { token_mint: mint, level, checked_at: checkedAt });
   }
 
-  async getRiskLevels(mints: readonly string[]): Promise<Map<string, RiskLevel>> {
+  async getRiskLevels(mints: readonly string[], freshSince: Date): Promise<Map<string, RiskLevel>> {
     if (mints.length === 0) return new Map();
-    const rows = await this.call<{ mint: string; risk_level: RiskLevel }>('risk_levels', {
-      mints: [...mints],
-    });
-    return new Map(rows.map((row) => [row.mint, row.risk_level]));
+    const rows = await this.call<{
+      mint: string;
+      risk_level: RiskLevel;
+      risk_checked_at: string | Date;
+    }>('risk_levels', { mints: [...mints] });
+    return new Map(
+      rows
+        .filter((row) => new Date(row.risk_checked_at).getTime() >= freshSince.getTime())
+        .map((row) => [row.mint, row.risk_level]),
+    );
   }
 
   async getTrades(mint: string, since: Date, limit: number): Promise<PricedTrade[]> {

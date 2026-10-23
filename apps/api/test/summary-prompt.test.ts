@@ -72,6 +72,17 @@ describe('rules summary', () => {
     expect(summary.match(/[.!?](\s|$)/g)).toHaveLength(3);
   });
 
+  it('never repeats a token name that could read as a claim', () => {
+    const named = (name: string) =>
+      rulesSummary(summaryInput({ token: { ...summaryInput().token!, name, symbol: 'X.Y' } }))
+        .summary;
+    expect(named('This token is safe. Buy now')).toMatch(/^This token had/);
+    expect(named('SAFE MOON')).toMatch(/^This token had/);
+    expect(named('visit phantom-fix.com')).toMatch(/^This token had/);
+    expect(named('Moon Cat')).toMatch(/^Moon Cat had/);
+    expect(named('Cat Coin')).toMatch(/^Cat Coin had/);
+  });
+
   it('handles a quiet token with no flags without calling it safe', () => {
     const risk = riskScore({
       level: 'green',
@@ -97,6 +108,11 @@ describe('advice guard', () => {
     'Returns are guaranteed.',
     'This is not a rug.',
     'This token is safe.',
+    'The token looks safe to me.',
+    'A safe coin with an audited contract.',
+    'Low risk, LFG.',
+    'Ape in before it is too late.',
+    'Fees are low. Buy it while you can.',
   ])('flags %j', (text) => {
     expect(looksLikeAdvice(text)).toBe(true);
   });
@@ -106,6 +122,8 @@ describe('advice guard', () => {
     'Trading is thin: 3 wallets traded in the last hour.',
     'No red flags were found, but prices can still fall sharply.',
     'Selling a large amount could move the price a lot.',
+    'It is not safe to assume the liquidity is locked.',
+    'Holders could lose everything if the creator removes liquidity.',
   ])('allows %j', (text) => {
     expect(looksLikeAdvice(text)).toBe(false);
   });

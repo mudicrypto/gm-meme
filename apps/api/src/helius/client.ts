@@ -288,6 +288,11 @@ export function createHeliusClient(options: HeliusClientOptions): HeliusClient {
         const parsed = parsedTokenAccount.safeParse(raw);
         return parsed.success ? parsed.data.data.parsed.info.owner : null;
       });
+      // Dropping a holder we can't read would understate concentration: fail instead, so
+      // the check says it couldn't verify (amber).
+      if (owners.length !== largest.value.length || owners.some((o) => o === null)) {
+        throw new Error('could not read every large holder');
+      }
       const knownOwners = [...new Set(owners.filter((o): o is string => o !== null))];
       const ownerAccounts = accountOwners.parse(
         await rpc('getMultipleAccounts', [

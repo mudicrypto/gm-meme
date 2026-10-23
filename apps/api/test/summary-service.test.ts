@@ -57,6 +57,17 @@ async function setup(
 const fakeModel = (impl: SummaryModel['summarize']) => ({ summarize: vi.fn(impl) });
 
 describe('summary service', () => {
+  it('replaces an AI summary that contradicts a flagged score', async () => {
+    // riskScore() is red: an answer with no red flags can't be right.
+    for (const answer of [
+      { summary: 'Moon Cat is new.', redFlags: [] },
+      { summary: 'Checks found no red flags.', redFlags: ['Thin trading'] },
+    ]) {
+      const { summary } = await setup(fakeModel(async () => answer));
+      expect((await summary.getSummary(RISK_MINT))!.source).toBe('rules');
+    }
+  });
+
   it('stops calling Claude once the hourly budget is spent, and resumes the next hour', async () => {
     const model = fakeModel(async () => AI);
     const { summary, advance } = await setup(model, { maxModelCallsPerHour: 2 });

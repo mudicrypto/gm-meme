@@ -92,6 +92,15 @@ export function createSummaryService(options: SummaryServiceOptions): SummarySer
         options.log.warn({ mint: input.mint }, 'Claude summary read as advice; using rules');
         return null;
       }
+      // The words must agree with the score: no "all clear" on an amber or red token.
+      const flagged = input.risk.level !== 'green';
+      if (
+        flagged &&
+        (answer.redFlags.length === 0 || /\bno (red )?flags\b/i.test(answer.summary))
+      ) {
+        options.log.warn({ mint: input.mint }, 'Claude summary contradicts the score; using rules');
+        return null;
+      }
       return answer;
     } catch (err) {
       options.log.warn({ err, mint: input.mint }, 'Claude summary failed; using rules');

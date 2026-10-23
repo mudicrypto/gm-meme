@@ -283,16 +283,18 @@ describe('watchlist and price alerts', () => {
       checkPriceAlerts({ social: ctx.social, tokens: ctx.tokens, push: ctx.push, now: () => NOW });
     expect(await check()).toEqual([]); // not crossed yet
 
-    await ctx.tokens.recordSwaps([
-      {
-        signature: 's2',
-        mint: MINT_A,
-        trader: wallet,
-        volumeSol: 3,
-        tokenAmount: 1000,
-        blockTime: new Date(NOW.getTime() + 60_000).toISOString(),
-      },
-    ]);
+    // One trade at 0.003 doesn't move the median price; a sustained move does.
+    const tradeAt = (signature: string, minutes: number) => ({
+      signature,
+      mint: MINT_A,
+      trader: wallet,
+      volumeSol: 3,
+      tokenAmount: 1000,
+      blockTime: new Date(NOW.getTime() + minutes * 60_000).toISOString(),
+    });
+    await ctx.tokens.recordSwaps([tradeAt('s2', 1)]);
+    expect(await check()).toEqual([]);
+    await ctx.tokens.recordSwaps([tradeAt('s2b', 2), tradeAt('s2c', 3)]);
     expect((await check()).map((a) => a.id)).toEqual([alert.id]);
     expect(await check()).toEqual([]); // fires once
     expect(ctx.push.send).toHaveBeenCalledTimes(1);
@@ -322,16 +324,16 @@ describe('watchlist and price alerts', () => {
       headers: as(token),
       payload: { mint: MINT_A, direction: 'below', priceSol: 0.0009 },
     });
-    await ctx.tokens.recordSwaps([
-      {
-        signature: 's3',
+    await ctx.tokens.recordSwaps(
+      ['s3', 's3b'].map((signature, i) => ({
+        signature,
         mint: MINT_A,
         trader: wallet,
         volumeSol: 0.5,
         tokenAmount: 1000,
-        blockTime: new Date(NOW.getTime() + 60_000).toISOString(),
-      },
-    ]);
+        blockTime: new Date(NOW.getTime() + (i + 1) * 60_000).toISOString(),
+      })),
+    );
     await checkPriceAlerts({
       social: ctx.social,
       tokens: ctx.tokens,

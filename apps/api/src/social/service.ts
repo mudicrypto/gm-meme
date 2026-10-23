@@ -11,7 +11,7 @@ import type {
   SharedTrade,
   WatchlistResponse,
 } from '@sift/shared';
-import type { TokenRepository } from '../tokens/repository';
+import { RISK_BADGE_MAX_AGE_MS, type TokenRepository } from '../tokens/repository';
 import { crossed, formatPriceSol } from './alerts';
 import type { ProfileRecord, SharedTradeRecord, SocialRepository } from './repository';
 
@@ -43,7 +43,7 @@ export function createSocialService(deps: {
     const unique = [...new Set(mints)];
     const [stored, risk] = await Promise.all([
       Promise.all(unique.map((mint) => tokens.getToken(mint))),
-      tokens.getRiskLevels(unique),
+      tokens.getRiskLevels(unique, new Date(now().getTime() - RISK_BADGE_MAX_AGE_MS)),
     ]);
     return new Map(
       unique.map((mint, i) => {
@@ -55,7 +55,7 @@ export function createSocialService(deps: {
             symbol: token?.symbol,
             name: token?.name,
             imageUrl: token?.imageUrl,
-            riskLevel: risk.get(mint) ?? token?.riskLevel,
+            riskLevel: risk.get(mint),
           },
         ];
       }),

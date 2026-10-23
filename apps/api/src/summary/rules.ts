@@ -1,3 +1,4 @@
+import { plainTokenName } from './guard';
 import type { SummaryInput } from './prompt';
 
 /**
@@ -5,7 +6,9 @@ import type { SummaryInput } from './prompt';
  * configured, when Claude is unavailable, and when its answer fails our checks.
  */
 export function rulesSummary(input: SummaryInput): { summary: string; redFlags: string[] } {
-  const name = input.token?.name ?? input.token?.symbol ?? 'This token';
+  // The creator picks the name, so it's only repeated when it can't read as a claim.
+  const name =
+    plainTokenName(input.token?.name) ?? plainTokenName(input.token?.symbol) ?? 'This token';
   const hour = input.activityLastHour;
   const trading =
     hour.swapCount === 0

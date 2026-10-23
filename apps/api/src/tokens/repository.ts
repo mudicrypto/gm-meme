@@ -1,5 +1,18 @@
 import type { RiskLevel, TokenSummary, TrendingToken } from '@sift/shared';
 
+/**
+ * Prices ignore trades below this size, so dust can't set them. Mirrors the SQL
+ * (supabase/migrations/20261023000000_robust_prices.sql).
+ */
+export const MIN_PRICED_TRADE_SOL = 0.01;
+/** The latest price is the median of this many most recent priced trades. */
+export const PRICE_MEDIAN_TRADES = 7;
+/**
+ * Lists show a stored risk badge only while it's this recent: a token that looked fine at
+ * launch can turn bad later. Older scores read as "not checked yet" until rescored.
+ */
+export const RISK_BADGE_MAX_AGE_MS = 30 * 60_000;
+
 /** Everything we store about a token. Optional fields may arrive in any order. */
 export interface TokenRecord {
   mint: string;
@@ -68,10 +81,11 @@ export interface TokenRepository {
   /** Store a risk level, unless a newer one is already stored. */
   setRiskLevel(mint: string, level: RiskLevel, checkedAt: string): Promise<void>;
   /** Stored risk levels for the mints that have one. */
-  getRiskLevels(mints: readonly string[]): Promise<Map<string, RiskLevel>>;
+  /** Stored risk levels checked at or after `freshSince`, for the mints that have one. */
+  getRiskLevels(mints: readonly string[], freshSince: Date): Promise<Map<string, RiskLevel>>;
   /** Priced trades since `since`, oldest first. */
   getTrades(mint: string, since: Date, limit: number): Promise<PricedTrade[]>;
-  /** Latest known price (SOL per whole token) for the mints that have one. */
+  /** Latest price (SOL per whole token): the median of the last few priced trades. */
   getLatestPrices(mints: readonly string[]): Promise<Map<string, number>>;
   /** Tokens ranked by distinct traders since `since`. */
   listTrending(options: { since: Date; limit: number }): Promise<TrendingToken[]>;

@@ -1,5 +1,7 @@
 import type { RiskLevel, TokenSummary, TrendingToken } from '@sift/shared';
 import {
+  MIN_PRICED_TRADE_SOL,
+  PRICE_MEDIAN_TRADES,
   type StoredToken,
   type PricedTrade,
   type SwapRecord,
@@ -68,24 +70,24 @@ export class InMemoryTokenRepository implements TokenRepository {
     this.tokens.set(mint, { ...token, riskLevel: level, riskCheckedAt: checkedAt });
   }
 
-  async getRiskLevels(mints: readonly string[]): Promise<Map<string, RiskLevel>> {
+  async getRiskLevels(mints: readonly string[], freshSince: Date): Promise<Map<string, RiskLevel>> {
     const levels = new Map<string, RiskLevel>();
     for (const mint of mints) {
-      const level = this.tokens.get(mint)?.riskLevel;
-      if (level) levels.set(mint, level);
+      const token = this.tokens.get(mint);
+      if (
+        token?.riskLevel &&
+        token.riskCheckedAt &&
+        Date.parse(token.riskCheckedAt) >= freshSince.getTime()
+      ) {
+        levels.set(mint, token.riskLevel);
+      }
     }
     return levels;
   }
 
   async getTrades(mint: string, since: Date, limit: number): Promise<PricedTrade[]> {
-    return [...this.swaps.values()]
-      .filter(
-        (s) =>
-          s.mint === mint &&
-          Date.parse(s.blockTime) >= since.getTime() &&
-          (s.tokenAmount ?? 0) > 0 &&
-          (s.volumeSol ?? 0) > 0,
-      )
+    return this.pricedSwaps(mint)
+      .filter((s) => Date.parse(s.blockTime) >= since.getTime())
       .sort((a, b) => Date.parse(a.blockTime) - Date.parse(b.blockTime))
       .slice(0, limit)
       .map((s) => ({
@@ -108,25 +110,29 @@ export class InMemoryTokenRepository implements TokenRepository {
   }
 
   async getLatestPrices(mints: readonly string[]): Promise<Map<string, number>> {
-    const wanted = new Set(mints);
-    const latest = new Map<string, { at: number; signature: string; price: number }>();
-    for (const swap of this.swaps.values()) {
-      if (!wanted.has(swap.mint) || !(swap.tokenAmount! > 0) || !(swap.volumeSol! > 0)) continue;
-      const at = Date.parse(swap.blockTime);
-      const current = latest.get(swap.mint);
-      if (
-        !current ||
-        at > current.at ||
-        (at === current.at && swap.signature < current.signature)
-      ) {
-        latest.set(swap.mint, {
-          at,
-          signature: swap.signature,
-          price: swap.volumeSol! / swap.tokenAmount!,
-        });
-      }
+    const prices = new Map<string, number>();
+    for (const mint of new Set(mints)) {
+      // The same order as the SQL: newest first, ties by signature.
+      const recent = this.pricedSwaps(mint)
+        .sort(
+          (a, b) =>
+            Date.parse(b.blockTime) - Date.parse(a.blockTime) ||
+            (a.signature < b.signature ? -1 : 1),
+        )
+        .slice(0, PRICE_MEDIAN_TRADES)
+        .map((s) => s.volumeSol! / s.tokenAmount!)
+        .sort((a, b) => a - b);
+      // percentile_disc(0.5): the lower middle value.
+      if (recent.length > 0) prices.set(mint, recent[Math.ceil(recent.length / 2) - 1]!);
     }
-    return new Map([...latest].map(([mint, entry]) => [mint, entry.price]));
+    return prices;
+  }
+
+  private pricedSwaps(mint: string): SwapRecord[] {
+    return [...this.swaps.values()].filter(
+      (s) =>
+        s.mint === mint && (s.tokenAmount ?? 0) > 0 && (s.volumeSol ?? 0) >= MIN_PRICED_TRADE_SOL,
+    );
   }
 
   async listTrending({ since, limit }: { since: Date; limit: number }): Promise<TrendingToken[]> {

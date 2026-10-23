@@ -2,7 +2,7 @@ import { type HoldingsResponse, LAMPORTS_PER_SOL, isSolanaAddress } from '@sift/
 import type { FastifyPluginAsync } from 'fastify';
 import { z } from 'zod';
 import type { HeliusClient } from '../helius/client';
-import type { TokenRepository } from '../tokens/repository';
+import { RISK_BADGE_MAX_AGE_MS, type TokenRepository } from '../tokens/repository';
 import { parseOrReply } from './validation';
 
 const params = z.object({
@@ -18,16 +18,20 @@ export const walletRoutes: FastifyPluginAsync<{
   repository: TokenRepository;
   /** Queue tokens for background risk scoring. */
   scoreLater: (mints: string[]) => void;
-}> = async (app, { helius, repository, scoreLater }) => {
+  now: () => Date;
+}> = async (app, { helius, repository, scoreLater, now }) => {
   app.get(
     '/wallets/:address/holdings',
     async (request, reply): Promise<HoldingsResponse | undefined> => {
       const p = parseOrReply(params, request.params, reply);
       if (!p) return;
       const { lamports, tokens } = await helius.getWalletHoldings(p.address);
-      const levels = await repository.getRiskLevels(tokens.map((t) => t.mint));
+      const levels = await repository.getRiskLevels(
+        tokens.map((t) => t.mint),
+        new Date(now().getTime() - RISK_BADGE_MAX_AGE_MS),
+      );
 
-      // Tokens Sift hasn't scored yet: store what DAS told us (risk levels attach to
+      // Tokens Sift hasn't scored lately: store what DAS told us (risk levels attach to
       // stored tokens), then score them in the background so the next view has badges.
       const unscored = tokens.filter((t) => !levels.has(t.mint)).slice(0, MAX_SCORED_PER_REQUEST);
       if (unscored.length > 0) {

@@ -18,8 +18,14 @@ export interface JupiterClientOptions {
 }
 
 const quoteResponse = z.looseObject({
-  priceImpactPct: z.union([z.string(), z.number()]),
-  routePlan: z.array(z.looseObject({ swapInfo: z.looseObject({ label: z.string().nullish() }) })),
+  // A real, finite number ("" or "abc" would become 0 or NaN and slip past the thresholds).
+  priceImpactPct: z
+    .union([z.string().regex(/^-?\d+(\.\d+)?(e-?\d+)?$/i), z.number()])
+    .transform(Number)
+    .pipe(z.number().finite()),
+  routePlan: z
+    .array(z.looseObject({ swapInfo: z.looseObject({ label: z.string().nullish() }) }))
+    .min(1),
 });
 const errorResponse = z.looseObject({
   error: z.string().optional(),
@@ -72,7 +78,7 @@ export function createJupiterClient(options: JupiterClientOptions): JupiterClien
         ...new Set(quote.routePlan.map((r) => r.swapInfo.label).filter((l): l is string => !!l)),
       ];
       // Jupiter reports impact as a fraction ("0.12" = 12%).
-      return { status: 'quoted', priceImpactPct: Number(quote.priceImpactPct) * 100, routes };
+      return { status: 'quoted', priceImpactPct: Math.abs(quote.priceImpactPct) * 100, routes };
     },
   };
 }

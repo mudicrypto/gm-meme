@@ -161,7 +161,11 @@ describe.each(implementations)('TokenRepository: %s', (_name, create) => {
       riskCheckedAt: at(10),
     });
     expect(tokens.find((t) => t.mint === MINT_B)?.riskLevel).toBeUndefined();
-    expect(await repo.getRiskLevels([MINT_A, MINT_B, MINT_C])).toEqual(new Map([[MINT_A, 'red']]));
+    expect(await repo.getRiskLevels([MINT_A, MINT_B, MINT_C], new Date(0))).toEqual(
+      new Map([[MINT_A, 'red']]),
+    );
+    // Scores older than `freshSince` are left out.
+    expect((await repo.getRiskLevels([MINT_A], new Date('2100-01-01'))).size).toBe(0);
 
     await repo.recordSwaps([{ signature: 'r1', mint: MINT_A, trader: ALICE, blockTime: at(30) }]);
     const [trending] = await repo.listTrending({ since: new Date(at(0)), limit: 10 });
@@ -206,28 +210,25 @@ describe.each(implementations)('TokenRepository: %s', (_name, create) => {
     expect(await repo.getTrades(MINT_A, new Date(at(10)), 1)).toHaveLength(1);
   });
 
-  it('gives the latest known price per token', async () => {
+  it('prices from the median of the last 7 trades of at least 0.01 SOL', async () => {
     await repo.upsertTokens([{ mint: MINT_A }, { mint: MINT_B }]);
+    const swap = (signature: string, minute: number, volumeSol: number, tokenAmount?: number) => ({
+      signature,
+      mint: MINT_A,
+      trader: ALICE,
+      volumeSol,
+      tokenAmount,
+      blockTime: at(minute),
+    });
     await repo.recordSwaps([
+      // Eight honest trades at 0.001 SOL per token; the oldest falls out of the window.
+      ...Array.from({ length: 8 }, (_, i) => swap(`h${i}`, i, 1, 1000)),
+      // One crafted trade at 1000× the price, and a dust trade, can't move it.
+      swap('attack', 20, 1, 1),
+      swap('dust', 21, 0.001, 0.000001),
+      swap('noamount', 22, 9),
       {
-        signature: 'l1',
-        mint: MINT_A,
-        trader: ALICE,
-        volumeSol: 1,
-        tokenAmount: 1000,
-        blockTime: at(30),
-      },
-      {
-        signature: 'l2',
-        mint: MINT_A,
-        trader: BOB,
-        volumeSol: 3,
-        tokenAmount: 1000,
-        blockTime: at(40),
-      },
-      { signature: 'l3', mint: MINT_A, trader: CAROL, volumeSol: 9, blockTime: at(50) }, // no amount
-      {
-        signature: 'l4',
+        signature: 'b1',
         mint: MINT_B,
         trader: ALICE,
         volumeSol: 1,
@@ -236,8 +237,12 @@ describe.each(implementations)('TokenRepository: %s', (_name, create) => {
       },
     ]);
     const prices = await repo.getLatestPrices([MINT_A, MINT_B, MINT_C]);
-    expect(Object.fromEntries(prices)).toEqual({ [MINT_A]: 0.003, [MINT_B]: 0.25 });
+    expect(Object.fromEntries(prices)).toEqual({ [MINT_A]: 0.001, [MINT_B]: 0.25 });
     expect((await repo.getLatestPrices([])).size).toBe(0);
+    // Charts skip dust too (the crafted 0.01+ SOL trade still shows: it really happened).
+    const trades = await repo.getTrades(MINT_A, new Date(at(0)), 100);
+    expect(trades.map((t) => t.volumeSol)).not.toContain(0.001);
+    expect(trades).toHaveLength(9);
   });
 
   it('ignores redelivered swaps', async () => {

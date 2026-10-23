@@ -41,6 +41,17 @@ export const checkFreezeAuthority: Check = ({ mintInfo }) => {
     : reason('freeze_authority', 'green', 'Freezing is switched off: no one can lock your tokens.');
 };
 
+/** Token-2022 extensions known not to affect holders; anything else needs a look. */
+const HARMLESS_EXTENSIONS = new Set([
+  'metadataPointer',
+  'tokenMetadata',
+  'groupPointer',
+  'groupMemberPointer',
+  'tokenGroup',
+  'tokenGroupMember',
+  'immutableOwner',
+]);
+
 /** Token-2022 extensions that can trap or take holders' tokens. */
 export const checkTokenExtensions: Check = ({ mintInfo }) => {
   if (!mintInfo)
@@ -55,6 +66,8 @@ export const checkTokenExtensions: Check = ({ mintInfo }) => {
     switch (extension) {
       case 'transferHook':
         if (state.programId) red.push('every transfer runs custom code that could block sales');
+        else if (state.authority)
+          amber.push('the creator can add custom code to every transfer later');
         break;
       case 'permanentDelegate':
         if (state.delegate) red.push('a permanent delegate can move or burn anyone’s tokens');
@@ -75,6 +88,13 @@ export const checkTokenExtensions: Check = ({ mintInfo }) => {
         else if (pct > 0) amber.push(`a ${pct}% fee is taken on every transfer`);
         break;
       }
+      case 'mintCloseAuthority':
+        if (state.closeAuthority) amber.push('the creator can close the token’s mint account');
+        break;
+      default:
+        // New or unusual rules aren't assumed safe.
+        if (!HARMLESS_EXTENSIONS.has(extension))
+          amber.push(`it uses a rule Sift can’t assess (${extension.slice(0, 40)})`);
     }
   }
 

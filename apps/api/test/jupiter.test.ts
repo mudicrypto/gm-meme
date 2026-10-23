@@ -43,6 +43,15 @@ describe('Jupiter quoteSell', () => {
     });
   });
 
+  it.each([
+    ['an impact that is not a number', { ...quote, priceImpactPct: 'abc' }],
+    ['an empty impact', { ...quote, priceImpactPct: '' }],
+    ['a route with no steps', { ...quote, routePlan: [] }],
+  ])('throws on %s, so the check says "couldn\'t test" rather than green', async (_name, body) => {
+    const { jupiter } = client(200, body);
+    await expect(jupiter.quoteSell(MINT_A, 1_000_000n)).rejects.toThrow();
+  });
+
   it('reports a token Jupiter cannot sell as no route', async () => {
     const { jupiter } = client(400, {
       error: `The token ${MINT_A} is not tradable`,

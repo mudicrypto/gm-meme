@@ -189,7 +189,9 @@ export function buildApp(config: Config, deps: AppDeps = {}) {
   };
 
   app.register(healthRoutes, { config });
-  app.register(tokenRoutes, { repository, now });
+  // Set once the risk queue exists (it needs Helius).
+  let rescore: ((mints: string[]) => void) | undefined;
+  app.register(tokenRoutes, { repository, now, scoreLater: (mints) => rescore?.(mints) });
   app.register(chartRoutes, { repository, now });
 
   // Newly launched tokens are scored in the background for the feeds' risk badges.
@@ -213,11 +215,13 @@ export function buildApp(config: Config, deps: AppDeps = {}) {
     });
     const riskQueue = createRiskQueue({ risk, log: app.log });
     onLaunched = (mints) => riskQueue.enqueue(mints);
+    rescore = (mints) => riskQueue.enqueue(mints);
     app.register(riskRoutes, { risk });
     app.register(walletRoutes, {
       helius,
       repository,
       scoreLater: (mints) => riskQueue.enqueue(mints),
+      now,
     });
 
     const tradingEnabled = config.SOLANA_CLUSTER === 'devnet' || config.ALLOW_MAINNET_TRADING;

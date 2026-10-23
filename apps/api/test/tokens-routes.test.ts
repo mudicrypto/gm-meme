@@ -88,3 +88,31 @@ describe('token routes', () => {
     await broken.close();
   });
 });
+
+describe('risk badges in the feeds', () => {
+  it('hides a stored badge once it is older than 30 minutes, and queues the token for rescoring', async () => {
+    const { tokenRoutes } = await import('../src/routes/tokens');
+    const Fastify = (await import('fastify')).default;
+    const repository = new InMemoryTokenRepository(() => NOW);
+    await repository.upsertTokens([
+      { mint: MINT_A, launchedAt: minutesAgo(120) },
+      { mint: MINT_B, launchedAt: minutesAgo(10) },
+    ]);
+    await repository.setRiskLevel(MINT_A, 'green', minutesAgo(90)); // scored at launch
+    await repository.setRiskLevel(MINT_B, 'amber', minutesAgo(5));
+    const queued: string[] = [];
+    const app = Fastify();
+    await app.register(tokenRoutes, {
+      repository,
+      now: () => NOW,
+      scoreLater: (mints) => queued.push(...mints),
+    });
+    const { tokens } = (await app.inject({ url: '/tokens/new' })).json<TokenListResponse>();
+    expect(Object.fromEntries(tokens.map((t) => [t.mint, t.riskLevel ?? null]))).toEqual({
+      [MINT_A]: null,
+      [MINT_B]: 'amber',
+    });
+    expect(queued).toEqual([MINT_A]);
+    await app.close();
+  });
+});

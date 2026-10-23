@@ -97,6 +97,21 @@ describe('token extensions', () => {
     expect(r).toMatchObject({ level: 'green', message: expect.stringContaining('Standard token') });
   });
 
+  it('is amber for rules it does not know, or a hook the creator can switch on later', () => {
+    expect(withExtensions({ extension: 'scaledUiAmountConfig' })).toMatchObject({
+      level: 'amber',
+      message: expect.stringContaining('can’t assess (scaledUiAmountConfig)'),
+    });
+    expect(
+      level(
+        withExtensions({ extension: 'transferHook', state: { authority: 'X', programId: null } }),
+      ),
+    ).toBe('amber');
+    expect(
+      level(withExtensions({ extension: 'metadataPointer' }, { extension: 'tokenMetadata' })),
+    ).toBe('green');
+  });
+
   it('is green for Token-2022 with only metadata (how pump.fun launches)', () => {
     expect(level(checkTokenExtensions(cleanInputs()))).toBe('green');
   });

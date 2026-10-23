@@ -153,6 +153,23 @@ describe('Helius client: Solana RPC for the risk score', () => {
     expect(fetch).toHaveBeenCalledTimes(3);
   });
 
+  it('getLargestTokenAccounts fails rather than drop a holder it cannot read', async () => {
+    const tokenAccounts = structuredClone(devnetRpc.getMultipleAccounts_tokenAccounts) as {
+      result: { value: unknown[] };
+    };
+    tokenAccounts.result.value[0] = null; // closed between the two calls
+    const fetch = mockFetch(
+      { body: devnetRpc.getTokenLargestAccounts },
+      { body: tokenAccounts },
+      { body: devnetRpc.getMultipleAccounts_owners },
+    );
+    await expect(
+      createHeliusClient({ apiKey: API_KEY, cluster: 'devnet', fetch }).getLargestTokenAccounts(
+        MOON_CAT,
+      ),
+    ).rejects.toThrow(/every large holder/);
+  });
+
   it('getLargestTokenAccounts stops early for a token with no holders', async () => {
     const fetch = mockFetch({ body: { result: { value: [] } } });
     expect(

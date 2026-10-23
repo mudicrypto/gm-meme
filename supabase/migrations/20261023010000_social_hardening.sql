@@ -1,7 +1,6 @@
 -- Security review: push tokens can only be removed by their owner, and nothing per wallet
 -- grows without bound (at most 10 devices and 10 sign-in sessions; expired sessions go).
-
-drop function public.delete_push_token(text);
+-- The old one-argument delete_push_token is dropped in the next migration.
 
 create function public.delete_push_token(push_token text, owner text)
 returns void

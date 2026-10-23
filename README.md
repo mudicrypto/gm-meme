@@ -215,3 +215,12 @@ Build the API for production with `pnpm --filter @sift/api build`, then
 
 Sift is non-custodial: private keys stay in the user's wallet on their phone, and every
 transaction is signed there. The API never sees a key.
+
+The Step 8 review, its findings by severity and what remains before mainnet are in
+[`docs/SECURITY_REVIEW.md`](docs/SECURITY_REVIEW.md). In short:
+
+- **Signing:** the phone re-checks every trade against the user's own settings (amounts,
+  slippage limit, fee rate, priority fee cap, totals) and refuses anything else.
+- **Sign-in:** the phone signs only Sift's own sign-in text.
+- **Abuse:** the API rate-limits per IP and caps Claude spend per hour.
+- **Prices and badges:** prices resist single crafted trades, and stale risk badges expire.

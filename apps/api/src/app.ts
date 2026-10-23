@@ -70,7 +70,7 @@ const ROUTE_LIMITS: Record<string, { max: number; timeWindow?: number }> = {
   'POST /me/alerts': { max: 20 },
 };
 // Authenticated by its own secret and called by Helius in bursts; health is for monitors.
-const UNLIMITED_ROUTES = new Set(['POST /webhooks/helius', 'GET /health']);
+const UNLIMITED_ROUTES = new Set(['POST /webhooks/helius', 'GET /health', 'HEAD /health']);
 
 /** Build the Fastify app without listening, so tests can use app.inject(). */
 export function buildApp(config: Config, deps: AppDeps = {}) {

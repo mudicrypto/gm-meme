@@ -1,0 +1,42 @@
+# Render Blueprint for the Sift API (https://render.com/docs/blueprint-spec).
+# In Render: New > Blueprint, pick this repo. Render asks for the values marked
+# `sync: false`; paste them there, never into code. Everything else is set here.
+services:
+  - type: web
+    name: sift-api
+    runtime: node
+    # Free sleeps after 15 idle minutes (the first request then takes ~1 minute, and price
+    # alerts pause). Starter keeps it always on.
+    plan: free
+    region: frankfurt # next to the Supabase database
+    # Only the API and the shared package: the mobile app isn't needed on the server.
+    buildCommand: corepack enable && pnpm install --frozen-lockfile --filter "@sift/api..." && pnpm --filter @sift/api build
+    startCommand: node apps/api/dist/server.js
+    healthCheckPath: /health
+    autoDeploy: true
+    envVars:
+      - key: NODE_VERSION
+        value: '22'
+      - key: HOST
+        value: 0.0.0.0
+      - key: LOG_LEVEL
+        value: info
+      # Devnet until the pre-mainnet checklist in docs/SECURITY_REVIEW.md is done.
+      - key: SOLANA_CLUSTER
+        value: devnet
+      - key: ALLOW_MAINNET_TRADING
+        value: 'false'
+      # Render's proxy adds the caller's IP; trust exactly that one hop for rate limits.
+      - key: TRUST_PROXY_HOPS
+        value: '1'
+      # Generated once by Render; the API registers its Helius webhook with it at startup.
+      - key: HELIUS_WEBHOOK_SECRET
+        generateValue: true
+      - key: HELIUS_API_KEY
+        sync: false
+      - key: SUPABASE_URL
+        sync: false
+      - key: SUPABASE_SERVICE_ROLE_KEY
+        sync: false
+      - key: ANTHROPIC_API_KEY
+        sync: false

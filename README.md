@@ -196,6 +196,11 @@ lamport, including the 0.5% fee and the deposits for new accounts.
   on Android can't receive remote pushes. Without one, alerts that went off show at the top of
   the Watchlist tab.
 
+## Putting it online
+
+A test version on Render (API) and Expo (Android app), still on devnet. Step by step, with
+no terminal needed: [`docs/DEPLOY.md`](docs/DEPLOY.md).
+
 ## Scripts
 
 | Command           | What it does                                  |

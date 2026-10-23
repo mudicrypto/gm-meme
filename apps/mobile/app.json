@@ -33,7 +33,8 @@
         {
           "faceIDPermission": "Sift uses Face ID to confirm it’s you before showing your private key or removing your wallet."
         }
-      ]
+      ],
+      "expo-status-bar"
     ]
   }
 }

@@ -85,6 +85,16 @@ const ConfigSchema = z
       .default(60_000),
     // Optional: Expo push access token, if "enhanced push security" is on for the project.
     EXPO_ACCESS_TOKEN: optionalSecret,
+    // This server's public https address. When set (Render sets RENDER_EXTERNAL_URL itself),
+    // the API registers its Helius webhook at startup.
+    PUBLIC_URL: z
+      .url()
+      .optional()
+      .or(z.literal('').transform(() => undefined)),
+    RENDER_EXTERNAL_URL: z
+      .url()
+      .optional()
+      .or(z.literal('').transform(() => undefined)),
     // Browser origins allowed to call the API (the native app needs none). Comma-separated.
     CORS_ORIGINS: z
       .string()

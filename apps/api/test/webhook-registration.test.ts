@@ -1,5 +1,5 @@
-import { describe, expect, it } from 'vitest';
-import { buildWebhookRequest } from '../src/helius/webhook-registration';
+import { describe, expect, it, vi } from 'vitest';
+import { buildWebhookRequest, syncWebhook } from '../src/helius/webhook-registration';
 import { MINT_A } from './fixtures/helius';
 
 const base = {
@@ -36,5 +36,40 @@ describe('buildWebhookRequest', () => {
     expect(() =>
       buildWebhookRequest('key', { ...base, webhookURL: 'https://sift.example/' }),
     ).toThrow(/webhooks\/helius/);
+  });
+});
+
+describe('syncWebhook', () => {
+  const respond = (...bodies: unknown[]) => {
+    const fetchFn = vi.fn<typeof fetch>();
+    for (const body of bodies) fetchFn.mockResolvedValueOnce(new Response(JSON.stringify(body)));
+    return fetchFn;
+  };
+
+  it('updates the webhook already pointing at this server', async () => {
+    const fetchFn = respond(
+      [
+        { webhookID: 'other', webhookURL: 'https://elsewhere/webhooks/helius' },
+        { webhookID: 'w1', webhookURL: base.webhookURL },
+      ],
+      { webhookID: 'w1' },
+    );
+    expect(await syncWebhook('key', base, fetchFn)).toEqual({ webhookID: 'w1', created: false });
+    const [url, init] = fetchFn.mock.calls[1]!;
+    expect(url).toBe('https://api-mainnet.helius-rpc.com/v0/webhooks/w1?api-key=key');
+    expect(init?.method).toBe('PUT');
+    expect(JSON.parse(String(init?.body))).toMatchObject({ authHeader: base.secret });
+  });
+
+  it('creates one when none exists', async () => {
+    const fetchFn = respond([], { webhookID: 'new' });
+    expect(await syncWebhook('key', base, fetchFn)).toEqual({ webhookID: 'new', created: true });
+    expect(fetchFn.mock.calls[1]![1]?.method).toBe('POST');
+  });
+
+  it('never puts the API key in its errors', async () => {
+    const fetchFn = vi.fn<typeof fetch>().mockResolvedValue(new Response('no', { status: 401 }));
+    await expect(syncWebhook('secret-key', base, fetchFn)).rejects.toThrow(/HTTP 401/);
+    await expect(syncWebhook('secret-key', base, fetchFn)).rejects.not.toThrow(/secret-key/);
   });
 });

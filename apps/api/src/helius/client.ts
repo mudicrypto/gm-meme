@@ -1,4 +1,4 @@
-import type { SolanaCluster } from '@sift/shared';
+import { type SolanaCluster, isSolanaAddress } from '@sift/shared';
 import { z } from 'zod';
 import type { MintInfo } from '../risk/inputs';
 
@@ -68,7 +68,7 @@ const ENHANCED_API_URL: Record<SolanaCluster, string> = {
 };
 
 const assetSchema = z.looseObject({
-  id: z.string(),
+  id: z.string().refine(isSolanaAddress),
   content: z
     .looseObject({
       metadata: z
@@ -341,15 +341,33 @@ const MAX_NAME_LENGTH = 64;
 const MAX_SYMBOL_LENGTH = 16;
 
 function nonEmpty(value: string | null | undefined, maxLength: number): string | undefined {
-  const trimmed = value?.trim().slice(0, maxLength);
-  return trimmed ? trimmed : undefined;
+  // No control or invisible formatting characters: a right-to-left override can make
+  // "CDSU" display as "USDC", and zero-width characters hide look-alikes.
+  const cleaned = value
+    ?.replace(/[\p{Cc}\p{Cf}]/gu, '')
+    .replace(/\s+/g, ' ')
+    .trim()
+    .slice(0, maxLength)
+    .trim();
+  return cleaned ? cleaned : undefined;
 }
+
+const MAX_IMAGE_URL_LENGTH = 512;
 
 /** Token images are attacker-controlled; only pass on plain https URLs. */
 function httpsUrl(value: string | null | undefined): string | undefined {
-  if (!value) return undefined;
+  if (!value || value.length > MAX_IMAGE_URL_LENGTH) return undefined;
   try {
-    return new URL(value).protocol === 'https:' ? value : undefined;
+    const url = new URL(value);
+    const plain =
+      url.protocol === 'https:' &&
+      !url.username &&
+      !url.password &&
+      url.port === '' &&
+      // A host name, not a raw IP address (phones would fetch it directly).
+      !/^\d+\.\d+\.\d+\.\d+$/.test(url.hostname) &&
+      !url.hostname.startsWith('[');
+    return plain ? value : undefined;
   } catch {
     return undefined;
   }

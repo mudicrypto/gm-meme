@@ -180,7 +180,7 @@ describe('profiles, follows and the friends feed', () => {
     expect(feed.json()).toEqual({
       trades: [
         {
-          signature: 'sig-a',
+          id: expect.stringMatching(/^[0-9a-f]{24}$/),
           handle: 'alice',
           displayName: 'Alice',
           side: 'buy',
@@ -200,10 +200,12 @@ describe('profiles, follows and the friends feed', () => {
     });
     expect(profile.json()).toMatchObject({
       profile: { handle: 'alice', followers: 1, followedByMe: true },
-      trades: [{ signature: 'sig-a' }],
+      trades: [{ id: feed.json().trades[0].id }],
     });
-    // A public profile never includes the wallet address.
+    // A public profile never includes the wallet address, nor the transaction signature
+    // (an explorer would show the wallet behind it).
     expect(JSON.stringify(profile.json())).not.toContain(aliceKeys.wallet);
+    expect(JSON.stringify(profile.json())).not.toContain('sig-a');
 
     const search = await ctx.app.inject({ method: 'GET', url: '/profiles?q=AL' });
     expect(search.json()).toMatchObject({ profiles: [{ handle: 'alice', followedByMe: false }] });

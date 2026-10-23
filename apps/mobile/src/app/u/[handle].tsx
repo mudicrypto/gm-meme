@@ -63,9 +63,7 @@ export default function ProfileScreen() {
       ) : trades.length === 0 ? (
         <Empty message="No shared trades yet." />
       ) : (
-        trades.map((trade) => (
-          <SharedTradeRow key={trade.signature} trade={trade} showName={false} />
-        ))
+        trades.map((trade) => <SharedTradeRow key={trade.id} trade={trade} showName={false} />)
       )}
     </ScrollView>
   );

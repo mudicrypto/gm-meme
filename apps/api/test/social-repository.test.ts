@@ -214,6 +214,23 @@ describe.each(implementations)('SocialRepository: %s', (_name, create) => {
     expect((await repo.alertsOf(ALICE)).map((a) => a.id)).toEqual([ALERT_1]);
   });
 
+  it('keeps the 10 newest sessions and devices per wallet', async () => {
+    for (let i = 0; i < 12; i++) {
+      // Real future times: creating a session purges ones that have expired by the clock.
+      const expiresAt = new Date(Date.now() + (60 + i) * 60_000).toISOString();
+      await repo.createSession({ tokenHash: `h${i}`, wallet: ALICE, expiresAt });
+      await repo.savePushToken(ALICE, `ExponentPushToken[d${String(i).padStart(2, '0')}]`);
+    }
+    const now = new Date();
+    expect(await repo.sessionWallet('h0', now)).toBeNull();
+    expect(await repo.sessionWallet('h1', now)).toBeNull();
+    expect(await repo.sessionWallet('h2', now)).toBe(ALICE);
+    expect(await repo.sessionWallet('h11', now)).toBe(ALICE);
+    const devices = await repo.pushTokens([ALICE]);
+    expect(devices).toHaveLength(10);
+    expect(devices.map((d) => d.token)).toContain('ExponentPushToken[d11]');
+  });
+
   it('keeps push tokens per wallet; a token moves to whoever registered it last', async () => {
     await repo.savePushToken(ALICE, 'ExponentPushToken[a]');
     await repo.savePushToken(ALICE, 'ExponentPushToken[b]');
@@ -222,7 +239,8 @@ describe.each(implementations)('SocialRepository: %s', (_name, create) => {
     expect(await repo.pushTokens([ALICE])).toEqual([
       { wallet: ALICE, token: 'ExponentPushToken[a]' },
     ]);
-    await repo.deletePushToken('ExponentPushToken[c]');
+    await repo.deletePushToken(ALICE, 'ExponentPushToken[b]'); // not Alice's any more
+    await repo.deletePushToken(BOB, 'ExponentPushToken[c]');
     expect(await repo.pushTokens([BOB])).toEqual([{ wallet: BOB, token: 'ExponentPushToken[b]' }]);
     expect(await repo.pushTokens([])).toEqual([]);
   });

@@ -104,7 +104,7 @@ function Feed({ profile }: { profile: MyProfile }) {
           }
         />
       ) : (
-        feed.data.trades.map((trade) => <SharedTradeRow key={trade.signature} trade={trade} />)
+        feed.data.trades.map((trade) => <SharedTradeRow key={trade.id} trade={trade} />)
       )}
       <View style={styles.signOut}>
         <Button label="Sign out" variant="secondary" onPress={() => void session.signOut()} />

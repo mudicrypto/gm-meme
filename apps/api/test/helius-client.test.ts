@@ -66,6 +66,35 @@ describe('Helius client', () => {
     expect(meta?.symbol).toBe('SYMBOLTHATISWAYT');
   });
 
+  it.each([
+    ['a raw IP address', 'https://203.0.113.7/a.png'],
+    ['credentials in the URL', 'https://user:pass@example.com/a.png'],
+    ['an unusual port', 'https://example.com:8443/a.png'],
+    ['a very long URL', `https://example.com/${'a'.repeat(600)}.png`],
+  ])('drops an image URL with %s', async (_name, image) => {
+    const asset = dasAsset(MINT_A, 'Name', 'SYM');
+    asset.content.links.image = image;
+    const fetch = mockFetch({ body: { result: [asset] } });
+    const [meta] = await createHeliusClient({
+      apiKey: API_KEY,
+      cluster: 'devnet',
+      fetch,
+    }).getAssetBatch([MINT_A]);
+    expect(meta?.imageUrl).toBeUndefined();
+  });
+
+  it('strips invisible and direction-changing characters from names', async () => {
+    // U+202E (right-to-left override) makes "CDSU" display as "USDC".
+    const asset = dasAsset(MINT_A, 'Fake\u200b  Coin\n', '\u202eCDSU');
+    const fetch = mockFetch({ body: { result: [asset] } });
+    const [meta] = await createHeliusClient({
+      apiKey: API_KEY,
+      cluster: 'devnet',
+      fetch,
+    }).getAssetBatch([MINT_A]);
+    expect(meta).toMatchObject({ name: 'Fake Coin', symbol: 'CDSU' });
+  });
+
   it('throws on HTTP errors without leaking the API key', async () => {
     const fetch = mockFetch({ status: 429, body: { error: 'rate limited' } });
     const promise = createHeliusClient({ apiKey: API_KEY, cluster: 'devnet', fetch }).getAssetBatch(

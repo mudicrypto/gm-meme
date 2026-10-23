@@ -60,7 +60,11 @@ export async function checkPriceAlerts(deps: {
   }
   if (messages.length > 0) {
     const gone = await deps.push.send(messages);
-    await Promise.all(gone.map((token) => deps.social.deletePushToken(token)));
+    await Promise.all(
+      tokens
+        .filter((device) => gone.includes(device.token))
+        .map((device) => deps.social.deletePushToken(device.wallet, device.token)),
+    );
   }
   return fired.map((f) => f.alert);
 }

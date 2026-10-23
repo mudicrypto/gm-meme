@@ -11,7 +11,7 @@ import {
 
 const MINT = 'E8NT2qghrktonV3RSSAc9nRmhhNxganaFo7ZWZpAFdCf';
 const trade = (overrides: Partial<SharedTrade> = {}): SharedTrade => ({
-  signature: 's',
+  id: 's',
   handle: 'alice',
   displayName: 'Alice',
   side: 'buy',

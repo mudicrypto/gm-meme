@@ -1,4 +1,4 @@
-import { randomUUID } from 'node:crypto';
+import { createHash, randomUUID } from 'node:crypto';
 import type {
   AlertDirection,
   FeedToken,
@@ -64,7 +64,12 @@ export function createSocialService(deps: {
 
   async function withTokens(records: SharedTradeRecord[]): Promise<SharedTrade[]> {
     const info = await tokenInfo(records.map((r) => r.mint));
-    return records.map(({ mint, ...rest }) => ({ ...rest, token: info.get(mint)! }));
+    return records.map(({ mint, signature, ...rest }) => ({
+      ...rest,
+      // The signature would let anyone look up the trader's wallet on an explorer.
+      id: createHash('sha256').update(`sift-trade:${signature}`).digest('hex').slice(0, 24),
+      token: info.get(mint)!,
+    }));
   }
 
   async function publicProfile(record: ProfileRecord, viewer: string | null) {
@@ -187,7 +192,7 @@ export function createSocialService(deps: {
     },
 
     savePushToken: (wallet: string, token: string) => social.savePushToken(wallet, token),
-    deletePushToken: (token: string) => social.deletePushToken(token),
+    deletePushToken: (wallet: string, token: string) => social.deletePushToken(wallet, token),
   };
 }
 

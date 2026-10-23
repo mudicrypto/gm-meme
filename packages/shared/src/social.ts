@@ -73,7 +73,8 @@ export interface FeedToken {
 
 /** A trade someone chose to share, made in Sift and confirmed on chain. */
 export interface SharedTrade {
-  signature: string;
+  /** Opaque ID. Not the transaction signature, which would reveal the trader's wallet. */
+  id: string;
   handle: string;
   displayName: string;
   side: 'buy' | 'sell';

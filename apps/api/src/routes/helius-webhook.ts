@@ -19,8 +19,9 @@ export const heliusWebhookRoutes: FastifyPluginAsync<{
   app.post(
     '/webhooks/helius',
     {
-      bodyLimit: 10 * 1024 * 1024,
-      preHandler: async (request, reply) => {
+      bodyLimit: 3 * 1024 * 1024,
+      // Checked before the body is read, so unauthenticated uploads are never parsed.
+      onRequest: async (request, reply) => {
         if (!secretMatches(request.headers.authorization, secret)) {
           await reply.status(401).send({ error: 'Unauthorized' });
         }

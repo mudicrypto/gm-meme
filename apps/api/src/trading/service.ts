@@ -352,9 +352,11 @@ export function createTradeService(options: TradeServiceOptions): TradeService {
         void watchConfirmation(sent, quote.trade);
         return sent;
       } catch (err) {
+        // The RPC's own error text stays in our logs, not in the app.
+        options.log?.error({ err }, 'sendRawTransaction failed');
         throw new TradeError(
           'SEND_FAILED',
-          `The network rejected the trade: ${short((err as Error).message)}`,
+          'The network rejected the trade. Review it again to get a fresh quote.',
         );
       }
     },

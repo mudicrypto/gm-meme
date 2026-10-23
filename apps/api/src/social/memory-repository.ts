@@ -19,7 +19,11 @@ export class InMemorySocialRepository implements SocialRepository {
   private push = new Map<string, string>();
 
   async createSession(session: { tokenHash: string; wallet: string; expiresAt: string }) {
+    for (const [hash, s] of this.sessions) {
+      if (Date.parse(s.expiresAt) <= Date.now()) this.sessions.delete(hash);
+    }
     this.sessions.set(session.tokenHash, { wallet: session.wallet, expiresAt: session.expiresAt });
+    keepNewest(this.sessions, (s) => s.wallet === session.wallet);
   }
 
   async sessionWallet(tokenHash: string, now: Date) {
@@ -144,11 +148,13 @@ export class InMemorySocialRepository implements SocialRepository {
   }
 
   async savePushToken(wallet: string, token: string) {
+    this.push.delete(token); // re-registering makes it the newest
     this.push.set(token, wallet);
+    keepNewest(this.push, (owner) => owner === wallet);
   }
 
-  async deletePushToken(token: string) {
-    this.push.delete(token);
+  async deletePushToken(wallet: string, token: string) {
+    if (this.push.get(token) === wallet) this.push.delete(token);
   }
 
   async pushTokens(wallets: readonly string[]) {
@@ -182,6 +188,15 @@ export class InMemorySocialRepository implements SocialRepository {
       .sort((a, b) => compareDesc(a.at, b.at) || (a.signature < b.signature ? -1 : 1))
       .slice(0, limit);
   }
+}
+
+/** Per-wallet cap on sessions and push tokens, as in the SQL. */
+const MAX_PER_WALLET = 10;
+
+/** Drop the oldest matching entries (Maps iterate in insertion order) beyond the cap. */
+function keepNewest<V>(map: Map<string, V>, matches: (value: V) => boolean) {
+  const keys = [...map].filter(([, value]) => matches(value)).map(([key]) => key);
+  for (const key of keys.slice(0, Math.max(0, keys.length - MAX_PER_WALLET))) map.delete(key);
 }
 
 // Wallets and mints are base58, so ':' can't appear in them.

@@ -34,6 +34,17 @@ describe('POST /webhooks/helius', () => {
     });
   });
 
+  it('rejects an unauthenticated delivery before reading its body', async () => {
+    // Malformed JSON would be a 400 if the body were parsed first.
+    const res = await app.inject({
+      method: 'POST',
+      url: '/webhooks/helius',
+      headers: { 'content-type': 'application/json' },
+      payload: '{not json',
+    });
+    expect(res.statusCode).toBe(401);
+  });
+
   it('rejects a body that is not an array of transactions', async () => {
     expect((await post({ signature: 'x' }, SECRET)).statusCode).toBe(400);
     expect(

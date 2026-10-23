@@ -111,6 +111,13 @@ export function buildApp(config: Config, deps: AppDeps = {}) {
       }),
   });
 
+  // A JSON API: nothing here should be sniffed as another type, framed, or sent a referrer.
+  app.addHook('onSend', async (_request, reply) => {
+    reply.header('x-content-type-options', 'nosniff');
+    reply.header('x-frame-options', 'DENY');
+    reply.header('referrer-policy', 'no-referrer');
+  });
+
   // Only for the web build. Sign-in uses bearer tokens, never cookies.
   app.register(cors, {
     origin: config.CORS_ORIGINS,

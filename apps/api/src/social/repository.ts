@@ -39,7 +39,8 @@ export interface AlertRecord {
 
 /** Profiles, follows, shared trades, watchlists, alerts and push tokens. */
 export interface SocialRepository {
-  /** Store a sign-in session by the SHA-256 hash of its token. */
+  /** Store a sign-in session by the SHA-256 hash of its token. Expired sessions are purged,
+   * and a wallet keeps its 10 newest. */
   createSession(session: { tokenHash: string; wallet: string; expiresAt: string }): Promise<void>;
   /** The session's wallet, or null if unknown or expired at `now`. */
   sessionWallet(tokenHash: string, now: Date): Promise<string | null>;
@@ -84,7 +85,9 @@ export interface SocialRepository {
   /** Mark an alert fired. True only for the call that fired it. */
   triggerAlert(id: string, at: string, priceSol: number): Promise<boolean>;
 
+  /** Register a device; a wallet keeps its 10 most recent. */
   savePushToken(wallet: string, token: string): Promise<void>;
-  deletePushToken(token: string): Promise<void>;
+  /** Only the wallet that registered a token can remove it. */
+  deletePushToken(wallet: string, token: string): Promise<void>;
   pushTokens(wallets: readonly string[]): Promise<{ wallet: string; token: string }[]>;
 }

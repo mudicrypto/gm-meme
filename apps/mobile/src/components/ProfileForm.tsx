@@ -73,8 +73,9 @@ export function ProfileForm({
         <View style={styles.flex}>
           <Text style={[styles.label, { color: palette.text }]}>Share my trades</Text>
           <Text style={{ color: palette.muted, fontSize: 13 }}>
-            People who follow you see the trades you make in Sift from now on. Off by default.
-            Turning it off removes the trades you shared.
+            Trades you make in Sift from now on show on your profile and in your followers’ feeds.
+            Anyone on Sift can see them, and someone determined could match them to your wallet on
+            the blockchain. Off by default. Turning it off removes what you shared.
           </Text>
         </View>
         <Switch value={shareTrades} onValueChange={setShareTrades} />

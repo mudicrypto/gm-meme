@@ -213,7 +213,7 @@ export const socialRoutes: FastifyPluginAsync<{ auth: Auth; social: SocialServic
     if (!wallet) return;
     const body = parseOrReply(pushBody, request.body, reply);
     if (!body) return;
-    await social.deletePushToken(body.token);
+    await social.deletePushToken(wallet, body.token);
     return reply.status(204).send();
   });
 };

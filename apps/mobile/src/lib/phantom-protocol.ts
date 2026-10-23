@@ -176,11 +176,14 @@ const ERROR_MESSAGES: Record<string, string> = {
 
 function throwIfError(params: Record<string, string | undefined>) {
   const code = params.errorCode;
-  if (code)
+  // Only our own wording: anyone can open a Sift link with a made-up errorMessage
+  // ("re-enter your recovery phrase at …"), and it must never reach the screen.
+  if (code) {
     throw new PhantomError(
-      code,
-      ERROR_MESSAGES[code] ?? params.errorMessage ?? `Phantom error ${code}.`,
+      code.slice(0, 12),
+      ERROR_MESSAGES[code] ?? 'Phantom couldn’t complete the request. Please try again.',
     );
+  }
 }
 
 function required(params: Record<string, string | undefined>, name: string): string {

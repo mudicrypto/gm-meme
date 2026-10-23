@@ -20,7 +20,25 @@ export function signInMessage(opts: { wallet: string; nonce: string; issuedAt: s
 export interface AuthChallenge {
   message: string;
   nonce: string;
+  issuedAt: string;
   expiresAt: string;
+}
+
+/**
+ * Whether a challenge from the server is exactly Sift's sign-in text for this wallet, freshly
+ * issued. The phone checks this before signing, so a compromised server can't get a wallet
+ * to sign some other site's login message.
+ */
+export function isSignInChallengeFor(challenge: unknown, wallet: string, now: Date): boolean {
+  if (typeof challenge !== 'object' || challenge === null) return false;
+  const { message, nonce, issuedAt } = challenge as Record<string, unknown>;
+  if (typeof message !== 'string' || typeof nonce !== 'string' || typeof issuedAt !== 'string')
+    return false;
+  if (!/^[0-9a-f]{32}$/.test(nonce)) return false;
+  const issued = Date.parse(issuedAt);
+  // Allow for a phone clock a few minutes out.
+  if (!Number.isFinite(issued) || Math.abs(now.getTime() - issued) > 10 * 60_000) return false;
+  return message === signInMessage({ wallet, nonce, issuedAt });
 }
 
 export interface AuthSession {

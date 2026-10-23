@@ -55,7 +55,12 @@ export function createAuth(opts: { repository: SocialRepository; now?: () => Dat
       const message = signInMessage({ wallet, nonce, issuedAt: issued.toISOString() });
       const expiresAt = issued.getTime() + CHALLENGE_TTL_MS;
       challenges.set(nonce, { wallet, message, expiresAt });
-      return { message, nonce, expiresAt: new Date(expiresAt).toISOString() };
+      return {
+        message,
+        nonce,
+        issuedAt: issued.toISOString(),
+        expiresAt: new Date(expiresAt).toISOString(),
+      };
     },
 
     async signIn(wallet, nonce, signatureBase58) {

@@ -210,6 +210,19 @@ describe('Phantom deeplinks', () => {
     expect(() => parseSignMessage(answer, session, other)).toThrow(/signature/);
   });
 
+  it('never shows error text that came in the link', () => {
+    const dapp = newDappKeypair(random);
+    expect(() =>
+      parseConnect(
+        {
+          errorCode: '1',
+          errorMessage: 'Update needed: re-enter your recovery phrase at evil.example',
+        },
+        dapp.secretKey,
+      ),
+    ).toThrow('Phantom couldn’t complete the request. Please try again.');
+  });
+
   it('turns Phantom errors into plain messages', () => {
     const dapp = newDappKeypair(random);
     const error = (() => {

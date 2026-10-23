@@ -24,6 +24,16 @@
     "web": {
       "favicon": "./assets/favicon.png"
     },
-    "plugins": ["expo-router", "expo-secure-store", "expo-notifications"]
+    "plugins": [
+      "expo-router",
+      "expo-secure-store",
+      "expo-notifications",
+      [
+        "expo-local-authentication",
+        {
+          "faceIDPermission": "Sift uses Face ID to confirm it’s you before showing your private key or removing your wallet."
+        }
+      ]
+    ]
   }
 }

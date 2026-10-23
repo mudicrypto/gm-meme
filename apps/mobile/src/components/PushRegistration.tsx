@@ -3,7 +3,7 @@ import { router } from 'expo-router';
 import { useEffect } from 'react';
 import { Platform } from 'react-native';
 import { socialApi } from '../lib/api';
-import { registerForPush } from '../lib/push';
+import { registerForPush, setRegisteredPushToken } from '../lib/push';
 import { useSession } from '../lib/session';
 
 /** Once signed in, register this phone for price-alert pushes; open the token on tap. */
@@ -14,7 +14,12 @@ export function PushRegistration() {
     if (!token) return;
     let cancelled = false;
     void registerForPush().then((pushToken) => {
-      if (pushToken && !cancelled) socialApi.savePushToken(token, pushToken).catch(() => {});
+      if (pushToken && !cancelled) {
+        socialApi
+          .savePushToken(token, pushToken)
+          .then(() => setRegisteredPushToken(pushToken))
+          .catch(() => {});
+      }
     });
     return () => {
       cancelled = true;

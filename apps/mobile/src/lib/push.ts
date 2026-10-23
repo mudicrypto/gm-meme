@@ -3,6 +3,14 @@ import * as Device from 'expo-device';
 import * as Notifications from 'expo-notifications';
 import { Platform } from 'react-native';
 
+let registered: string | null = null;
+
+/** The push token this phone registered with Sift in this session, if any. */
+export const registeredPushToken = () => registered;
+export const setRegisteredPushToken = (token: string | null) => {
+  registered = token;
+};
+
 /**
  * An Expo push token for price alerts, or null when this build can't get one: the web
  * preview, a simulator, Expo Go on Android (no remote push since SDK 53), a build without

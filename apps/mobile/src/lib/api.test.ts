@@ -61,3 +61,12 @@ describe('authed', () => {
     expect(init.body).toBeUndefined();
   });
 });
+
+describe('insecureApiUrl', () => {
+  it('refuses plain http in release builds only', async () => {
+    const { insecureApiUrl } = await import('./api');
+    expect(insecureApiUrl('http://192.168.1.20:3000', false)).toBe(true);
+    expect(insecureApiUrl('https://api.example.com', false)).toBe(false);
+    expect(insecureApiUrl('http://localhost:3000', true)).toBe(false);
+  });
+});

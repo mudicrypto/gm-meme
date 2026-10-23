@@ -66,7 +66,18 @@ export async function postJson<T>(
   );
 }
 
+/** Release builds must talk to Sift over https: plain http can be read and changed in transit. */
+export function insecureApiUrl(base: string, dev: boolean): boolean {
+  return !dev && !base.startsWith('https://');
+}
+
+// React Native always defines __DEV__ (false in release builds); tests don't.
+const isDevBuild = typeof __DEV__ === 'undefined' || __DEV__;
+
 async function request<T>(path: string, init: RequestInit, fetchFn: typeof fetch): Promise<T> {
+  if (insecureApiUrl(getApiBaseUrl(), isDevBuild)) {
+    throw new ApiError(0, 'This build of Sift points at an insecure server address.');
+  }
   let res: Response;
   try {
     res = await fetchFn(apiUrl(path), init);
@@ -131,6 +142,8 @@ export const socialApi = {
     authed<void>(token, 'DELETE', `/me/alerts/${enc(id)}`),
   savePushToken: (token: string, pushToken: string) =>
     authed<void>(token, 'PUT', '/me/push-token', { token: pushToken }),
+  deletePushToken: (token: string, pushToken: string) =>
+    authed<void>(token, 'DELETE', '/me/push-token', { token: pushToken }),
 };
 
 export const api = {

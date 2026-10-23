@@ -1,5 +1,5 @@
 import type { AuthSession } from '@sift/shared';
-import { base58Encode } from '@sift/shared';
+import { base58Encode, isSignInChallengeFor } from '@sift/shared';
 import { useQueryClient } from '@tanstack/react-query';
 import {
   type ReactNode,
@@ -12,6 +12,7 @@ import {
 } from 'react';
 import { ApiError, socialApi } from './api';
 import { authStore } from './keystore';
+import { registeredPushToken, setRegisteredPushToken } from './push';
 import { useWallet } from './wallet';
 
 interface SessionState {
@@ -58,6 +59,12 @@ export function SessionProvider({ children }: { children: ReactNode }) {
     const address = wallet.address;
     if (!address) throw new Error('Set up a wallet first.');
     const challenge = await socialApi.challenge(address);
+    // Sign only Sift's own sign-in text, rebuilt here, never whatever the server sent.
+    if (!isSignInChallengeFor(challenge, address, new Date())) {
+      throw new Error(
+        'The sign-in request from the server didn’t look right, so nothing was signed.',
+      );
+    }
     const message = Uint8Array.from(new TextEncoder().encode(challenge.message));
     const signature = await wallet.signMessage(message);
     const session = await socialApi.signIn(address, challenge.nonce, base58Encode(signature));
@@ -66,9 +73,27 @@ export function SessionProvider({ children }: { children: ReactNode }) {
   }, [wallet]);
 
   const signOut = useCallback(async () => {
-    if (saved) await socialApi.signOut(saved.token).catch(() => {});
+    if (saved) {
+      // Stop this phone getting the wallet's alerts, then end the session on the server.
+      const pushToken = registeredPushToken();
+      if (pushToken) {
+        await socialApi.deletePushToken(saved.token, pushToken).catch(() => {});
+        setRegisteredPushToken(null);
+      }
+      await socialApi.signOut(saved.token).catch(() => {});
+    }
     await forget();
   }, [saved, forget]);
+
+  // A wallet removed from this phone (or Phantom disconnected) is signed out everywhere.
+  const { embeddedAddress, phantomAddress } = wallet;
+  useEffect(() => {
+    if (!loaded || wallet.status === 'loading' || !saved) return;
+    if (saved.wallet !== embeddedAddress && saved.wallet !== phantomAddress) {
+      // After this render: signing out updates state.
+      void Promise.resolve().then(signOut);
+    }
+  }, [loaded, wallet.status, saved, embeddedAddress, phantomAddress, signOut]);
 
   const expired = useCallback(
     (error: unknown) => {

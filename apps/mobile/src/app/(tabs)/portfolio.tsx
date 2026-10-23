@@ -5,10 +5,12 @@ import { Link } from 'expo-router';
 import { useEffect, useState } from 'react';
 import { Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 import { Card } from '../../components/Card';
+import { PrivateKeyReveal } from '../../components/PrivateKeyReveal';
 import { RiskBadge } from '../../components/RiskBadge';
 import { Empty, ErrorState, Loading } from '../../components/States';
 import { TokenAvatar } from '../../components/TokenAvatar';
 import { api } from '../../lib/api';
+import { confirmOwner } from '../../lib/device-auth';
 import { formatCompact, shortAddress } from '../../lib/format';
 import { useMode } from '../../lib/mode';
 import { RISK_COLORS, usePalette } from '../../lib/theme';
@@ -222,6 +224,13 @@ function PhantomWallet() {
           Your keys stay in Phantom. Sift shows you the full cost first, then Phantom asks you to
           approve each trade.
         </Text>
+        {/* A fake "Phantom" app could answer the connect request: let people check. */}
+        <Text style={{ color: palette.muted, fontSize: 13 }}>
+          Check this matches the address shown in your Phantom app:
+        </Text>
+        <Text style={[styles.secret, { color: palette.text, borderColor: palette.border }]}>
+          {wallet.phantomAddress}
+        </Text>
       </Card>
       {!wallet.embeddedAddress ? (
         <Pressable onPress={() => void wallet.create()}>
@@ -243,7 +252,6 @@ function PhantomWallet() {
 function EmbeddedWallet() {
   const palette = usePalette();
   const wallet = useWallet();
-  const [secret, setSecret] = useState<string | null>(null);
   const [confirmRemove, setConfirmRemove] = useState(false);
   return (
     <>
@@ -261,33 +269,7 @@ function EmbeddedWallet() {
           If you delete the app or lose this phone, this key is the only way to get your funds back.
           Sift can’t recover it. It imports into Phantom or Solflare.
         </Text>
-        {secret ? (
-          <>
-            <Text
-              selectable
-              style={[styles.secret, { color: palette.text, borderColor: palette.border }]}
-            >
-              {secret}
-            </Text>
-            <Text style={{ color: RISK_COLORS.red.fg }}>
-              Anyone with this key can take your funds. Never share it, and never paste it into a
-              website.
-            </Text>
-            <Pressable
-              onPress={() => setSecret(null)}
-              style={[styles.secondary, { borderColor: palette.border }]}
-            >
-              <Text style={{ color: palette.text, fontWeight: '600' }}>Hide</Text>
-            </Pressable>
-          </>
-        ) : (
-          <Pressable
-            onPress={async () => setSecret(await wallet.exportPrivateKey())}
-            style={[styles.secondary, { borderColor: palette.border }]}
-          >
-            <Text style={{ color: palette.text, fontWeight: '600' }}>Show private key</Text>
-          </Pressable>
-        )}
+        <PrivateKeyReveal />
       </Card>
 
       <Pressable onPress={() => setConfirmRemove(true)}>
@@ -306,7 +288,11 @@ function EmbeddedWallet() {
               <Text style={{ color: RISK_COLORS.red.fg, fontWeight: '600' }}>Keep it</Text>
             </Pressable>
             <Pressable
-              onPress={() => void wallet.remove()}
+              onPress={async () => {
+                if (await confirmOwner('Confirm it’s you to remove this wallet')) {
+                  await wallet.remove();
+                }
+              }}
               style={[
                 styles.secondary,
                 styles.flex,

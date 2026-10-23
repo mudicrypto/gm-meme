@@ -1,4 +1,4 @@
-import { PUMP_PROGRAM, findProgramAddress, publicKeyBytes } from '@sift/shared';
+import { pumpBondingCurveAddress } from '@sift/shared';
 import type { FastifyBaseLogger } from 'fastify';
 import type { HeliusClient } from '../helius/client';
 import { parseTransactions } from '../helius/parse';
@@ -48,12 +48,7 @@ export async function gatherRiskInputs(mint: string, deps: GatherDeps): Promise<
 }
 
 /** pump.fun's bonding curve for `mint`: the only pump.fun account that is this token's curve. */
-export function pumpBondingCurve(mint: string): string {
-  return findProgramAddress(
-    [new TextEncoder().encode('bonding-curve'), publicKeyBytes(mint)],
-    PUMP_PROGRAM,
-  );
-}
+export const pumpBondingCurve = pumpBondingCurveAddress;
 
 async function fetchHolders(mint: string, helius: HeliusClient): Promise<Holder[]> {
   const byOwner = new Map<string, Holder>();

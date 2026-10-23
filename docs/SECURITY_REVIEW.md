@@ -26,7 +26,7 @@ something that takes their money.**
 | Critical |     1 |     1 | –               |
 | High     |     5 |     5 | –               |
 | Medium   |    14 |    14 | –               |
-| Low      |    16 |    13 | 3 (see below)   |
+| Low      |    16 |    15 | 1 (see below)   |
 
 The repository's git history contains no secrets. `.gitignore` covers `.env` files and key
 files, and only `.env.example` files are tracked, with empty values.
@@ -123,22 +123,31 @@ files, and only `.env.example` files are tracked, with empty values.
 - The transaction decoder rejects non-canonical lengths, as Solana does.
 - Malformed pump.fun instruction data is reported as a problem, not thrown.
 
+## Fixed after the review (step 4)
+
+1. **The phone trusted the server's price** (`expectedLamports`).
+   - **Fix:** before signing, the phone reads the token's pump.fun bonding curve straight
+     from Solana's public RPC, never through the Sift API (`apps/mobile/src/lib/chain-check.ts`).
+   - It refuses a buy that gives fewer tokens, or a sale that pays less SOL, than the
+     on-chain price allows. The allowance covers pump.fun's fees plus a 1% price move.
+   - The curve decoding and addresses are tested against the pump.fun SDK, using a real
+     devnet account.
+   - Verified live on devnet: real quotes pass, and copies lowballed by 10% are refused.
+2. **Rent and token decimals on screen came from the server.**
+   - **Fix:** the phone reads the mint's decimals and works out the deposit for new accounts
+     itself (your token account, pump.fun's tracker on a first buy).
+   - A quote that doesn't match is refused. If the network can't be reached, nothing is
+     signed.
+
 ## Accepted for now, to address before mainnet
 
-1. **The phone trusts the server's price** (`expectedLamports`).
-   - Every limit is now bound to the user's own slippage. Within that, a server that
-     understates a sale's price could keep the gap, up to the slippage the user chose.
-   - Before mainnet: read the bonding curve on the phone from an independent RPC, or send
-     signed trades from the phone or a protected relay rather than the API.
-2. **Rent and token decimals on screen come from the server.**
-   - They can't move funds to anyone else, but they can be misstated.
-   - Before mainnet: read the mint (decimals) and the rent rate on the phone.
-3. **Phantom deeplinks can't prove the answer came from the real Phantom app.**
+1. **Phantom deeplinks can't prove the answer came from the real Phantom app.**
    - A fake "Phantom" app on an unprotected Android phone could bind its own address. It
      still couldn't touch the user's real funds: every signature is checked against the
      bound address.
    - Mitigation: the full address is shown after connecting, to check against Phantom.
-   - Before mainnet: consider Mobile Wallet Adapter on Android.
+   - Before mainnet: add Mobile Wallet Adapter on Android. It needs the installable test
+     build (`docs/DEPLOY.md`) to test.
 
 Other limits worth knowing (they are inherent, not bugs):
 
@@ -148,10 +157,15 @@ Other limits worth knowing (they are inherent, not bugs):
 
 ## Before mainnet
 
-- [ ] Run the database step below (owner-scoped push tokens, device and session caps).
+- [ ] Apply `supabase/migrations/20261023010000_social_hardening.sql` and
+      `20261023020000_drop_unscoped_delete_push_token.sql` (owner-scoped push tokens, device
+      and session caps).
 - [ ] Deploy the API behind HTTPS. Set `TRUST_PROXY_HOPS` to the real proxy count and
       `CORS_ORIGINS` to the real web origin.
-- [ ] Fix the three accepted items above.
+- [x] Phone checks the price, decimals and deposits on chain (step 4).
+- [ ] Mobile Wallet Adapter for Phantom on Android (the accepted item above).
+- [ ] A mainnet RPC for the phone's checks (`EXPO_PUBLIC_SOLANA_RPC_URL`): the public one is
+      rate-limited.
 - [ ] Get an external audit of the signing path (the plan's own risk list asks for one).
 - [ ] Get legal advice on licensing (VARA in the UAE) and check the app store crypto rules.
 - [ ] Only then set `SOLANA_CLUSTER=mainnet-beta` and `ALLOW_MAINNET_TRADING=true`.

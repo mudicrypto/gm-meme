@@ -28,6 +28,7 @@ import { costLines, secondsLeft } from '../../lib/costs';
 import { formatCompact, shortAddress } from '../../lib/format';
 import { useMode } from '../../lib/mode';
 import { RISK_COLORS, usePalette } from '../../lib/theme';
+import { createRpcReader, onChainProblems } from '../../lib/chain-check';
 import { checkQuote } from '../../lib/trade-check';
 import { cancelPhantomRequest, isCancelled } from '../../lib/phantom';
 import { useWallet } from '../../lib/wallet';
@@ -48,6 +49,8 @@ type Stage =
   | { name: 'sending'; quote: TradeQuote }
   | { name: 'pending' | 'done'; quote: TradeQuote; signature: string }
   | { name: 'failed'; message: string };
+
+const chain = createRpcReader();
 
 export default function TradeScreen() {
   const palette = usePalette();
@@ -162,12 +165,16 @@ export default function TradeScreen() {
     setStage({ name: 'quoting' });
     try {
       const quote = await api.quote(req);
-      setStage({
-        name: 'review',
-        quote,
-        request: req,
-        problems: checkQuote(quote, req, FEE_WALLET),
-      });
+      const problems = checkQuote(quote, req, FEE_WALLET);
+      // Then the price, decimals and deposits, read from Solana directly (not via Sift).
+      if (problems.length === 0) {
+        problems.push(
+          ...(await onChainProblems(quote, chain).catch(() => [
+            'couldn’t check the price on the Solana network; try again in a moment',
+          ])),
+        );
+      }
+      setStage({ name: 'review', quote, request: req, problems });
     } catch (err) {
       setStage({ name: 'failed', message: (err as Error).message });
     }

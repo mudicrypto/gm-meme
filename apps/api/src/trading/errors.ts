@@ -9,7 +9,8 @@ export type TradeErrorCode =
   | 'TRANSACTION_MISMATCH'
   | 'BAD_SIGNATURE'
   | 'SEND_FAILED'
-  | 'TRADING_DISABLED';
+  | 'TRADING_DISABLED'
+  | 'BUSY';
 
 /** A trade problem the user can understand and act on. Message is shown as is. */
 export class TradeError extends Error {

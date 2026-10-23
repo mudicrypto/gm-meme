@@ -94,6 +94,11 @@ export const tradeRoutes: FastifyPluginAsync<{
         message: 'One devnet airdrop per wallet every 10 minutes.',
       });
     }
+    if (lastAirdrop.size > 10_000) {
+      for (const [address, at] of lastAirdrop) {
+        if (Date.now() - at >= AIRDROP_COOLDOWN_MS) lastAirdrop.delete(address);
+      }
+    }
     lastAirdrop.set(params.address, Date.now());
     try {
       return { signature: await airdrop(params.address) };

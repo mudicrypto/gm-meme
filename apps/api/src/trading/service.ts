@@ -74,6 +74,8 @@ interface IssuedQuote {
   trade: Omit<ConfirmedTrade, 'signature' | 'at'>;
 }
 
+// Quotes waiting to be signed; a flood of quote requests can't grow memory past this.
+const MAX_OPEN_QUOTES = 10_000;
 const CONFIRM_POLL_MS = 2000;
 const CONFIRM_POLLS = 45;
 
@@ -290,6 +292,9 @@ export function createTradeService(options: TradeServiceOptions): TradeService {
         throw new Error(`built a trade that fails verification: ${check.problems.join('; ')}`);
 
       prune();
+      if (issued.size >= MAX_OPEN_QUOTES) {
+        throw new TradeError('BUSY', 'Sift is busy right now. Try again in a minute.');
+      }
       issued.set(quote.quoteId, {
         message: tx.message.serialize(),
         wallet: request.wallet,

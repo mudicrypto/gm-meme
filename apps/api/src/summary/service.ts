@@ -22,6 +22,8 @@ export interface SummaryServiceOptions {
   /** How long a summary is reused (the plan asks for 5 minutes). */
   ttlMs?: number;
   maxEntries?: number;
+  /** Most Claude calls per hour, whatever the traffic; past it, summaries are rules-based. */
+  maxModelCallsPerHour?: number;
 }
 
 const HOUR_MS = 3_600_000;
@@ -34,6 +36,19 @@ export function createSummaryService(options: SummaryServiceOptions): SummarySer
   const maxEntries = options.maxEntries ?? 5_000;
   type Entry = { expiresAt: number; result: Promise<TokenExplanation | null> };
   const cache = new Map<string, Entry>();
+  const budget = options.maxModelCallsPerHour ?? 300;
+  let windowStart = 0;
+  let callsInWindow = 0;
+  /** Spend one call from this hour's budget, if any is left. */
+  function takeModelCall(at: number): boolean {
+    if (at - windowStart >= HOUR_MS) {
+      windowStart = at;
+      callsInWindow = 0;
+    }
+    if (callsInWindow >= budget) return false;
+    callsInWindow += 1;
+    return true;
+  }
 
   async function compute(mint: string, entry: Entry): Promise<TokenExplanation | null> {
     const risk = await options.risk.getRisk(mint);
@@ -49,7 +64,8 @@ export function createSummaryService(options: SummaryServiceOptions): SummarySer
 
     // Only tokens Sift tracks get an AI summary, so lookups of arbitrary addresses
     // can't run up the Claude bill.
-    let written = options.model && token ? await askModel(options.model, input) : null;
+    const useModel = options.model && token && takeModelCall(at.getTime());
+    let written = useModel ? await askModel(options.model!, input) : null;
     if (options.model && token && !written) entry.expiresAt = at.getTime() + FALLBACK_TTL_MS;
     const source = written ? 'ai' : 'rules';
     written ??= rulesSummary(input);

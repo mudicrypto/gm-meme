@@ -1,4 +1,5 @@
 import cors from '@fastify/cors';
+import rateLimit from '@fastify/rate-limit';
 import { LAMPORTS_PER_SOL } from '@sift/shared';
 import Fastify, { type FastifyBaseLogger, type FastifyError } from 'fastify';
 import type { Config } from './config';
@@ -50,6 +51,27 @@ export interface AppDeps {
   now?: () => Date;
 }
 
+/**
+ * Per-IP limits for routes that cost money or upstream quota (Helius, Claude, Solana RPC),
+ * per minute unless stated. Everything else gets RATE_LIMIT_PER_MINUTE.
+ */
+const ROUTE_LIMITS: Record<string, { max: number; timeWindow?: number }> = {
+  'GET /tokens/:mint/summary': { max: 10 },
+  'GET /tokens/:mint/risk': { max: 20 },
+  'GET /wallets/:address/holdings': { max: 30 },
+  'POST /trades/quote': { max: 20 },
+  'POST /trades/submit': { max: 20 },
+  'GET /trades/:signature': { max: 60 },
+  'POST /wallets/:address/airdrop': { max: 3, timeWindow: 60 * 60_000 },
+  'POST /auth/challenge': { max: 10 },
+  'POST /auth/session': { max: 10 },
+  'PUT /me/profile': { max: 10 },
+  'GET /profiles': { max: 30 },
+  'POST /me/alerts': { max: 20 },
+};
+// Authenticated by its own secret and called by Helius in bursts; health is for monitors.
+const UNLIMITED_ROUTES = new Set(['POST /webhooks/helius', 'GET /health']);
+
 /** Build the Fastify app without listening, so tests can use app.inject(). */
 export function buildApp(config: Config, deps: AppDeps = {}) {
   const app = Fastify({
@@ -58,9 +80,37 @@ export function buildApp(config: Config, deps: AppDeps = {}) {
       // Keep secrets out of request logs.
       redact: ['req.headers.authorization', 'req.headers.cookie'],
     },
+    // Behind a load balancer, read the client IP from X-Forwarded-For, trusting only the
+    // configured number of hops (more would let clients pick their own IP).
+    trustProxy:
+      config.TRUST_PROXY_HOPS > 0 ? (_address, hop) => hop < config.TRUST_PROXY_HOPS : false,
   });
 
-  // Don't leak internal error messages (database, upstream APIs) to clients.
+  // Set each route's limit before the rate-limit plugin reads it (hooks run in order).
+  app.addHook('onRoute', (route) => {
+    for (const method of [route.method].flat()) {
+      const key = `${method} ${route.url}`;
+      if (UNLIMITED_ROUTES.has(key)) route.config = { ...route.config, rateLimit: false };
+      const limit = ROUTE_LIMITS[key];
+      if (limit) {
+        route.config = {
+          ...route.config,
+          rateLimit: { max: limit.max, timeWindow: limit.timeWindow ?? 60_000 },
+        };
+      }
+    }
+  });
+  app.register(rateLimit, {
+    global: true,
+    max: config.RATE_LIMIT_PER_MINUTE,
+    timeWindow: 60_000,
+    // A real Error, so every route's error handler passes it on as a 429.
+    errorResponseBuilder: () =>
+      Object.assign(new Error('Too many requests. Wait a minute and try again.'), {
+        statusCode: 429,
+      }),
+  });
+
   // Only for the web build. Sign-in uses bearer tokens, never cookies.
   app.register(cors, {
     origin: config.CORS_ORIGINS,
@@ -68,8 +118,12 @@ export function buildApp(config: Config, deps: AppDeps = {}) {
     allowedHeaders: ['content-type', 'authorization'],
   });
 
+  // Don't leak internal error messages (database, upstream APIs) to clients.
   app.setErrorHandler<FastifyError>((error, request, reply) => {
     const statusCode = error.statusCode ?? 500;
+    if (statusCode === 429) {
+      return reply.status(429).send({ error: 'Too Many Requests', message: error.message });
+    }
     if (statusCode >= 500) {
       request.log.error({ err: error }, 'request failed');
       return reply.status(statusCode).send({ error: 'Internal Server Error' });
@@ -199,6 +253,7 @@ export function buildApp(config: Config, deps: AppDeps = {}) {
       model: summaryModel,
       log: app.log,
       now,
+      maxModelCallsPerHour: config.SUMMARY_MAX_CALLS_PER_HOUR,
     });
     app.register(summaryRoutes, { summary });
   } else {

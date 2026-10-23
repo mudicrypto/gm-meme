@@ -13,7 +13,10 @@ const AI = {
   redFlags: ['Serial launcher'],
 };
 
-async function setup(model: SummaryModel | null, { known = true } = {}) {
+async function setup(
+  model: SummaryModel | null,
+  { known = true, maxModelCallsPerHour }: { known?: boolean; maxModelCallsPerHour?: number } = {},
+) {
   let clock = new Date('2026-10-19T12:00:00Z').getTime();
   const repository = new InMemoryTokenRepository();
   if (known) {
@@ -46,6 +49,7 @@ async function setup(model: SummaryModel | null, { known = true } = {}) {
     model,
     log: silentLog,
     now: () => new Date(clock),
+    maxModelCallsPerHour,
   });
   return { summary, risk, advance: (ms: number) => (clock += ms) };
 }
@@ -53,6 +57,20 @@ async function setup(model: SummaryModel | null, { known = true } = {}) {
 const fakeModel = (impl: SummaryModel['summarize']) => ({ summarize: vi.fn(impl) });
 
 describe('summary service', () => {
+  it('stops calling Claude once the hourly budget is spent, and resumes the next hour', async () => {
+    const model = fakeModel(async () => AI);
+    const { summary, advance } = await setup(model, { maxModelCallsPerHour: 2 });
+    const sources: string[] = [];
+    for (let i = 0; i < 3; i++) {
+      sources.push((await summary.getSummary(RISK_MINT))!.source);
+      advance(6 * 60_000); // past the 5-minute cache
+    }
+    expect(sources).toEqual(['ai', 'ai', 'rules']);
+    expect(model.summarize).toHaveBeenCalledTimes(2);
+    advance(60 * 60_000);
+    expect((await summary.getSummary(RISK_MINT))!.source).toBe('ai');
+  });
+
   it('returns the AI summary with the risk level and disclaimer', async () => {
     const model = fakeModel(async () => AI);
     const { summary } = await setup(model);

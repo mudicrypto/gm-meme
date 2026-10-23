@@ -15,6 +15,7 @@
   "dependencies": {
     "@anthropic-ai/sdk": "^0.135.0",
     "@fastify/cors": "^11.3.1",
+    "@fastify/rate-limit": "^11.2.1",
     "@pump-fun/pump-sdk": "4.2.0",
     "@sift/shared": "workspace:*",
     "@solana/web3.js": "^1.99.0",

@@ -70,6 +70,13 @@ const ConfigSchema = z
       .enum(['true', 'false'])
       .default('false')
       .transform((value) => value === 'true'),
+    // Requests per minute per IP address for ordinary routes (expensive ones are stricter).
+    RATE_LIMIT_PER_MINUTE: z.coerce.number().int().min(1).default(120),
+    // Proxies in front of the API (load balancer etc.), so rate limits see the real client IP.
+    // 0 = connected directly. Never set it higher than the real number of hops.
+    TRUST_PROXY_HOPS: z.coerce.number().int().min(0).max(5).default(0),
+    // Hard cap on Claude calls for summaries; past it, summaries are rules-based.
+    SUMMARY_MAX_CALLS_PER_HOUR: z.coerce.number().int().min(0).default(300),
     // How often to check price alerts. 0 = off.
     ALERT_CHECK_INTERVAL_MS: z.coerce
       .number()

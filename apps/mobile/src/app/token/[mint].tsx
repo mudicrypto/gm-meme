@@ -1,17 +1,23 @@
+import type { RiskLevel, TokenSummary } from '@sift/shared';
 import { RISK_DISCLAIMER, isSolanaAddress } from '@sift/shared';
-import { useQuery } from '@tanstack/react-query';
-import { Link, Stack, useLocalSearchParams } from 'expo-router';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
+import { Link, router, useLocalSearchParams } from 'expo-router';
+import { ChevronLeft, ShieldAlert, ShieldCheck, Sparkles } from 'lucide-react-native';
 import { useState } from 'react';
-import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Pressable, ScrollView, StyleSheet, View } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { IconButton } from '../../components/Button';
 import { Card } from '../../components/Card';
 import { ModeToggle } from '../../components/ModeToggle';
 import { PriceChart } from '../../components/PriceChart';
-import { RiskBadge } from '../../components/RiskBadge';
-import { TokenWatch } from '../../components/TokenWatch';
-import { Segmented } from '../../components/Segmented';
 import { ErrorState, Loading } from '../../components/States';
+import { Text } from '../../components/Text';
+import { TokenAvatar } from '../../components/TokenAvatar';
+import { TokenWatch } from '../../components/TokenWatch';
 import { api } from '../../lib/api';
 import {
+  formatAge,
+  formatCompact,
   formatPct,
   formatSol,
   formatSolPrice,
@@ -19,12 +25,14 @@ import {
   shortAddress,
 } from '../../lib/format';
 import { useMode } from '../../lib/mode';
-import { RISK_COLORS, usePalette } from '../../lib/theme';
+import { RISK_COLORS, RISK_LABELS, colors, space, tint } from '../../lib/theme';
 
+// The chart API takes 5 minutes to 24 hours.
 const WINDOWS = [
-  { value: '15', label: '15m' },
-  { value: '60', label: '1h' },
-  { value: '1440', label: '24h' },
+  { value: 5, label: '5M' },
+  { value: 60, label: '1H' },
+  { value: 360, label: '6H' },
+  { value: 1440, label: '24H' },
 ] as const;
 
 const CHECK_NAMES: Record<string, string> = {
@@ -37,11 +45,15 @@ const CHECK_NAMES: Record<string, string> = {
   sell_test: 'Selling',
 };
 
+const MARKS: Record<RiskLevel, string> = { green: '✓', amber: '!', red: '×' };
+
 export default function TokenScreen() {
-  const palette = usePalette();
+  const insets = useSafeAreaInsets();
   const { mode } = useMode();
+  const queryClient = useQueryClient();
   const { mint = '' } = useLocalSearchParams<{ mint: string }>();
-  const [window, setWindow] = useState<(typeof WINDOWS)[number]['value']>('60');
+  const [window, setWindow] = useState<(typeof WINDOWS)[number]['value']>(60);
+  const [showDetails, setShowDetails] = useState(false);
   const valid = isSolanaAddress(mint);
 
   const risk = useQuery({
@@ -56,182 +68,349 @@ export default function TokenScreen() {
   });
   const chart = useQuery({
     queryKey: ['chart', mint, window],
-    queryFn: () => api.chart(mint, Number(window)),
+    queryFn: () => api.chart(mint, window),
     enabled: valid,
     refetchInterval: 15_000,
   });
 
-  if (!valid) return <ErrorState message="That isn't a valid token address." />;
-  if (risk.isPending) return <Loading label="Checking this token…" />;
+  // Name, symbol and image come from the Discover lists already loaded, if any.
+  const info = queryClient
+    .getQueriesData<{ tokens: TokenSummary[] }>({ queryKey: ['feed'] })
+    .flatMap(([, data]) => data?.tokens ?? [])
+    .find((token) => token.mint === mint);
+
+  const header = (
+    <View style={[styles.header, { paddingTop: insets.top + 12 }]}>
+      <IconButton
+        label="Back"
+        onPress={() => (router.canGoBack() ? router.back() : router.replace('/'))}
+      >
+        <ChevronLeft size={20} color={colors.text} strokeWidth={2} />
+      </IconButton>
+      <View style={styles.identity}>
+        <TokenAvatar
+          uri={info?.imageUrl}
+          label={info?.name ?? info?.symbol}
+          seed={mint}
+          size={32}
+        />
+        <View style={styles.flexShrink}>
+          <Text style={styles.name} numberOfLines={1}>
+            {info?.name ?? info?.symbol ?? shortAddress(mint)}
+          </Text>
+          <Text style={styles.sub} numberOfLines={1}>
+            {[
+              info?.symbol,
+              info ? `${formatAge(info.launchedAt ?? info.firstSeenAt)} old` : undefined,
+            ]
+              .filter(Boolean)
+              .join(' · ') || 'Token'}
+          </Text>
+        </View>
+      </View>
+      <ModeToggle />
+    </View>
+  );
+
+  if (!valid)
+    return (
+      <View style={styles.root}>
+        {header}
+        <ErrorState message="That isn't a valid token address." />
+      </View>
+    );
+  if (risk.isPending)
+    return (
+      <View style={styles.root}>
+        {header}
+        <Loading label="Checking this token…" />
+      </View>
+    );
   if (risk.isError)
-    return <ErrorState message={risk.error.message} onRetry={() => risk.refetch()} />;
+    return (
+      <View style={styles.root}>
+        {header}
+        <ErrorState message={risk.error.message} onRetry={() => risk.refetch()} />
+      </View>
+    );
 
   const points = chart.data?.points ?? [];
   const lastPrice = points[points.length - 1]?.priceSol;
   const change = priceChangePct(points);
   const volume = points.reduce((total, p) => total + p.volumeSol, 0);
-  const flagged = risk.data.reasons.filter((r) => r.level !== 'green');
-  const reasons =
-    mode === 'pro'
-      ? risk.data.reasons
-      : flagged.length > 0
-        ? flagged
-        : risk.data.reasons.slice(0, 3);
+  const reasons = risk.data.reasons;
+  const passed = reasons.filter((r) => r.level === 'green').length;
+  const level = risk.data.level;
+  const VerdictIcon = level === 'green' ? ShieldCheck : ShieldAlert;
+  const symbol = info?.symbol;
 
   return (
-    <ScrollView contentContainerStyle={styles.screen}>
-      <Stack.Screen options={{ title: shortAddress(mint), headerRight: () => <ModeToggle /> }} />
-
-      <Card>
-        <View style={styles.priceRow}>
-          <View>
-            <Text style={[styles.price, { color: palette.text }]}>
-              {lastPrice ? `${formatSolPrice(lastPrice)} SOL` : 'No price yet'}
+    <View style={styles.root}>
+      {header}
+      <ScrollView contentContainerStyle={styles.content}>
+        <View>
+          {lastPrice ? (
+            <Text mono style={styles.price}>
+              {formatSolPrice(lastPrice)} SOL
             </Text>
+          ) : (
+            <Text style={styles.noPrice}>No trades yet</Text>
+          )}
+          <View style={styles.changeRow}>
             {change !== undefined ? (
-              <Text style={{ color: change >= 0 ? palette.up : palette.down, fontWeight: '600' }}>
-                {formatPct(change)} · {WINDOWS.find((w) => w.value === window)?.label}
+              <Text mono style={[styles.change, { color: change >= 0 ? colors.up : colors.down }]}>
+                {formatPct(change)}
               </Text>
             ) : null}
+            <Text style={styles.sub}>
+              {[
+                `last ${WINDOWS.find((w) => w.value === window)?.label.toLowerCase()}`,
+                info?.marketCapUsd !== undefined
+                  ? `MC $${formatCompact(info.marketCapUsd)}`
+                  : undefined,
+              ]
+                .filter(Boolean)
+                .join(' · ')}
+            </Text>
           </View>
-          <RiskBadge level={risk.data.level} large />
         </View>
-        <PriceChart points={points} />
-        <Segmented compact value={window} onChange={setWindow} options={WINDOWS} />
-        {mode === 'pro' ? (
-          <Text style={{ color: palette.muted, fontSize: 13 }}>
-            {formatSol(volume)} traded · prices from trades Sift recorded · {mint}
-          </Text>
-        ) : null}
-      </Card>
 
-      <TokenWatch mint={mint} priceSol={lastPrice} />
-
-      <Card title="In plain words" right={summary.data?.source === 'ai' ? <Tag text="AI" /> : null}>
-        {summary.isPending ? (
-          <Text style={{ color: palette.muted }}>Writing a summary…</Text>
-        ) : summary.isError ? (
-          <Text style={{ color: palette.muted }}>Summary unavailable right now.</Text>
-        ) : (
-          <>
-            <Text style={[styles.body, { color: palette.text }]}>{summary.data.summary}</Text>
-            {summary.data.redFlags.length > 0 ? (
-              <View style={styles.flags}>
-                {summary.data.redFlags.map((flag) => (
+        <View>
+          <PriceChart points={points} />
+          <View style={styles.ranges}>
+            {WINDOWS.map((option) => {
+              const selected = option.value === window;
+              return (
+                <Pressable
+                  key={option.value}
+                  onPress={() => setWindow(option.value)}
+                  accessibilityRole="button"
+                  accessibilityState={{ selected }}
+                  style={[styles.range, selected && styles.rangeOn]}
+                >
                   <Text
-                    key={flag}
-                    style={[
-                      styles.flag,
-                      { color: RISK_COLORS.red.fg, backgroundColor: RISK_COLORS.red.bg },
-                    ]}
+                    mono
+                    style={[styles.rangeLabel, { color: selected ? colors.text : colors.muted }]}
                   >
-                    {flag}
+                    {option.label}
                   </Text>
-                ))}
-              </View>
-            ) : null}
-          </>
-        )}
-      </Card>
-
-      <Card
-        title={
-          mode === 'pro' ? 'All checks' : flagged.length > 0 ? 'What we found' : 'Checks passed'
-        }
-      >
-        {reasons.map((reason) => (
-          <View key={reason.check} style={styles.reason}>
-            <View style={[styles.reasonDot, { backgroundColor: RISK_COLORS[reason.level].fg }]} />
-            <View style={{ flex: 1 }}>
-              <Text style={[styles.reasonName, { color: palette.text }]}>
-                {CHECK_NAMES[reason.check] ?? reason.check}
-              </Text>
-              <Text style={{ color: palette.muted }}>{reason.message}</Text>
-            </View>
+                </Pressable>
+              );
+            })}
           </View>
-        ))}
-        {mode === 'simple' && reasons.length < risk.data.reasons.length ? (
-          <Text style={{ color: palette.muted, fontSize: 13 }}>
-            {risk.data.reasons.length - reasons.length} more checks passed. Switch to Pro to see
-            all.
-          </Text>
-        ) : null}
-      </Card>
+          {mode === 'pro' ? (
+            <Text style={styles.proLine}>
+              {formatSol(volume)} traded · prices from trades Sift recorded · {mint}
+            </Text>
+          ) : null}
+        </View>
 
-      <View style={styles.actions}>
-        {(['Buy', 'Sell'] as const).map((label) => (
-          <Link key={label} href={`/trade/${mint}?side=${label.toLowerCase()}`} asChild>
-            <Pressable
-              style={StyleSheet.flatten([
-                styles.action,
-                {
-                  backgroundColor: label === 'Buy' ? palette.accent : palette.card,
-                  borderColor: palette.border,
-                },
-              ])}
-            >
-              <Text
-                style={[
-                  styles.actionText,
-                  { color: label === 'Buy' ? palette.accentText : palette.text },
-                ]}
+        <Card>
+          <View style={styles.verdictRow}>
+            <View style={styles.verdict}>
+              <View
+                style={[styles.verdictIcon, { backgroundColor: tint(RISK_COLORS[level].fg, 0.14) }]}
               >
-                {label}
-              </Text>
+                <VerdictIcon size={22} color={RISK_COLORS[level].fg} strokeWidth={2} />
+              </View>
+              <View>
+                <Text style={[styles.verdictLabel, { color: RISK_COLORS[level].fg }]}>
+                  {RISK_LABELS[level]}
+                </Text>
+                <Text style={styles.sub}>
+                  {passed} of {reasons.length} checks passed
+                </Text>
+              </View>
+            </View>
+            <Pressable
+              onPress={() => setShowDetails((value) => !value)}
+              accessibilityRole="button"
+              hitSlop={12}
+            >
+              <Text style={styles.link}>{showDetails || mode === 'pro' ? 'Less' : 'Details'}</Text>
+            </Pressable>
+          </View>
+          {showDetails || mode === 'pro' ? (
+            <View style={styles.details}>
+              {reasons.map((reason) => (
+                <View key={reason.check} style={styles.detail}>
+                  <Mark level={reason.level} />
+                  <View style={styles.flex}>
+                    <Text style={styles.checkName}>
+                      {CHECK_NAMES[reason.check] ?? reason.check}
+                    </Text>
+                    <Text style={styles.checkText}>{reason.message}</Text>
+                  </View>
+                </View>
+              ))}
+            </View>
+          ) : (
+            <View style={styles.grid}>
+              {reasons.map((reason) => (
+                <View key={reason.check} style={styles.cell}>
+                  <Mark level={reason.level} />
+                  <Text style={styles.checkText} numberOfLines={1}>
+                    {CHECK_NAMES[reason.check] ?? reason.check}
+                  </Text>
+                </View>
+              ))}
+            </View>
+          )}
+        </Card>
+
+        <Card>
+          <View style={styles.eyebrowRow}>
+            <Sparkles size={14} color={colors.link} strokeWidth={2} />
+            <Text style={styles.eyebrow}>In plain words</Text>
+            {summary.data?.source === 'ai' ? <Text style={styles.aiTag}>AI</Text> : null}
+          </View>
+          {summary.isPending ? (
+            <Text style={styles.checkText}>Writing a summary…</Text>
+          ) : summary.isError ? (
+            <Text style={styles.checkText}>Summary unavailable right now.</Text>
+          ) : (
+            <>
+              <Text style={styles.body}>{summary.data.summary}</Text>
+              {summary.data.redFlags.length > 0 ? (
+                <View style={styles.flags}>
+                  {summary.data.redFlags.map((flag) => (
+                    <Text key={flag} style={styles.flag}>
+                      {flag}
+                    </Text>
+                  ))}
+                </View>
+              ) : null}
+            </>
+          )}
+        </Card>
+
+        <TokenWatch mint={mint} priceSol={lastPrice} />
+        <Text style={styles.note}>{risk.data.disclaimer ?? RISK_DISCLAIMER}</Text>
+      </ScrollView>
+
+      <View style={[styles.footer, { paddingBottom: insets.bottom + 14 }]}>
+        <View style={styles.actions}>
+          <Link href={`/trade/${mint}?side=sell`} asChild>
+            <Pressable style={StyleSheet.flatten([styles.action, styles.sell])}>
+              <Text style={styles.sellText}>Sell</Text>
             </Pressable>
           </Link>
-        ))}
+          <Link href={`/trade/${mint}?side=buy`} asChild>
+            <Pressable style={StyleSheet.flatten([styles.action, styles.buy])}>
+              <Text style={styles.buyText}>{symbol ? `Buy ${symbol}` : 'Buy'}</Text>
+            </Pressable>
+          </Link>
+        </View>
+        <Text style={styles.footNote}>
+          Safety checks reduce risk, they don’t remove it. Not financial advice.
+        </Text>
       </View>
-      <Text style={[styles.note, { color: palette.muted }]}>
-        You’ll see the full cost, every fee included, before confirming.
-      </Text>
-      <Text style={[styles.note, { color: palette.muted }]}>
-        {risk.data.disclaimer ?? RISK_DISCLAIMER}
-      </Text>
-    </ScrollView>
+    </View>
   );
 }
 
-function Tag({ text }: { text: string }) {
-  const palette = usePalette();
+function Mark({ level }: { level: RiskLevel }) {
+  const { fg } = RISK_COLORS[level];
   return (
-    <Text style={[styles.tag, { color: palette.accent, borderColor: palette.accent }]}>{text}</Text>
+    <View
+      style={[styles.mark, { backgroundColor: tint(fg, 0.16) }]}
+      accessibilityLabel={RISK_LABELS[level]}
+    >
+      <Text style={[styles.markText, { color: fg }]}>{MARKS[level]}</Text>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
-  screen: { padding: 16, gap: 12, paddingBottom: 40 },
-  priceRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start' },
-  price: { fontSize: 26, fontWeight: '700' },
-  body: { fontSize: 15, lineHeight: 22 },
+  root: { flex: 1, backgroundColor: colors.bg },
+  header: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+    paddingHorizontal: space.screen,
+    paddingBottom: 8,
+  },
+  identity: { flex: 1, flexDirection: 'row', alignItems: 'center', gap: 10, minWidth: 0 },
+  flex: { flex: 1 },
+  flexShrink: { flexShrink: 1 },
+  name: { fontSize: 16, fontWeight: '800' },
+  sub: { fontSize: 12, color: colors.muted },
+  content: { paddingHorizontal: space.screen, paddingTop: 10, paddingBottom: 24, gap: space.gap },
+  price: { fontSize: 32, fontWeight: '600', letterSpacing: -1 },
+  noPrice: { fontSize: 24, fontWeight: '800', color: colors.muted },
+  changeRow: { flexDirection: 'row', alignItems: 'center', gap: 8, marginTop: 4 },
+  change: { fontSize: 14, fontWeight: '600' },
+  ranges: { flexDirection: 'row', gap: 6, marginTop: 8 },
+  range: { height: 32, paddingHorizontal: 12, borderRadius: 10, justifyContent: 'center' },
+  rangeOn: { backgroundColor: colors.surface2 },
+  rangeLabel: { fontSize: 12, fontWeight: '600' },
+  proLine: { fontSize: 12, color: colors.faint, marginTop: 8 },
+  verdictRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
+  verdict: { flexDirection: 'row', alignItems: 'center', gap: 10 },
+  verdictIcon: {
+    width: 40,
+    height: 40,
+    borderRadius: 12,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  verdictLabel: { fontSize: 18, fontWeight: '800' },
+  link: { fontSize: 13, fontWeight: '700', color: colors.link },
+  grid: { flexDirection: 'row', flexWrap: 'wrap', rowGap: 8, marginTop: 4 },
+  cell: { width: '50%', flexDirection: 'row', alignItems: 'center', gap: 8, paddingRight: 8 },
+  details: { gap: 12, marginTop: 4 },
+  detail: { flexDirection: 'row', gap: 10, alignItems: 'flex-start' },
+  mark: { width: 18, height: 18, borderRadius: 9, alignItems: 'center', justifyContent: 'center' },
+  markText: { fontSize: 11, fontWeight: '800' },
+  checkName: { fontSize: 14, fontWeight: '700' },
+  checkText: { fontSize: 13, color: colors.text2, flexShrink: 1 },
+  eyebrowRow: { flexDirection: 'row', alignItems: 'center', gap: 8 },
+  eyebrow: {
+    fontSize: 12,
+    fontWeight: '800',
+    letterSpacing: 0.6,
+    textTransform: 'uppercase',
+    color: colors.link,
+  },
+  aiTag: {
+    fontSize: 11,
+    fontWeight: '700',
+    color: colors.link,
+    borderWidth: 1,
+    borderColor: tint(colors.link, 0.35),
+    borderRadius: 6,
+    paddingHorizontal: 6,
+  },
+  body: { fontSize: 14, lineHeight: 21, color: colors.body },
   flags: { flexDirection: 'row', flexWrap: 'wrap', gap: 6 },
   flag: {
     fontSize: 12,
-    fontWeight: '600',
-    paddingHorizontal: 8,
+    fontWeight: '700',
+    color: RISK_COLORS.red.fg,
+    backgroundColor: RISK_COLORS.red.bg,
+    paddingHorizontal: 10,
     paddingVertical: 4,
-    borderRadius: 8,
+    borderRadius: 999,
     overflow: 'hidden',
   },
-  reason: { flexDirection: 'row', gap: 10, alignItems: 'flex-start' },
-  reasonDot: { width: 10, height: 10, borderRadius: 5, marginTop: 5 },
-  reasonName: { fontWeight: '600' },
-  actions: { flexDirection: 'row', gap: 12 },
-  action: {
+  note: { fontSize: 12, color: colors.faint, textAlign: 'center', marginTop: 4 },
+  footer: {
+    paddingTop: 12,
+    paddingHorizontal: space.screen,
+    backgroundColor: colors.bg,
+    borderTopWidth: 1,
+    borderTopColor: colors.border,
+  },
+  actions: { flexDirection: 'row', gap: 10 },
+  action: { height: 54, borderRadius: 16, alignItems: 'center', justifyContent: 'center' },
+  sell: {
     flex: 1,
-    borderRadius: 12,
-    paddingVertical: 14,
-    alignItems: 'center',
-    borderWidth: StyleSheet.hairlineWidth,
-  },
-  actionText: { fontSize: 16, fontWeight: '700' },
-  note: { fontSize: 12, textAlign: 'center' },
-  tag: {
-    fontSize: 11,
-    fontWeight: '700',
+    backgroundColor: colors.surface,
     borderWidth: 1,
-    borderRadius: 6,
-    paddingHorizontal: 6,
-    paddingVertical: 1,
+    borderColor: colors.borderStrong,
   },
+  buy: { flex: 2, backgroundColor: colors.accent },
+  sellText: { fontSize: 16, fontWeight: '800', color: colors.text },
+  buyText: { fontSize: 16, fontWeight: '800', color: colors.onAccent },
+  footNote: { marginTop: 8, textAlign: 'center', fontSize: 11, color: colors.faint },
 });

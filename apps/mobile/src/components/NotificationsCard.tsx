@@ -1,5 +1,5 @@
 import { useMutation } from '@tanstack/react-query';
-import { Text } from 'react-native';
+import { Text } from './Text';
 import { socialApi } from '../lib/api';
 import { setRegisteredPushToken, setUpPush } from '../lib/push';
 import { useSession } from '../lib/session';

@@ -1,7 +1,9 @@
 import { DISPLAY_NAME_MAX, type MyProfile } from '@sift/shared';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { useState } from 'react';
-import { StyleSheet, Switch, Text, TextInput, View } from 'react-native';
+import { StyleSheet, View } from 'react-native';
+import { Switch } from './Switch';
+import { Text, TextInput } from './Text';
 import { socialApi } from '../lib/api';
 import { useSession } from '../lib/session';
 import { normalizeHandle } from '../lib/social';
@@ -78,7 +80,7 @@ export function ProfileForm({
             the blockchain. Off by default. Turning it off removes what you shared.
           </Text>
         </View>
-        <Switch value={shareTrades} onValueChange={setShareTrades} />
+        <Switch value={shareTrades} onValueChange={setShareTrades} label="Share my trades" />
       </View>
       <Button
         label={save.isPending ? 'Saving…' : 'Save'}

@@ -1,6 +1,7 @@
 import { useMutation } from '@tanstack/react-query';
 import { Link } from 'expo-router';
-import { Pressable, StyleSheet, Text } from 'react-native';
+import { Pressable, StyleSheet } from 'react-native';
+import { Text } from './Text';
 import { mwaErrorMessage } from '../lib/mwa-results';
 import { isCancelled } from '../lib/phantom';
 import { useSession } from '../lib/session';

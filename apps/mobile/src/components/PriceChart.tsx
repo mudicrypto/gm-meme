@@ -1,6 +1,7 @@
 import type { PricePoint } from '@sift/shared';
 import { useState } from 'react';
-import { StyleSheet, Text, View } from 'react-native';
+import { StyleSheet, View } from 'react-native';
+import { Text } from './Text';
 import Svg, { Path } from 'react-native-svg';
 import { chartGeometry } from '../lib/chart';
 import { usePalette } from '../lib/theme';

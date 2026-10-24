@@ -1,13 +1,15 @@
 import type { AlertDirection } from '@sift/shared';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { useState } from 'react';
-import { StyleSheet, Text, TextInput } from 'react-native';
+import { Bell } from 'lucide-react-native';
+import { StyleSheet, View } from 'react-native';
+import { Text, TextInput } from './Text';
 import { socialApi } from '../lib/api';
 import { formatSolPrice } from '../lib/format';
 import { useSession } from '../lib/session';
 import { describeAlert, parsePriceSol, suggestedAlertPrice } from '../lib/social';
 import { useAlerts, useWatchlist } from '../lib/social-hooks';
-import { usePalette } from '../lib/theme';
+import { colors, radius, usePalette } from '../lib/theme';
 import { Button } from './Button';
 import { Card } from './Card';
 import { Segmented } from './Segmented';
@@ -58,15 +60,16 @@ export function TokenWatch({ mint, priceSol }: { mint: string; priceSol: number 
   return (
     <Card title="Watch and alerts">
       <Button
-        label={watching ? 'On your watchlist ✓' : 'Add to watchlist'}
+        label={watching ? 'On your watchlist' : 'Add to watchlist'}
         variant={watching ? 'secondary' : 'primary'}
         disabled={toggleWatch.isPending || watchlist.isPending}
         onPress={() => toggleWatch.mutate()}
       />
       {mine.map((alert) => (
-        <Text key={alert.id} style={{ color: palette.text }}>
-          🔔 {describeAlert(alert)}
-        </Text>
+        <View key={alert.id} style={styles.alert}>
+          <Bell size={16} color={colors.link} strokeWidth={2} />
+          <Text style={{ color: palette.text }}>{describeAlert(alert)}</Text>
+        </View>
       ))}
       {open ? (
         <>
@@ -88,7 +91,7 @@ export function TokenWatch({ mint, priceSol }: { mint: string; priceSol: number 
             placeholderTextColor={palette.muted}
             keyboardType="decimal-pad"
             autoCapitalize="none"
-            style={[styles.input, { color: palette.text, borderColor: palette.border }]}
+            style={styles.input}
           />
           <Text style={{ color: palette.muted, fontSize: 13 }}>
             {priceSol ? `Now ${formatSolPrice(priceSol)} SOL. ` : 'No price recorded yet. '}
@@ -114,11 +117,15 @@ export function TokenWatch({ mint, priceSol }: { mint: string; priceSol: number 
 }
 
 const styles = StyleSheet.create({
+  alert: { flexDirection: 'row', alignItems: 'center', gap: 8 },
   input: {
     borderWidth: 1,
-    borderRadius: 10,
-    paddingHorizontal: 12,
-    paddingVertical: 10,
+    borderColor: colors.borderStrong,
+    backgroundColor: colors.bg,
+    borderRadius: radius.input,
+    paddingHorizontal: 14,
+    paddingVertical: 12,
     fontSize: 15,
+    color: colors.text,
   },
 });

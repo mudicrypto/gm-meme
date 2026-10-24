@@ -1,0 +1,114 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Sift — Stop loss order</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&amp;family=JetBrains+Mono:wght@500;600&amp;display=swap" rel="stylesheet">
+<style>
+body{margin:0;background:#0B0D12}
+a{color:#A9B5FF}a:hover{color:#C9D1FF}
+button{font-family:inherit}
+</style>
+</helmet>
+<div style="width: 390px; height: 844px; box-sizing: border-box; background: #0B0D12; color: #F3F5F9; font-family: Manrope, system-ui, sans-serif; display: flex; flex-direction: column; overflow: hidden; position: relative">
+
+  <header style="padding: 56px 20px 8px; display: flex; align-items: center; justify-content: space-between">
+    <a href="Token.dc.html" aria-label="Close" style="width: 44px; height: 44px; border-radius: 14px; border: 1px solid #262C3A; background: #151922; color: #F3F5F9; display: flex; align-items: center; justify-content: center">
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M18 6 6 18M6 6l12 12"/></svg>
+    </a>
+    <div style="text-align: center">
+      <div style="font-size: 17px; font-weight: 800">Moon Cat</div>
+      <div style="font-size: 12px; color: #9BA4B5; font-family: 'JetBrains Mono', monospace">Now $0.000048</div>
+    </div>
+    <span style="width: 44px; height: 28px; border-radius: 999px; background: rgba(139,156,255,0.16); color: #A9B5FF; font-size: 11px; font-weight: 800; letter-spacing: 0.6px; display: flex; align-items: center; justify-content: center">PRO</span>
+  </header>
+
+  <div style="margin: 10px 20px 0; padding: 4px; border-radius: 14px; background: #151922; border: 1px solid #1F2430; display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 4px">
+    <sc-for list="{{types}}" as="t" hint-placeholder-count="4">
+      <button onClick="{{t.pick}}" style="{{t.style}}">{{t.label}}</button>
+    </sc-for>
+  </div>
+
+  <div style="padding: 18px 20px 0">
+    <label for="trigger" style="font-size: 13px; color: #9BA4B5">{{triggerLabel}}</label>
+    <input id="trigger" value="{{triggerValue}}" style="width: 100%; box-sizing: border-box; height: 60px; margin-top: 6px; padding: 0 16px; border-radius: 16px; border: 1px solid #262C3A; background: #151922; color: #F3F5F9; font-size: 24px; font-weight: 700; font-family: 'JetBrains Mono', monospace; outline: none">
+    <div style="display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 8px; margin-top: 8px">
+      <sc-for list="{{steps}}" as="s" hint-placeholder-count="4">
+        <button style="{{s.style}}">{{s.label}}</button>
+      </sc-for>
+    </div>
+  </div>
+
+  <div style="padding: 16px 20px 0">
+    <div style="font-size: 13px; color: #9BA4B5">Amount to sell</div>
+    <div style="display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 8px; margin-top: 6px">
+      <sc-for list="{{amounts}}" as="a" hint-placeholder-count="4">
+        <button onClick="{{a.pick}}" style="{{a.style}}">{{a.label}}</button>
+      </sc-for>
+    </div>
+  </div>
+
+  <div style="margin: 14px 20px 0; padding: 4px 16px; border-radius: 18px; background: #151922; border: 1px solid #1F2430">
+    <div style="display: flex; align-items: center; justify-content: space-between; padding: 10px 0; border-bottom: 1px solid #1F2430">
+      <div>
+        <div style="font-size: 14px; color: #E2E6EE">Trailing</div>
+        <div style="font-size: 12px; color: #9BA4B5">Stop rises as the price rises</div>
+      </div>
+      <button role="switch" aria-checked="{{trailOn}}" aria-label="Trailing" onClick="{{flipTrail}}" style="{{trailTrack}}"><span style="{{trailKnob}}"></span></button>
+    </div>
+    <div style="display: flex; align-items: center; justify-content: space-between; padding: 12px 0">
+      <span style="font-size: 14px; color: #E2E6EE">Expires</span>
+      <span style="font-size: 14px; font-weight: 700">In 7 days</span>
+    </div>
+  </div>
+
+  <div style="margin: 10px 20px 0; padding: 12px 14px; border-radius: 14px; background: rgba(139,156,255,0.10); border: 1px solid rgba(139,156,255,0.30); font-size: 13px; line-height: 1.5; color: #E2E6EE">{{summary}}</div>
+
+  <div style="position: absolute; left: 0; right: 0; bottom: 0; padding: 10px 20px 30px">
+    <a href="Orders.dc.html" style="display: flex; align-items: center; justify-content: center; gap: 8px; margin-bottom: 10px; font-size: 12px; color: #9BA4B5; text-decoration: none">
+      <span style="width: 8px; height: 8px; border-radius: 50%; background: #34D399"></span>Runs automatically, even when your phone is off</a>
+    <a href="Orders.dc.html" style="height: 56px; border-radius: 16px; background: {{accent}}; color: #0B0D12; font-size: 16px; font-weight: 800; display: flex; align-items: center; justify-content: center; text-decoration: none">{{cta}}</a>
+  </div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"accent":{"editor":"color","default":"#8B9CFF","options":["#8B9CFF","#34D399","#F5B544","#F3F5F9"]},"$preview":{"width":390,"height":844}}'>
+class Component extends DCLogic {
+  constructor(p) { super(p); this.state = { type: 'stop', amount: '100%', trail: false }; }
+  renderVals() {
+    const accent = this.props.accent ?? '#8B9CFF';
+    const T = {
+      market: { label: 'Market', trig: 'Sell now at', val: '$0.000048', steps: [], cta: 'Review sell', sum: 'Sells right away at the best available price, signed on your phone.' },
+      limit: { label: 'Limit', trig: 'Buy when price drops to', val: '$0.000040', steps: ['-5%', '-10%', '-20%', '-30%'], cta: 'Place limit buy', sum: 'If MOON drops to $0.000040, Sift buys with 0.5 SOL from your Sift wallet.' },
+      stop: { label: 'Stop loss', trig: 'Sell if price falls to', val: '$0.000038', steps: ['-10%', '-20%', '-30%', '-50%'], cta: 'Place stop loss', sum: 'If MOON falls to $0.000038 (-21%), Sift sells 100% (10.4M MOON) for about 0.39 SOL. In a sudden crash it can fill lower; max price move 15%.' },
+      tp: { label: 'Take profit', trig: 'Sell when price reaches', val: '$0.000096', steps: ['+50%', '+100%', '+200%', '+500%'], cta: 'Place take profit', sum: 'If MOON reaches $0.000096 (+100%), Sift sells your chosen amount and keeps the SOL in your Sift wallet.' }
+    };
+    const cur = T[this.state.type];
+    const types = Object.keys(T).map((id) => {
+      const on = this.state.type === id;
+      return { label: T[id].label, pick: () => this.setState({ type: id }), style: 'height: 40px; border-radius: 10px; border: none; font-size: 12px; font-weight: 800; cursor: pointer; background: ' + (on ? accent : 'transparent') + '; color: ' + (on ? '#0B0D12' : '#C9CFDA') };
+    });
+    const steps = cur.steps.map((label, i) => ({ label, style: 'height: 36px; border-radius: 10px; font-size: 13px; font-weight: 700; cursor: pointer; font-family: JetBrains Mono, monospace; border: 1px solid ' + (i === 1 ? accent : '#262C3A') + '; background: ' + (i === 1 ? 'rgba(139,156,255,0.14)' : '#151922') + '; color: ' + (i === 1 ? '#F3F5F9' : '#C9CFDA') }));
+    const amounts = ['25%', '50%', '75%', '100%'].map((label) => {
+      const on = this.state.amount === label;
+      return { label, pick: () => this.setState({ amount: label }), style: 'height: 44px; border-radius: 12px; font-size: 14px; font-weight: 700; cursor: pointer; border: 1px solid ' + (on ? accent : '#262C3A') + '; background: ' + (on ? 'rgba(139,156,255,0.14)' : '#151922') + '; color: ' + (on ? '#F3F5F9' : '#C9CFDA') };
+    });
+    const t = this.state.trail;
+    return {
+      accent, types, steps, amounts,
+      triggerLabel: cur.trig, triggerValue: cur.val, summary: cur.sum, cta: cur.cta,
+      trailOn: t ? 'true' : 'false',
+      flipTrail: () => this.setState({ trail: !t }),
+      trailTrack: 'width: 48px; height: 28px; border-radius: 14px; border: none; padding: 3px; cursor: pointer; display: flex; justify-content: ' + (t ? 'flex-end' : 'flex-start') + '; background: ' + (t ? accent : '#2A3040'),
+      trailKnob: 'width: 22px; height: 22px; border-radius: 50%; background: ' + (t ? '#0B0D12' : '#9BA4B5')
+    };
+  }
+}
+</script>
+</body>
+</html>

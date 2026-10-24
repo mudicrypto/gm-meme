@@ -1,20 +1,26 @@
 import { Tabs } from 'expo-router';
-import { ModeToggle } from '../../components/ModeToggle';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { TabIcon } from '../../components/TabIcon';
-import { usePalette } from '../../lib/theme';
+import { colors, fonts } from '../../lib/theme';
 
 export default function TabLayout() {
-  const palette = usePalette();
+  const insets = useSafeAreaInsets();
   return (
     <Tabs
       screenOptions={{
-        headerStyle: { backgroundColor: palette.card },
-        headerTintColor: palette.text,
-        headerRight: () => <ModeToggle />,
-        tabBarActiveTintColor: palette.accent,
-        tabBarInactiveTintColor: palette.muted,
-        tabBarStyle: { backgroundColor: palette.card, borderTopColor: palette.border },
-        sceneStyle: { backgroundColor: palette.background },
+        // Each screen draws its own header (components/Screen.tsx).
+        headerShown: false,
+        tabBarActiveTintColor: colors.accent,
+        tabBarInactiveTintColor: colors.muted,
+        tabBarStyle: {
+          backgroundColor: colors.tabBar,
+          borderTopColor: colors.border,
+          height: 70 + insets.bottom,
+          paddingTop: 6,
+          paddingBottom: insets.bottom + 6,
+        },
+        tabBarLabelStyle: { fontFamily: fonts.ui[700], fontSize: 11, lineHeight: 16 },
+        sceneStyle: { backgroundColor: colors.bg },
       }}
     >
       <Tabs.Screen

@@ -1,0 +1,116 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Sift — Review trade</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&amp;family=JetBrains+Mono:wght@500;600&amp;display=swap" rel="stylesheet">
+<style>
+body{margin:0;background:#0B0D12}
+a{color:#A9B5FF}a:hover{color:#C9D1FF}
+button{font-family:inherit}
+</style>
+</helmet>
+<div style="width: 390px; height: 844px; box-sizing: border-box; background: #0B0D12; color: #F3F5F9; font-family: Manrope, system-ui, sans-serif; display: flex; flex-direction: column; overflow: hidden; position: relative">
+
+  <header style="padding: 56px 20px 8px; display: flex; align-items: center; justify-content: space-between">
+    <a href="Token.dc.html" aria-label="Close" style="width: 44px; height: 44px; border-radius: 14px; border: 1px solid #262C3A; background: #151922; color: #F3F5F9; display: flex; align-items: center; justify-content: center">
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M18 6 6 18M6 6l12 12"/></svg>
+    </a>
+    <span style="font-size: 17px; font-weight: 800">Buy MOON</span>
+    <span style="height: 28px; padding: 0 10px; border-radius: 999px; background: rgba(251,191,36,0.14); color: #FBBF24; font-size: 11px; font-weight: 800; display: flex; align-items: center; letter-spacing: 0.4px">DEVNET</span>
+  </header>
+
+  <div style="padding: 20px 20px 0; text-align: center">
+    <label for="amount" style="font-size: 13px; color: #9BA4B5">You pay</label>
+    <div style="display: flex; align-items: baseline; justify-content: center; gap: 8px; margin-top: 6px">
+      <input id="amount" value="0.50" inputmode="decimal" style="width: 150px; background: transparent; border: none; outline: none; color: #F3F5F9; font-size: 52px; font-weight: 700; letter-spacing: -2px; text-align: right; font-family: 'JetBrains Mono', monospace; padding: 0">
+      <span style="font-size: 22px; font-weight: 700; color: #9BA4B5">SOL</span>
+    </div>
+    <div style="font-size: 14px; color: #C9CFDA; margin-top: 4px">You get ≈ <b style="font-family: 'JetBrains Mono', monospace">10.4M MOON</b></div>
+  </div>
+
+  <div style="padding: 18px 20px 0; display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 8px">
+    <sc-for list="{{chips}}" as="c" hint-placeholder-count="4">
+      <button onClick="{{c.pick}}" style="{{c.style}}">{{c.label}}</button>
+    </sc-for>
+  </div>
+
+  <section aria-label="Full cost" style="margin: 20px 20px 0; padding: 6px 16px; border-radius: 20px; background: #151922; border: 1px solid #1F2430">
+    <sc-for list="{{rows}}" as="r" hint-placeholder-count="5">
+      <div style="{{r.rowStyle}}">
+        <span style="font-size: 14px; color: #9BA4B5">{{r.label}}</span>
+        <span style="{{r.valStyle}}">{{r.value}}</span>
+      </div>
+    </sc-for>
+  </section>
+
+  <div style="margin: 10px 20px 0; padding: 10px 14px; border-radius: 14px; background: rgba(52,211,153,0.08); border: 1px solid rgba(52,211,153,0.25); display: flex; gap: 10px; align-items: center">
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#34D399" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" style="flex: none"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/><path d="m9 12 2 2 4-4"/></svg>
+    <span style="font-size: 13px; color: #C9CFDA"><b style="color: #F3F5F9">Price checked on Solana</b> before signing</span>
+  </div>
+
+  <div style="margin: 10px 20px 0; padding: 12px 14px; border-radius: 16px; background: {{protectBg}}; border: 1px solid {{protectBorder}}; display: flex; align-items: center; gap: 12px">
+    <div style="flex: 1">
+      <div style="font-size: 15px; font-weight: 800">Protect this trade</div>
+      <div style="font-size: 12px; color: #C9CFDA; margin-top: 2px; line-height: 1.4">Auto-sell if it falls 30% · sell half at 2x</div>
+      <a href="Order.dc.html" style="font-size: 12px; font-weight: 700; text-decoration: none">Customize</a>
+    </div>
+    <button role="switch" aria-checked="{{protectOn}}" aria-label="Protect this trade" onClick="{{flipProtect}}" style="{{protectTrack}}"><span style="{{protectKnob}}"></span></button>
+  </div>
+
+  <div style="position: absolute; left: 0; right: 0; bottom: 0; padding: 10px 20px 30px">
+    <div style="display: flex; justify-content: center; gap: 6px; margin-bottom: 8px; font-size: 12px; color: #9BA4B5">Paying from <b style="color: #E2E6EE">Sift wallet</b><span style="font-family: 'JetBrains Mono', monospace">· 4.82 SOL</span></div>
+    <a href="{{confirmHref}}" style="width: 100%; height: 56px; border-radius: 16px; background: {{accent}}; color: #0B0D12; font-size: 16px; font-weight: 800; display: flex; align-items: center; justify-content: center; text-decoration: none">Confirm buy · 0.507 SOL</a>
+  </div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"accent":{"editor":"color","default":"#8B9CFF","options":["#8B9CFF","#34D399","#F5B544","#F3F5F9"]},"$preview":{"width":390,"height":844}}'>
+class Component extends DCLogic {
+  constructor(p) { super(p); this.state = { chip: '0.5', protect: true }; }
+  renderVals() {
+    const accent = this.props.accent ?? '#8B9CFF';
+    const chips = ['0.1', '0.5', '1', 'Max'].map((label) => {
+      const on = this.state.chip === label;
+      return {
+        label: label === 'Max' ? label : label + ' SOL',
+        pick: () => this.setState({ chip: label }),
+        style: 'height: 44px; border-radius: 12px; font-size: 13px; font-weight: 700; cursor: pointer; border: 1px solid ' + (on ? accent : '#262C3A') + '; background: ' + (on ? 'rgba(139,156,255,0.14)' : '#151922') + '; color: ' + (on ? '#F3F5F9' : '#C9CFDA')
+      };
+    });
+    const base = 'display: flex; justify-content: space-between; align-items: center; padding: 9px 0; ';
+    const mono = 'font-size: 14px; font-weight: 600; font-family: JetBrains Mono, monospace; color: #E2E6EE';
+    const list = [
+      ['Sift fee (1%)', '0.005 SOL'],
+      ['Network priority fee', '0.0001 SOL'],
+      ['New account deposit', '0.002 SOL'],
+      ['Max price move', '1%'],
+      ['Minimum you receive', '10.3M MOON'],
+      ['Total', '0.507 SOL']
+    ];
+    const rows = list.map(([label, value], i) => ({
+      label, value,
+      rowStyle: base + (i < list.length - 1 ? 'border-bottom: 1px solid #1F2430' : ''),
+      valStyle: i === list.length - 1 ? mono.replace('font-weight: 600', 'font-weight: 800').replace('#E2E6EE', '#F3F5F9') : mono
+    }));
+    const pr = this.state.protect;
+    return {
+      accent, chips, rows,
+      protectOn: pr ? 'true' : 'false',
+      flipProtect: () => this.setState({ protect: !pr }),
+      protectBg: pr ? 'rgba(139,156,255,0.10)' : '#151922',
+      protectBorder: pr ? 'rgba(139,156,255,0.35)' : '#1F2430',
+      protectTrack: 'width: 48px; height: 28px; border-radius: 14px; border: none; padding: 3px; cursor: pointer; flex: none; display: flex; justify-content: ' + (pr ? 'flex-end' : 'flex-start') + '; background: ' + (pr ? accent : '#2A3040'),
+      protectKnob: 'width: 22px; height: 22px; border-radius: 50%; background: ' + (pr ? '#0B0D12' : '#9BA4B5'),
+      confirmHref: pr ? 'Orders.dc.html' : 'Portfolio.dc.html'
+    };
+  }
+}
+</script>
+</body>
+</html>

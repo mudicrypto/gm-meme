@@ -1,33 +1,51 @@
 import { useState } from 'react';
-import { Image, StyleSheet, Text, View } from 'react-native';
-import { usePalette } from '../lib/theme';
+import { Image, StyleSheet, View } from 'react-native';
+import { colors } from '../lib/theme';
+import { Text } from './Text';
 
+// Muted tile colours for tokens without an image, picked from the mint so a token keeps
+// the same colour everywhere.
+const TILE_HUES = ['#3B3F8F', '#1F5E4A', '#6B3A2E', '#4A2E6B', '#2E4F6B', '#5E6B2E', '#7A3E5E'];
+
+export function hueFor(seed: string): string {
+  let h = 0;
+  for (const c of seed) h = (h * 31 + c.charCodeAt(0)) >>> 0;
+  return TILE_HUES[h % TILE_HUES.length]!;
+}
+
+/** A token's image, or its initials on a coloured tile (rounded square, per the design). */
 export function TokenAvatar({
   uri,
   label,
-  size = 40,
+  seed,
+  size = 44,
 }: {
   uri?: string;
   label?: string;
+  /** Usually the mint; picks the tile colour. */
+  seed?: string;
   size?: number;
 }) {
-  const palette = usePalette();
   const [failed, setFailed] = useState(false);
-  const box = { width: size, height: size, borderRadius: size / 2 };
+  const box = { width: size, height: size, borderRadius: Math.round(size * 0.32) };
   if (uri && !failed) {
     return <Image source={{ uri }} style={[box, styles.image]} onError={() => setFailed(true)} />;
   }
   return (
-    <View style={[box, styles.fallback, { backgroundColor: palette.border }]}>
-      <Text style={[styles.initials, { color: palette.muted, fontSize: size * 0.38 }]}>
-        {(label ?? '?').slice(0, 2).toUpperCase()}
-      </Text>
+    <View style={[box, styles.tile, { backgroundColor: hueFor(seed ?? label ?? '?') }]}>
+      <Text style={[styles.initials, { fontSize: Math.round(size / 3.1) }]}>{initials(label)}</Text>
     </View>
   );
 }
 
+export function initials(label?: string): string {
+  const words = (label ?? '?').trim().split(/\s+/);
+  const text = words.length > 1 ? `${words[0]![0]}${words[1]![0]}` : (words[0] ?? '?').slice(0, 2);
+  return text.toUpperCase();
+}
+
 const styles = StyleSheet.create({
-  image: { backgroundColor: '#E5E7EB' },
-  fallback: { alignItems: 'center', justifyContent: 'center' },
-  initials: { fontWeight: '700' },
+  image: { backgroundColor: colors.surface2 },
+  tile: { alignItems: 'center', justifyContent: 'center' },
+  initials: { fontWeight: '800', color: colors.text },
 });

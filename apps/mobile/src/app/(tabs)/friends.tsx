@@ -2,17 +2,12 @@ import type { MyProfile } from '@sift/shared';
 import { useQuery } from '@tanstack/react-query';
 import { Link } from 'expo-router';
 import { useState } from 'react';
-import {
-  Pressable,
-  RefreshControl,
-  ScrollView,
-  StyleSheet,
-  Text,
-  TextInput,
-  View,
-} from 'react-native';
+import { Pressable, ScrollView, StyleSheet, View } from 'react-native';
 import { Button } from '../../components/Button';
 import { Card } from '../../components/Card';
+import { PersonAvatar } from '../../components/PersonAvatar';
+import { Screen, SectionTitle } from '../../components/Screen';
+import { Text, TextInput } from '../../components/Text';
 import { ProfileForm } from '../../components/ProfileForm';
 import { SharedTradeRow } from '../../components/SharedTradeRow';
 import { SignInCard } from '../../components/SignInCard';
@@ -20,27 +15,36 @@ import { Empty, ErrorState, Loading } from '../../components/States';
 import { socialApi } from '../../lib/api';
 import { useSession } from '../../lib/session';
 import { useMe } from '../../lib/social-hooks';
-import { usePalette } from '../../lib/theme';
+import { colors, radius, usePalette } from '../../lib/theme';
 
 export default function FriendsScreen() {
   const session = useSession();
   const me = useMe();
 
-  if (session.status === 'loading') return <Loading />;
+  if (session.status === 'loading' || (session.status !== 'signed-out' && me.isPending))
+    return (
+      <Screen title="Friends">
+        <Loading />
+      </Screen>
+    );
   if (session.status === 'signed-out') {
     return (
-      <ScrollView contentContainerStyle={styles.screen}>
+      <Screen title="Friends" subtitle="Trades your friends chose to share">
         <SignInCard reason="Sign in to follow friends and see the trades they share." />
-      </ScrollView>
+      </Screen>
     );
   }
-  if (me.isPending) return <Loading />;
-  if (me.isError) return <ErrorState message={me.error.message} onRetry={() => me.refetch()} />;
-  if (!me.data.profile) {
+  if (me.isError)
     return (
-      <ScrollView contentContainerStyle={styles.screen}>
+      <Screen title="Friends">
+        <ErrorState message={me.error.message} onRetry={() => me.refetch()} />
+      </Screen>
+    );
+  if (!me.data?.profile) {
+    return (
+      <Screen title="Friends">
         <ProfileForm profile={null} />
-      </ScrollView>
+      </Screen>
     );
   }
   return <Feed profile={me.data.profile} />;
@@ -56,13 +60,45 @@ function Feed({ profile }: { profile: MyProfile }) {
     refetchInterval: 30_000,
   });
 
+  // The people in the feed, most recent first; a ring marks those who traded today.
+  const people = [
+    ...new Map(
+      (feed.data?.trades ?? []).map((trade) => [trade.handle, trade] as const).reverse(),
+    ).values(),
+  ].reverse();
+  const dayAgo = feed.dataUpdatedAt - 24 * 60 * 60 * 1000;
+
   return (
-    <ScrollView
-      contentContainerStyle={styles.screen}
-      refreshControl={
-        <RefreshControl refreshing={feed.isRefetching} onRefresh={() => void feed.refetch()} />
-      }
+    <Screen
+      title="Friends"
+      subtitle="Trades your friends chose to share"
+      refreshing={feed.isRefetching}
+      onRefresh={() => void feed.refetch()}
     >
+      {people.length > 0 ? (
+        <ScrollView
+          horizontal
+          showsHorizontalScrollIndicator={false}
+          contentContainerStyle={styles.people}
+        >
+          {people.map((trade) => (
+            <Link key={trade.handle} href={`/u/${trade.handle}`} asChild>
+              <Pressable style={StyleSheet.flatten(styles.personChip)}>
+                <PersonAvatar
+                  name={trade.displayName}
+                  seed={trade.handle}
+                  size={52}
+                  active={Date.parse(trade.at) > dayAgo}
+                />
+                <Text style={styles.personName} numberOfLines={1}>
+                  {trade.displayName}
+                </Text>
+              </Pressable>
+            </Link>
+          ))}
+        </ScrollView>
+      ) : null}
+
       {editing ? (
         <ProfileForm profile={profile} onDone={() => setEditing(false)} />
       ) : (
@@ -87,8 +123,8 @@ function Feed({ profile }: { profile: MyProfile }) {
 
       <FindPeople />
 
-      <Text style={[styles.heading, { color: palette.text }]}>Friends’ trades</Text>
-      <Text style={{ color: palette.muted, fontSize: 13 }}>
+      <SectionTitle title="Friends’ trades" />
+      <Text style={styles.note}>
         Trades people chose to share. They aren’t advice: check each token’s risk score yourself.
       </Text>
       {feed.isPending ? (
@@ -109,7 +145,7 @@ function Feed({ profile }: { profile: MyProfile }) {
       <View style={styles.signOut}>
         <Button label="Sign out" variant="secondary" onPress={() => void session.signOut()} />
       </View>
-    </ScrollView>
+    </Screen>
   );
 }
 
@@ -133,7 +169,7 @@ function FindPeople() {
         placeholderTextColor={palette.muted}
         autoCapitalize="none"
         autoCorrect={false}
-        style={[styles.input, { color: palette.text, borderColor: palette.border }]}
+        style={styles.input}
       />
       {valid && results.data ? (
         results.data.profiles.length === 0 ? (
@@ -161,20 +197,24 @@ function FindPeople() {
 }
 
 const styles = StyleSheet.create({
-  screen: { padding: 16, gap: 12, paddingBottom: 40 },
-  heading: { fontSize: 17, fontWeight: '700', marginTop: 4 },
+  people: { gap: 14, paddingVertical: 4 },
+  personChip: { alignItems: 'center', gap: 6, width: 60 },
+  personName: { fontSize: 12, color: colors.text2, maxWidth: 60 },
+  note: { fontSize: 13, color: colors.faint },
   input: {
     borderWidth: 1,
-    borderRadius: 10,
-    paddingHorizontal: 12,
-    paddingVertical: 10,
+    borderColor: colors.borderStrong,
+    backgroundColor: colors.bg,
+    borderRadius: radius.input,
+    paddingHorizontal: 14,
+    paddingVertical: 12,
     fontSize: 15,
   },
   person: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingVertical: 8,
-    borderTopWidth: StyleSheet.hairlineWidth,
+    paddingVertical: 10,
+    borderTopWidth: 1,
   },
   flex: { flex: 1 },
   signOut: { marginTop: 12 },

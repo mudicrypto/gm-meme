@@ -1,0 +1,107 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Sift — Watchlist</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&amp;family=JetBrains+Mono:wght@500;600&amp;display=swap" rel="stylesheet">
+<style>
+body{margin:0;background:#0B0D12}
+a{color:#A9B5FF}a:hover{color:#C9D1FF}
+button{font-family:inherit}
+</style>
+</helmet>
+<div style="width: 390px; height: 844px; box-sizing: border-box; background: #0B0D12; color: #F3F5F9; font-family: Manrope, system-ui, sans-serif; display: flex; flex-direction: column; overflow: hidden; position: relative">
+
+  <header style="padding: 56px 20px 0; display: flex; align-items: center; justify-content: space-between">
+    <h1 style="margin: 0; font-size: 28px; font-weight: 800; letter-spacing: -0.8px">Watchlist</h1>
+    <button aria-label="Add token" style="width: 44px; height: 44px; border-radius: 14px; border: 1px solid #262C3A; background: #151922; color: #F3F5F9; display: flex; align-items: center; justify-content: center; cursor: pointer">
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg>
+    </button>
+  </header>
+
+  <div style="padding: 16px 20px 0; display: flex; flex-direction: column; gap: 10px">
+    <sc-for list="{{items}}" as="w" hint-placeholder-count="3">
+      <div style="padding: 14px; border-radius: 18px; background: #151922; border: 1px solid #1F2430">
+        <div style="display: flex; align-items: center; gap: 12px">
+          <div style="{{w.avatar}}">{{w.initials}}</div>
+          <div style="flex: 1">
+            <div style="font-size: 15px; font-weight: 700">{{w.name}}</div>
+            <div style="font-size: 12px; color: #9BA4B5; font-family: 'JetBrains Mono', monospace">{{w.price}}</div>
+          </div>
+          <span style="{{w.changeStyle}}">{{w.change}}</span>
+        </div>
+        <div style="display: flex; align-items: center; gap: 8px; margin-top: 10px; font-size: 12px; color: #C9CFDA">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#A9B5FF" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9"/></svg>
+          {{w.alert}}
+        </div>
+        <sc-if value="{{w.warn}}" hint-placeholder-val="{{false}}">
+          <div style="margin-top: 10px; padding: 8px 10px; border-radius: 10px; background: rgba(251,191,36,0.10); color: #FBBF24; font-size: 12px; font-weight: 700">Risk changed to Caution · dev launched 3 tokens</div>
+        </sc-if>
+      </div>
+    </sc-for>
+  </div>
+
+  <div style="position: absolute; inset: 0; background: rgba(5,6,10,0.55)"></div>
+
+  <section aria-label="Set price alert" style="position: absolute; left: 0; right: 0; bottom: 0; padding: 12px 20px 32px; border-radius: 28px 28px 0 0; background: #151922; border-top: 1px solid #262C3A">
+    <div style="width: 40px; height: 4px; border-radius: 2px; background: #3A4152; margin: 0 auto 16px"></div>
+    <h2 style="margin: 0; font-size: 20px; font-weight: 800">Alert me about Desk Plant</h2>
+    <p style="margin: 4px 0 0; font-size: 13px; color: #9BA4B5">Now $0.000022 · you choose what matters</p>
+
+    <div style="display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; margin-top: 16px">
+      <sc-for list="{{dirs}}" as="d" hint-placeholder-count="2">
+        <button onClick="{{d.pick}}" style="{{d.style}}">{{d.label}}</button>
+      </sc-for>
+    </div>
+    <label for="target" style="display: block; font-size: 12px; color: #9BA4B5; margin-top: 14px">Price</label>
+    <input id="target" value="$0.000030" style="width: 100%; box-sizing: border-box; height: 52px; margin-top: 6px; padding: 0 14px; border-radius: 14px; border: 1px solid #262C3A; background: #0B0D12; color: #F3F5F9; font-size: 18px; font-weight: 600; font-family: 'JetBrains Mono', monospace; outline: none">
+
+    <div style="margin-top: 14px; display: flex; flex-direction: column">
+      <sc-for list="{{toggles}}" as="t" hint-placeholder-count="2">
+        <div style="display: flex; align-items: center; justify-content: space-between; padding: 10px 0">
+          <span style="font-size: 14px; color: #E2E6EE">{{t.label}}</span>
+          <button role="switch" aria-checked="{{t.on}}" aria-label="{{t.label}}" onClick="{{t.flip}}" style="{{t.track}}"><span style="{{t.knob}}"></span></button>
+        </div>
+      </sc-for>
+    </div>
+
+    <button style="width: 100%; height: 54px; margin-top: 10px; border-radius: 16px; border: none; background: {{accent}}; color: #0B0D12; font-size: 16px; font-weight: 800; cursor: pointer">Save alert</button>
+  </section>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"accent":{"editor":"color","default":"#8B9CFF","options":["#8B9CFF","#34D399","#F5B544","#F3F5F9"]},"$preview":{"width":390,"height":844}}'>
+class Component extends DCLogic {
+  constructor(p) { super(p); this.state = { dir: 'above', risk: true, friends: true }; }
+  renderVals() {
+    const accent = this.props.accent ?? '#8B9CFF';
+    const av = (hue) => 'width: 40px; height: 40px; border-radius: 12px; background: ' + hue + '; display: flex; align-items: center; justify-content: center; font-size: 13px; font-weight: 800; color: #F3F5F9; flex: none';
+    const items = [
+      { name: 'Moon Cat', initials: 'MC', hue: '#3B3F8F', price: '$0.000048', change: '+182%', up: true, alert: 'Alert: above $0.000050', warn: false },
+      { name: 'Be Like Poland', initials: 'BP', hue: '#6B3A2E', price: '$0.0000094', change: '-12%', up: false, alert: 'Alert: risk level changes', warn: true },
+      { name: 'Desk Plant', initials: 'DP', hue: '#1F5E4A', price: '$0.000022', change: '+64%', up: true, alert: 'No alert yet', warn: false }
+    ].map((w) => ({ ...w, avatar: av(w.hue), changeStyle: 'font-size: 14px; font-weight: 700; font-family: JetBrains Mono, monospace; color: ' + (w.up ? '#34D399' : '#F87171') }));
+    const dirs = [['above', 'Goes above'], ['below', 'Drops below']].map(([id, label]) => {
+      const on = this.state.dir === id;
+      return { label, pick: () => this.setState({ dir: id }), style: 'height: 44px; border-radius: 12px; font-size: 14px; font-weight: 700; cursor: pointer; border: 1px solid ' + (on ? accent : '#262C3A') + '; background: ' + (on ? 'rgba(139,156,255,0.14)' : '#0B0D12') + '; color: ' + (on ? '#F3F5F9' : '#C9CFDA') };
+    });
+    const toggles = [['risk', 'Safety rating changes'], ['friends', 'A friend buys or sells it']].map(([key, label]) => {
+      const on = !!this.state[key];
+      return {
+        label, on: on ? 'true' : 'false',
+        flip: () => this.setState({ [key]: !on }),
+        track: 'width: 48px; height: 28px; border-radius: 14px; border: none; padding: 3px; cursor: pointer; display: flex; justify-content: ' + (on ? 'flex-end' : 'flex-start') + '; background: ' + (on ? accent : '#2A3040'),
+        knob: 'width: 22px; height: 22px; border-radius: 50%; background: ' + (on ? '#0B0D12' : '#9BA4B5')
+      };
+    });
+    return { accent, items, dirs, toggles };
+  }
+}
+</script>
+</body>
+</html>

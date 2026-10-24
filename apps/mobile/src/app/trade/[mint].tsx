@@ -6,28 +6,23 @@ import {
 } from '@sift/shared';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { Link, Stack, useLocalSearchParams } from 'expo-router';
-import { useEffect, useState } from 'react';
-import {
-  ActivityIndicator,
-  Linking,
-  Pressable,
-  ScrollView,
-  StyleSheet,
-  Switch,
-  Text,
-  TextInput,
-  View,
-} from 'react-native';
+import { type ReactNode, useEffect, useState } from 'react';
+import { Check, ShieldCheck, ShieldX } from 'lucide-react-native';
+import { ActivityIndicator, Linking, Pressable, ScrollView, StyleSheet, View } from 'react-native';
+import { Button, Chip } from '../../components/Button';
 import { Card } from '../../components/Card';
+import { DevnetBadge } from '../../components/DevnetBadge';
 import { RiskBadge } from '../../components/RiskBadge';
 import { Segmented } from '../../components/Segmented';
 import { ErrorState } from '../../components/States';
+import { Switch } from '../../components/Switch';
+import { Text, TextInput } from '../../components/Text';
 import { parseSolToLamports, percentOfRaw, rawToTokens } from '../../lib/amounts';
 import { FEE_WALLET, api } from '../../lib/api';
 import { costLines, secondsLeft } from '../../lib/costs';
 import { formatCompact, shortAddress } from '../../lib/format';
 import { useMode } from '../../lib/mode';
-import { RISK_COLORS, usePalette } from '../../lib/theme';
+import { RISK_COLORS, colors, radius, space, tint } from '../../lib/theme';
 import { createRpcReader, onChainProblems } from '../../lib/chain-check';
 import { mwaErrorMessage } from '../../lib/mwa-results';
 import { checkQuote } from '../../lib/trade-check';
@@ -53,8 +48,13 @@ type Stage =
 
 const chain = createRpcReader();
 
+const PAYING_FROM = {
+  embedded: 'this phone’s wallet',
+  phantom: 'Phantom',
+  walletApp: 'your wallet app',
+} as const;
+
 export default function TradeScreen() {
-  const palette = usePalette();
   const { mode } = useMode();
   const wallet = useWallet();
   const queryClient = useQueryClient();
@@ -129,15 +129,13 @@ export default function TradeScreen() {
     return (
       <View style={styles.screen}>
         <Card title="Set up a wallet to trade">
-          <Text style={{ color: palette.muted }}>
+          <Text style={styles.muted}>
             Create a wallet on this phone or connect your wallet app. Either way, your key never
             leaves your device.
           </Text>
           <Link href="/portfolio" asChild>
-            <Pressable
-              style={StyleSheet.flatten([styles.primary, { backgroundColor: palette.accent }])}
-            >
-              <Text style={[styles.primaryText, { color: palette.accentText }]}>Set up wallet</Text>
+            <Pressable style={StyleSheet.flatten(styles.linkButton)}>
+              <Text style={styles.linkButtonText}>Set up wallet</Text>
             </Pressable>
           </Link>
         </Card>
@@ -201,7 +199,16 @@ export default function TradeScreen() {
 
   return (
     <ScrollView contentContainerStyle={styles.screen}>
-      <Stack.Screen options={{ title: `${title} ${holding?.symbol ?? shortAddress(mint)}` }} />
+      <Stack.Screen
+        options={{
+          title: `${title} ${holding?.symbol ?? shortAddress(mint)}`,
+          headerRight: () => (
+            <View style={styles.headerBadge}>
+              <DevnetBadge />
+            </View>
+          ),
+        }}
+      />
 
       {stage.name === 'edit' || stage.name === 'quoting' ? (
         <>
@@ -213,110 +220,117 @@ export default function TradeScreen() {
               { value: 'sell', label: 'Sell' },
             ]}
           />
-          <Card>
-            <View style={styles.rowBetween}>
-              <RiskBadge level={risk.data?.level} />
-              <Text style={{ color: palette.muted }}>
-                {solBalance !== undefined ? `${formatCompact(solBalance)} SOL available` : ' '}
-              </Text>
-            </View>
-            {side === 'buy' ? (
-              <>
-                <Text style={[styles.label, { color: palette.text }]}>Amount to spend (SOL)</Text>
-                <TextInput
-                  value={solInput}
-                  onChangeText={setSolInput}
-                  keyboardType="decimal-pad"
-                  style={[styles.input, { color: palette.text, borderColor: palette.border }]}
-                />
-                <View style={styles.presets}>
-                  {BUY_PRESETS.map((p) => (
-                    <Chip
-                      key={p}
-                      label={`${p} SOL`}
-                      selected={solInput === p}
-                      onPress={() => setSolInput(p)}
-                    />
-                  ))}
+          <View style={styles.rowBetween}>
+            <RiskBadge level={risk.data?.level} />
+            <Text mono style={styles.muted}>
+              {solBalance !== undefined ? `${formatCompact(solBalance)} SOL available` : ' '}
+            </Text>
+          </View>
+          {side === 'buy' ? (
+            <>
+              <View style={styles.amountBox}>
+                <Text style={styles.amountLabel}>You pay</Text>
+                <View style={styles.amountRow}>
+                  <TextInput
+                    value={solInput}
+                    onChangeText={setSolInput}
+                    keyboardType="decimal-pad"
+                    accessibilityLabel="Amount to spend in SOL"
+                    mono
+                    style={styles.amountInput}
+                  />
+                  <Text mono style={styles.amountUnit}>
+                    SOL
+                  </Text>
                 </View>
-                <Text style={{ color: palette.muted, fontSize: 13 }}>
+                <Text style={styles.caption}>
                   Includes Sift’s fee. Network fees are added on top.
                 </Text>
-              </>
-            ) : holding ? (
-              <>
-                <Text style={[styles.label, { color: palette.text }]}>
-                  Sell {sellPercent}% of{' '}
-                  {formatCompact(rawToTokens(holding.amountRaw, holding.decimals))}{' '}
+              </View>
+              <View style={styles.presets}>
+                {BUY_PRESETS.map((p) => (
+                  <Chip
+                    key={p}
+                    label={p}
+                    mono
+                    filled={false}
+                    selected={solInput === p}
+                    onPress={() => setSolInput(p)}
+                  />
+                ))}
+              </View>
+            </>
+          ) : holding ? (
+            <>
+              <View style={styles.amountBox}>
+                <Text style={styles.amountLabel}>You sell</Text>
+                <Text mono style={styles.amountInput}>
+                  {sellPercent}%
+                </Text>
+                <Text style={styles.caption}>
+                  of {formatCompact(rawToTokens(holding.amountRaw, holding.decimals))}{' '}
                   {holding.symbol ?? 'tokens'}
                 </Text>
-                <View style={styles.presets}>
-                  {SELL_PRESETS.map((p) => (
-                    <Chip
-                      key={p}
-                      label={p === 100 ? 'All' : `${p}%`}
-                      selected={sellPercent === p}
-                      onPress={() => setSellPercent(p)}
-                    />
-                  ))}
-                </View>
-              </>
-            ) : (
-              <Text style={{ color: palette.muted }}>
+              </View>
+              <View style={styles.presets}>
+                {SELL_PRESETS.map((p) => (
+                  <Chip
+                    key={p}
+                    label={p === 100 ? 'All' : `${p}%`}
+                    mono
+                    filled={false}
+                    selected={sellPercent === p}
+                    onPress={() => setSellPercent(p)}
+                  />
+                ))}
+              </View>
+            </>
+          ) : (
+            <Card>
+              <Text style={styles.muted}>
                 {holdings.isPending ? 'Loading your balance…' : 'You don’t hold this token.'}
               </Text>
-            )}
-            {mode === 'pro' ? (
-              <>
-                <Text style={[styles.label, { color: palette.text }]}>Max slippage</Text>
-                <Segmented compact value={slippage} onChange={setSlippage} options={SLIPPAGES} />
-              </>
-            ) : (
-              <Text style={{ color: palette.muted, fontSize: 13 }}>
-                Max slippage 5% (change in Pro mode).
-              </Text>
-            )}
-          </Card>
+            </Card>
+          )}
+          {mode === 'pro' ? (
+            <View style={styles.slippage}>
+              <Text style={styles.label}>Max slippage</Text>
+              <Segmented compact value={slippage} onChange={setSlippage} options={SLIPPAGES} />
+            </View>
+          ) : (
+            <Text style={styles.caption}>Max slippage 5% (change in Pro mode).</Text>
+          )}
 
           {highRisk ? (
-            <View style={[styles.warning, { backgroundColor: RISK_COLORS.red.bg }]}>
-              <Text style={{ color: RISK_COLORS.red.fg, fontWeight: '700' }}>
-                Sift flagged this token as high risk.
-              </Text>
+            <View style={[styles.warning, styles.redBox]}>
+              <Text style={styles.redStrong}>Sift flagged this token as high risk.</Text>
               <View style={styles.rowBetween}>
-                <Text style={{ color: RISK_COLORS.red.fg, flex: 1 }}>
+                <Text style={[styles.red, styles.flex]}>
                   I understand I could lose everything I put in.
                 </Text>
                 <Switch
                   value={understood}
                   onValueChange={setUnderstood}
-                  accessibilityLabel="I understand the risk"
+                  label="I understand the risk"
                 />
               </View>
             </View>
           ) : null}
 
-          <Pressable
+          <PayingFrom kind={wallet.kind} address={wallet.address} solBalance={solBalance} />
+          <Button
+            label={stage.name === 'quoting' ? 'Getting price…' : `Review ${title.toLowerCase()}`}
             onPress={review}
             disabled={stage.name === 'quoting' || !request() || (highRisk && !understood)}
-            style={[
-              styles.primary,
-              {
-                backgroundColor: palette.accent,
-                opacity:
-                  stage.name === 'quoting' || !request() || (highRisk && !understood) ? 0.4 : 1,
-              },
-            ]}
-          >
-            <Text style={[styles.primaryText, { color: palette.accentText }]}>
-              {stage.name === 'quoting' ? 'Getting price…' : `Review ${title.toLowerCase()}`}
-            </Text>
-          </Pressable>
+          />
         </>
       ) : null}
 
       {stage.name === 'review' ? (
         <Review
+          payingFrom={
+            <PayingFrom kind={wallet.kind} address={wallet.address} solBalance={solBalance} />
+          }
           quote={stage.quote}
           problems={stage.problems}
           onConfirm={() => confirm(stage.quote)}
@@ -327,8 +341,8 @@ export default function TradeScreen() {
 
       {stage.name === 'sending' || stage.name === 'pending' ? (
         <Card>
-          <ActivityIndicator color={palette.accent} />
-          <Text style={[styles.center, { color: palette.text }]}>
+          <ActivityIndicator color={colors.accent} />
+          <Text style={styles.center}>
             {stage.name === 'pending'
               ? 'Waiting for the network to confirm…'
               : wallet.kind === 'phantom'
@@ -339,45 +353,43 @@ export default function TradeScreen() {
           </Text>
           {stage.name === 'sending' && wallet.kind === 'phantom' ? (
             <Pressable onPress={cancelPhantomRequest}>
-              <Text style={[styles.center, { color: palette.muted }]}>Cancel</Text>
+              <Text style={[styles.center, styles.muted]}>Cancel</Text>
             </Pressable>
           ) : null}
         </Card>
       ) : null}
 
       {stage.name === 'done' ? (
-        <Card title={stage.quote.side === 'buy' ? 'Bought' : 'Sold'}>
-          <Text style={{ color: palette.text }}>
+        <Card>
+          <View style={styles.doneIcon}>
+            <Check size={26} color={colors.up} strokeWidth={2.4} />
+          </View>
+          <Text style={styles.doneTitle}>{stage.quote.side === 'buy' ? 'Bought' : 'Sold'}</Text>
+          <Text style={styles.center}>
             Confirmed on Solana.{' '}
             {stage.quote.side === 'buy'
               ? 'The tokens are in your wallet.'
               : 'The SOL is in your wallet.'}
           </Text>
           <Pressable onPress={() => Linking.openURL(explorerUrl(stage.signature))}>
-            <Text style={{ color: palette.accent, fontWeight: '600' }}>View on Solscan</Text>
+            <Text style={[styles.center, styles.link]}>View on Solscan</Text>
           </Pressable>
-          <Pressable
+          <Button
+            label="Trade again"
+            variant="secondary"
             onPress={() => setStage({ name: 'edit' })}
-            style={[styles.secondary, { borderColor: palette.border }]}
-          >
-            <Text style={{ color: palette.text, fontWeight: '600' }}>Trade again</Text>
-          </Pressable>
+          />
         </Card>
       ) : null}
 
       {stage.name === 'failed' ? (
         <Card title="Trade not completed">
-          <Text style={{ color: palette.text }}>{stage.message}</Text>
-          <Pressable
-            onPress={() => setStage({ name: 'edit' })}
-            style={[styles.secondary, { borderColor: palette.border }]}
-          >
-            <Text style={{ color: palette.text, fontWeight: '600' }}>Back</Text>
-          </Pressable>
+          <Text style={styles.bodyText}>{stage.message}</Text>
+          <Button label="Back" variant="secondary" onPress={() => setStage({ name: 'edit' })} />
         </Card>
       ) : null}
 
-      <Text style={[styles.note, { color: palette.muted }]}>
+      <Text style={styles.note}>
         Trades run on Solana devnet with test SOL. Not financial advice.
       </Text>
     </ScrollView>
@@ -387,123 +399,105 @@ export default function TradeScreen() {
 function Review({
   quote,
   problems,
+  payingFrom,
   onConfirm,
   onBack,
   onRefresh,
 }: {
   quote: TradeQuote;
   problems: string[];
+  payingFrom: ReactNode;
   onConfirm: () => void;
   onBack: () => void;
   onRefresh: () => void;
 }) {
-  const palette = usePalette();
   const left = secondsLeft(quote);
   const tokens = formatCompact(rawToTokens(quote.tokenAmount, quote.tokenDecimals));
   const verified = problems.length === 0;
+  const status = verified ? RISK_COLORS.green : RISK_COLORS.red;
+  const StatusIcon = verified ? ShieldCheck : ShieldX;
 
   return (
     <>
-      <Card title={quote.side === 'buy' ? `You get ${tokens} tokens` : `You sell ${tokens} tokens`}>
+      <View style={styles.amountBox}>
+        <Text style={styles.amountLabel}>
+          {quote.side === 'buy' ? 'You get about' : 'You sell'}
+        </Text>
+        <Text mono style={styles.amountInput}>
+          {tokens}
+        </Text>
+        <Text style={styles.caption}>tokens</Text>
+      </View>
+
+      <Card title="Full cost">
         {costLines(quote).map((line) => (
-          <View key={line.label} style={{ gap: 2 }}>
+          <View key={line.label} style={styles.costLine}>
             <View style={styles.rowBetween}>
-              <Text style={[{ color: palette.text }, line.emphasis && styles.bold]}>
-                {line.label}
-              </Text>
-              <Text style={[{ color: palette.text }, line.emphasis && styles.bold]}>
+              <Text style={line.emphasis ? styles.costStrong : styles.costLabel}>{line.label}</Text>
+              <Text mono style={line.emphasis ? styles.costStrong : styles.costValue}>
                 {line.value}
               </Text>
             </View>
-            {line.note ? (
-              <Text style={{ color: palette.muted, fontSize: 12 }}>{line.note}</Text>
-            ) : null}
+            {line.note ? <Text style={styles.caption}>{line.note}</Text> : null}
           </View>
         ))}
         {quote.priceImpactPct !== null ? (
-          <Text
-            style={{
-              color: quote.priceImpactPct >= 10 ? palette.down : palette.muted,
-              fontSize: 13,
-            }}
-          >
+          <Text style={[styles.caption, quote.priceImpactPct >= 10 && { color: colors.down }]}>
             Price impact {quote.priceImpactPct.toFixed(1)}% (fees included) · via {quote.venue}
           </Text>
         ) : null}
       </Card>
 
       <View
-        style={[
-          styles.warning,
-          { backgroundColor: verified ? RISK_COLORS.green.bg : RISK_COLORS.red.bg },
-        ]}
+        style={[styles.warning, { backgroundColor: status.bg, borderColor: tint(status.fg, 0.3) }]}
       >
-        <Text
-          style={{ color: verified ? RISK_COLORS.green.fg : RISK_COLORS.red.fg, fontWeight: '700' }}
-        >
-          {verified
-            ? 'Checked on this phone: the transaction does exactly this.'
-            : 'Do not sign: this transaction doesn’t match the quote.'}
-        </Text>
+        <View style={styles.statusRow}>
+          <StatusIcon size={18} color={status.fg} strokeWidth={2} />
+          <Text style={[styles.flex, { color: status.fg, fontWeight: '700' }]}>
+            {verified
+              ? 'Checked on this phone against Solana: the transaction does exactly this.'
+              : 'Do not sign: this transaction doesn’t match the quote.'}
+          </Text>
+        </View>
         {problems.map((p) => (
-          <Text key={p} style={{ color: RISK_COLORS.red.fg }}>
+          <Text key={p} style={styles.red}>
             • {p}
           </Text>
         ))}
       </View>
 
+      {payingFrom}
       {left > 0 ? (
-        <Pressable
+        <Button
+          label={`Confirm ${quote.side} · ${left}s`}
           onPress={onConfirm}
           disabled={!verified}
-          style={[styles.primary, { backgroundColor: palette.accent, opacity: verified ? 1 : 0.4 }]}
-        >
-          <Text style={[styles.primaryText, { color: palette.accentText }]}>
-            Confirm {quote.side} · {left}s
-          </Text>
-        </Pressable>
+        />
       ) : (
-        <Pressable
-          onPress={onRefresh}
-          style={[styles.primary, { backgroundColor: palette.accent }]}
-        >
-          <Text style={[styles.primaryText, { color: palette.accentText }]}>
-            Price expired · get a new one
-          </Text>
-        </Pressable>
+        <Button label="Price expired · get a new one" onPress={onRefresh} />
       )}
-      <Pressable onPress={onBack} style={[styles.secondary, { borderColor: palette.border }]}>
-        <Text style={{ color: palette.text, fontWeight: '600' }}>Change amount</Text>
-      </Pressable>
+      <Button label="Change amount" variant="secondary" onPress={onBack} />
     </>
   );
 }
 
-function Chip({
-  label,
-  selected,
-  onPress,
+function PayingFrom({
+  kind,
+  address,
+  solBalance,
 }: {
-  label: string;
-  selected: boolean;
-  onPress: () => void;
+  kind: keyof typeof PAYING_FROM | null;
+  address: string;
+  solBalance: number | undefined;
 }) {
-  const palette = usePalette();
   return (
-    <Pressable
-      onPress={onPress}
-      style={[
-        styles.chip,
-        {
-          borderColor: selected ? palette.accent : palette.border,
-          backgroundColor: selected ? palette.accent : 'transparent',
-        },
-      ]}
-    >
-      <Text style={{ color: selected ? palette.accentText : palette.text, fontWeight: '600' }}>
-        {label}
+    <Text style={styles.payingFrom}>
+      Paying from {kind ? PAYING_FROM[kind] : 'your wallet'}{' '}
+      <Text mono style={styles.payingFrom}>
+        {shortAddress(address)}
       </Text>
-    </Pressable>
+      {solBalance !== undefined ? ` · ${formatCompact(solBalance)} SOL` : ''}
+    </Text>
   );
 }
 
@@ -512,28 +506,71 @@ function explorerUrl(signature: string): string {
 }
 
 const styles = StyleSheet.create({
-  screen: { padding: 16, gap: 12, paddingBottom: 40 },
+  screen: { padding: space.screen, gap: 12, paddingBottom: 40 },
+  flex: { flex: 1 },
+  headerBadge: { marginRight: 12 },
   rowBetween: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
     gap: 12,
   },
-  label: { fontWeight: '600', fontSize: 15 },
-  input: {
+  muted: { fontSize: 13, color: colors.muted },
+  caption: { fontSize: 12, color: colors.faint },
+  label: { fontWeight: '700', fontSize: 14 },
+  amountBox: {
+    alignItems: 'center',
+    paddingVertical: 20,
+    paddingHorizontal: space.card,
+    borderRadius: radius.hero,
+    backgroundColor: colors.surface,
     borderWidth: 1,
-    borderRadius: 10,
-    paddingHorizontal: 12,
-    paddingVertical: 10,
-    fontSize: 20,
+    borderColor: colors.border,
+    gap: 4,
   },
-  presets: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
-  chip: { borderWidth: 1, borderRadius: 999, paddingHorizontal: 12, paddingVertical: 6 },
-  warning: { borderRadius: 12, padding: 12, gap: 6 },
-  primary: { borderRadius: 12, paddingVertical: 14, alignItems: 'center' },
-  primaryText: { fontSize: 16, fontWeight: '700' },
-  secondary: { borderRadius: 12, paddingVertical: 12, alignItems: 'center', borderWidth: 1 },
-  bold: { fontWeight: '700' },
-  center: { textAlign: 'center' },
-  note: { fontSize: 12, textAlign: 'center' },
+  amountLabel: { fontSize: 13, color: colors.muted },
+  amountRow: { flexDirection: 'row', alignItems: 'baseline', gap: 8 },
+  amountInput: {
+    fontSize: 44,
+    fontWeight: '600',
+    letterSpacing: -1.5,
+    textAlign: 'center',
+    minWidth: 80,
+    padding: 0,
+  },
+  amountUnit: { fontSize: 18, fontWeight: '600', color: colors.muted },
+  presets: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, justifyContent: 'center' },
+  slippage: { gap: 8 },
+  warning: { borderRadius: radius.input, padding: 14, gap: 6, borderWidth: 1 },
+  redBox: { backgroundColor: RISK_COLORS.red.bg, borderColor: tint(colors.down, 0.3) },
+  red: { color: RISK_COLORS.red.fg },
+  redStrong: { color: RISK_COLORS.red.fg, fontWeight: '700' },
+  statusRow: { flexDirection: 'row', alignItems: 'center', gap: 10 },
+  costLine: { gap: 2 },
+  costLabel: { fontSize: 14, color: colors.text2 },
+  costValue: { fontSize: 14, color: colors.text },
+  costStrong: { fontSize: 15, fontWeight: '700', color: colors.text },
+  payingFrom: { fontSize: 13, color: colors.muted, textAlign: 'center' },
+  linkButton: {
+    height: 54,
+    borderRadius: 16,
+    backgroundColor: colors.accent,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  linkButtonText: { fontSize: 16, fontWeight: '800', color: colors.onAccent },
+  doneIcon: {
+    alignSelf: 'center',
+    width: 52,
+    height: 52,
+    borderRadius: 26,
+    backgroundColor: tint(colors.up, 0.14),
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  doneTitle: { fontSize: 20, fontWeight: '800', textAlign: 'center' },
+  bodyText: { fontSize: 14, color: colors.text2 },
+  link: { color: colors.link, fontWeight: '700' },
+  center: { textAlign: 'center', color: colors.text },
+  note: { fontSize: 12, textAlign: 'center', color: colors.faint },
 });

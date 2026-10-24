@@ -1,0 +1,124 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Sift — Token detail</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&amp;family=JetBrains+Mono:wght@500;600&amp;display=swap" rel="stylesheet">
+<style>
+body{margin:0;background:#0B0D12}
+a{color:#A9B5FF}a:hover{color:#C9D1FF}
+button{font-family:inherit}
+</style>
+</helmet>
+<div style="width: 390px; height: 844px; box-sizing: border-box; background: #0B0D12; color: #F3F5F9; font-family: Manrope, system-ui, sans-serif; display: flex; flex-direction: column; overflow: hidden; position: relative">
+
+  <header style="padding: 56px 20px 8px; display: flex; align-items: center; justify-content: space-between">
+    <a href="Main.dc.html" aria-label="Back" style="width: 44px; height: 44px; border-radius: 14px; border: 1px solid #262C3A; background: #151922; color: #F3F5F9; display: flex; align-items: center; justify-content: center">
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m15 18-6-6 6-6"/></svg>
+    </a>
+    <div style="display: flex; align-items: center; gap: 10px">
+      <div style="width: 32px; height: 32px; border-radius: 10px; background: #3B3F8F; display: flex; align-items: center; justify-content: center; font-size: 12px; font-weight: 800">MC</div>
+      <div>
+        <div style="font-size: 16px; font-weight: 800; line-height: 1.1">Moon Cat</div>
+        <div style="font-size: 12px; color: #9BA4B5">MOON · 4m old</div>
+      </div>
+    </div>
+    <button aria-label="Add to watchlist" style="width: 44px; height: 44px; border-radius: 14px; border: 1px solid #262C3A; background: #151922; color: #F3F5F9; display: flex; align-items: center; justify-content: center; cursor: pointer">
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round" aria-hidden="true"><path d="m12 3 2.8 5.7 6.2.9-4.5 4.4 1 6.2L12 17.3 6.5 20.2l1-6.2L3 9.6l6.2-.9z"/></svg>
+    </button>
+  </header>
+
+  <div style="padding: 10px 20px 0">
+    <div style="font-size: 36px; font-weight: 700; letter-spacing: -1px; font-family: 'JetBrains Mono', monospace">$0.000048</div>
+    <div style="display: flex; align-items: center; gap: 8px; margin-top: 4px">
+      <span style="font-size: 14px; font-weight: 700; color: #34D399; font-family: 'JetBrains Mono', monospace">+182.4%</span>
+      <span style="font-size: 13px; color: #9BA4B5">since launch · MC $48.2K</span>
+    </div>
+  </div>
+
+  <div style="padding: 12px 20px 0">
+    <svg width="350" height="120" viewBox="0 0 350 120" role="img" aria-label="Price chart, rising since launch">
+      <path d="M0 100 L25 96 L50 98 L75 88 L100 90 L125 76 L150 80 L175 62 L200 66 L225 48 L250 54 L275 36 L300 40 L325 22 L350 18" fill="none" stroke="#34D399" stroke-width="2.5" stroke-linejoin="round" stroke-linecap="round"/>
+      <path d="M0 100 L25 96 L50 98 L75 88 L100 90 L125 76 L150 80 L175 62 L200 66 L225 48 L250 54 L275 36 L300 40 L325 22 L350 18 L350 120 L0 120 Z" fill="#34D399" fill-opacity="0.08"/>
+      <circle cx="350" cy="18" r="4" fill="#34D399"/>
+    </svg>
+    <div style="display: flex; gap: 6px; margin-top: 8px">
+      <sc-for list="{{ranges}}" as="r" hint-placeholder-count="5">
+        <button onClick="{{r.pick}}" style="{{r.style}}">{{r.label}}</button>
+      </sc-for>
+    </div>
+  </div>
+
+  <section aria-label="Safety check" style="margin: 16px 20px 0; padding: 16px; border-radius: 20px; background: #151922; border: 1px solid #1F2430">
+    <div style="display: flex; align-items: center; justify-content: space-between">
+      <div style="display: flex; align-items: center; gap: 10px">
+        <div style="width: 40px; height: 40px; border-radius: 12px; background: rgba(52,211,153,0.14); display: flex; align-items: center; justify-content: center">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#34D399" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/><path d="m9 12 2 2 4-4"/></svg>
+        </div>
+        <div>
+          <div style="font-size: 18px; font-weight: 800; color: #34D399">Safe</div>
+          <div style="font-size: 12px; color: #9BA4B5">5 of 6 checks passed</div>
+        </div>
+      </div>
+      <a href="#" style="font-size: 13px; font-weight: 700; text-decoration: none">Details</a>
+    </div>
+    <div style="display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px 12px; margin-top: 14px">
+      <sc-for list="{{checks}}" as="c" hint-placeholder-count="6">
+        <div style="display: flex; align-items: center; gap: 8px; font-size: 13px; color: #C9CFDA">
+          <span style="{{c.icon}}">{{c.mark}}</span>{{c.label}}
+        </div>
+      </sc-for>
+    </div>
+  </section>
+
+  <section aria-label="In plain words" style="margin: 10px 20px 0; padding: 14px 16px; border-radius: 20px; background: #151922; border: 1px solid #1F2430">
+    <div style="display: flex; align-items: center; gap: 8px; font-size: 12px; font-weight: 800; letter-spacing: 0.6px; text-transform: uppercase; color: #A9B5FF">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3v3M12 18v3M3 12h3M18 12h3M5.6 5.6l2.1 2.1M16.3 16.3l2.1 2.1M5.6 18.4l2.1-2.1M16.3 7.7l2.1-2.1"/></svg>
+      In plain words
+    </div>
+    <p style="margin: 8px 0 0; font-size: 14px; line-height: 1.5; color: #E2E6EE">Moon Cat is 4 minutes old and climbing fast on steady buying from 212 wallets. The creator can't mint more or freeze your tokens. Watch out: one early wallet holds 9% and could sell.</p>
+  </section>
+
+  <div style="position: absolute; left: 0; right: 0; bottom: 0; padding: 12px 20px 30px; background: #0B0D12; border-top: 1px solid #1F2430">
+    <div style="display: flex; gap: 10px">
+      <a href="Trade.dc.html" style="flex: 1; height: 54px; border-radius: 16px; border: 1px solid #262C3A; background: #151922; color: #F3F5F9; font-size: 16px; font-weight: 800; display: flex; align-items: center; justify-content: center; text-decoration: none">Sell</a>
+      <a href="Trade.dc.html" style="flex: 2; height: 54px; border-radius: 16px; background: {{accent}}; color: #0B0D12; font-size: 16px; font-weight: 800; display: flex; align-items: center; justify-content: center; text-decoration: none">Buy MOON</a>
+    </div>
+    <p style="margin: 8px 0 0; text-align: center; font-size: 11px; color: #8A93A5">Safety checks reduce risk, they don't remove it. Not financial advice.</p>
+  </div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"accent":{"editor":"color","default":"#8B9CFF","options":["#8B9CFF","#34D399","#F5B544","#F3F5F9"]},"$preview":{"width":390,"height":844}}'>
+class Component extends DCLogic {
+  constructor(p) { super(p); this.state = { range: '1H' }; }
+  renderVals() {
+    const accent = this.props.accent ?? '#8B9CFF';
+    const ranges = ['5M', '1H', '6H', '24H', 'All'].map((label) => {
+      const on = this.state.range === label;
+      return {
+        label,
+        pick: () => this.setState({ range: label }),
+        style: 'height: 32px; padding: 0 12px; border-radius: 10px; border: none; font-size: 12px; font-weight: 700; cursor: pointer; font-family: JetBrains Mono, monospace; background: ' + (on ? '#1D2230' : 'transparent') + '; color: ' + (on ? '#F3F5F9' : '#9BA4B5')
+      };
+    });
+    const ok = 'width: 18px; height: 18px; border-radius: 50%; display: inline-flex; align-items: center; justify-content: center; font-size: 11px; font-weight: 900; flex: none; ';
+    const checks = [
+      ['Mint locked', true], ['Freeze off', true], ['Liquidity burned', true],
+      ['Sell test passed', true], ['Dev history clean', true], ['Top holder 9%', false]
+    ].map(([label, pass]) => ({
+      label,
+      mark: pass ? '✓' : '!',
+      icon: ok + (pass ? 'background: rgba(52,211,153,0.16); color: #34D399' : 'background: rgba(251,191,36,0.16); color: #FBBF24')
+    }));
+    return { accent, ranges, checks };
+  }
+}
+</script>
+</body>
+</html>

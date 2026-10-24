@@ -3,17 +3,21 @@ import { type Holding, isSolanaAddress } from '@sift/shared';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { Link } from 'expo-router';
 import { useEffect, useState } from 'react';
-import { Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
+import { Pressable, StyleSheet, View } from 'react-native';
 import { Card } from '../../components/Card';
+import { DevnetBadge } from '../../components/DevnetBadge';
+import { ModeToggle } from '../../components/ModeToggle';
 import { PrivateKeyReveal } from '../../components/PrivateKeyReveal';
-import { RiskBadge } from '../../components/RiskBadge';
+import { RiskDot } from '../../components/RiskBadge';
+import { Screen, SectionTitle } from '../../components/Screen';
+import { Text, TextInput } from '../../components/Text';
 import { Empty, ErrorState, Loading } from '../../components/States';
 import { TokenAvatar } from '../../components/TokenAvatar';
 import { api } from '../../lib/api';
 import { confirmOwner } from '../../lib/device-auth';
 import { formatCompact, shortAddress } from '../../lib/format';
 import { useMode } from '../../lib/mode';
-import { RISK_COLORS, usePalette } from '../../lib/theme';
+import { RISK_COLORS, RISK_LABELS, colors, radius, usePalette } from '../../lib/theme';
 import { mwaErrorMessage } from '../../lib/mwa-results';
 import { cancelPhantomRequest, isCancelled } from '../../lib/phantom';
 import { type WalletKind, useWallet } from '../../lib/wallet';
@@ -36,10 +40,19 @@ export default function PortfolioScreen() {
     );
   };
 
-  if (wallet.status === 'loading') return <Loading />;
+  const config = useQuery({ queryKey: ['config'], queryFn: api.config, staleTime: Infinity });
   return (
-    <ScrollView contentContainerStyle={styles.screen}>
-      {wallet.address && wallet.kind ? (
+    <Screen
+      title="Portfolio"
+      right={
+        <View style={styles.headerRight}>
+          {config.data?.cluster === 'devnet' ? <DevnetBadge /> : null}
+          <ModeToggle />
+        </View>
+      }
+    >
+      {wallet.status === 'loading' ? <Loading /> : null}
+      {wallet.status === 'loading' ? null : wallet.address && wallet.kind ? (
         <OwnWallet address={wallet.address} kind={wallet.kind} />
       ) : (
         <>
@@ -51,7 +64,7 @@ export default function PortfolioScreen() {
           )}
         </>
       )}
-    </ScrollView>
+    </Screen>
   );
 }
 
@@ -363,7 +376,7 @@ function EmbeddedWallet() {
                 { borderColor: RISK_COLORS.red.fg, backgroundColor: RISK_COLORS.red.fg },
               ]}
             >
-              <Text style={{ color: '#FFFFFF', fontWeight: '600' }}>Remove</Text>
+              <Text style={{ color: colors.onAccent, fontWeight: '700' }}>Remove</Text>
             </Pressable>
           </View>
         </View>
@@ -413,7 +426,6 @@ function Holdings({
   title: string;
   onClear?: () => void;
 }) {
-  const palette = usePalette();
   const { mode } = useMode();
   const holdings = useQuery({
     queryKey: ['holdings', address],
@@ -423,25 +435,27 @@ function Holdings({
 
   return (
     <>
-      <Card
-        title={title}
-        right={
-          onClear ? (
-            <Pressable onPress={onClear}>
-              <Text style={{ color: palette.accent, fontWeight: '600' }}>Change</Text>
+      <View style={styles.hero}>
+        <View style={styles.heroTop}>
+          <Text style={styles.heroLabel}>{title}</Text>
+          {onClear ? (
+            <Pressable onPress={onClear} hitSlop={12}>
+              <Text style={styles.link}>Change</Text>
             </Pressable>
-          ) : null
-        }
-      >
-        <Text selectable style={{ color: palette.muted }}>
+          ) : null}
+        </View>
+        <Text mono style={styles.balance}>
+          {holdings.data ? formatCompact(holdings.data.solBalance) : '–'}
+          <Text mono style={styles.balanceUnit}>
+            {' '}
+            SOL
+          </Text>
+        </Text>
+        <Text mono selectable style={styles.address}>
           {mode === 'pro' ? address : shortAddress(address, 6)}
         </Text>
-        {holdings.data ? (
-          <Text style={[styles.balance, { color: palette.text }]}>
-            {formatCompact(holdings.data.solBalance)} SOL
-          </Text>
-        ) : null}
-      </Card>
+      </View>
+      <SectionTitle title="Holdings" />
       {holdings.isPending ? (
         <Loading label="Loading holdings…" />
       ) : holdings.isError ? (
@@ -456,56 +470,95 @@ function Holdings({
 }
 
 function HoldingRow({ item }: { item: Holding }) {
-  const palette = usePalette();
+  const level = item.riskLevel ?? 'unknown';
   return (
     <Link href={`/token/${item.mint}`} asChild>
-      <Pressable
-        style={StyleSheet.flatten([
-          styles.row,
-          { backgroundColor: palette.card, borderColor: palette.border },
-        ])}
-      >
-        <TokenAvatar uri={item.imageUrl} label={item.symbol ?? item.name} size={36} />
+      <Pressable style={StyleSheet.flatten(styles.row)}>
+        <TokenAvatar uri={item.imageUrl} label={item.symbol ?? item.name} seed={item.mint} />
         <View style={styles.flex}>
-          <Text style={[styles.name, { color: palette.text }]} numberOfLines={1}>
+          <Text style={styles.name} numberOfLines={1}>
             {item.name ?? item.symbol ?? shortAddress(item.mint)}
           </Text>
-          <Text style={{ color: palette.muted }}>
+          <Text mono style={styles.amount} numberOfLines={1}>
             {formatCompact(item.amount)} {item.symbol ?? 'tokens'}
           </Text>
         </View>
-        <RiskBadge level={item.riskLevel} />
+        <View style={styles.risk}>
+          <RiskDot level={item.riskLevel} />
+          <Text style={[styles.riskText, { color: RISK_COLORS[level].fg }]}>
+            {RISK_LABELS[level]}
+          </Text>
+        </View>
       </Pressable>
     </Link>
   );
 }
 
 const styles = StyleSheet.create({
-  switch: { flexDirection: 'row', borderWidth: 1, borderRadius: 12, padding: 3 },
-  switchOption: { flex: 1, alignItems: 'center', paddingVertical: 8, borderRadius: 9 },
-  screen: { padding: 16, gap: 12, paddingBottom: 40 },
+  headerRight: { flexDirection: 'row', alignItems: 'center', gap: 8 },
+  switch: {
+    flexDirection: 'row',
+    borderWidth: 1,
+    borderRadius: radius.input,
+    padding: 4,
+    backgroundColor: colors.surface,
+  },
+  switchOption: { flex: 1, alignItems: 'center', paddingVertical: 9, borderRadius: 10 },
   input: {
     borderWidth: 1,
-    borderRadius: 10,
-    paddingHorizontal: 12,
-    paddingVertical: 10,
+    borderRadius: radius.input,
+    backgroundColor: colors.bg,
+    paddingHorizontal: 14,
+    paddingVertical: 12,
     fontSize: 15,
   },
-  button: { borderRadius: 12, paddingVertical: 12, alignItems: 'center' },
-  buttonText: { fontSize: 16, fontWeight: '700' },
-  secondary: { borderRadius: 12, paddingVertical: 10, alignItems: 'center', borderWidth: 1 },
-  balance: { fontSize: 24, fontWeight: '700' },
-  secret: { borderWidth: 1, borderRadius: 10, padding: 10, fontFamily: 'monospace', fontSize: 12 },
-  warning: { borderRadius: 12, padding: 12, gap: 10 },
-  center: { textAlign: 'center', fontWeight: '600' },
+  button: { height: 54, borderRadius: 16, alignItems: 'center', justifyContent: 'center' },
+  buttonText: { fontSize: 16, fontWeight: '800' },
+  secondary: {
+    height: 48,
+    borderRadius: 16,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 1,
+    backgroundColor: colors.surface2,
+  },
+  hero: {
+    padding: 20,
+    gap: 6,
+    borderRadius: radius.hero,
+    backgroundColor: colors.surface,
+    borderWidth: 1,
+    borderColor: colors.border,
+  },
+  heroTop: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
+  heroLabel: { fontSize: 13, color: colors.muted, fontWeight: '600' },
+  link: { fontSize: 13, color: colors.link, fontWeight: '700' },
+  balance: { fontSize: 40, fontWeight: '600', letterSpacing: -1.5 },
+  balanceUnit: { fontSize: 18, fontWeight: '600', color: colors.muted, letterSpacing: 0 },
+  address: { fontSize: 12, color: colors.faint },
+  secret: {
+    borderWidth: 1,
+    borderRadius: radius.chip,
+    padding: 12,
+    fontFamily: 'monospace',
+    fontSize: 12,
+    backgroundColor: colors.bg,
+  },
+  warning: { borderRadius: radius.input, padding: 14, gap: 10 },
+  center: { textAlign: 'center', fontWeight: '700' },
   flex: { flex: 1 },
   row: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 12,
-    padding: 12,
-    borderRadius: 14,
-    borderWidth: StyleSheet.hairlineWidth,
+    padding: 14,
+    borderRadius: radius.card,
+    borderWidth: 1,
+    borderColor: colors.border,
+    backgroundColor: colors.surface,
   },
-  name: { fontSize: 15, fontWeight: '600' },
+  name: { fontSize: 15, fontWeight: '700' },
+  amount: { fontSize: 12, color: colors.muted, marginTop: 2 },
+  risk: { flexDirection: 'row', alignItems: 'center', gap: 6 },
+  riskText: { fontSize: 12, fontWeight: '800' },
 });

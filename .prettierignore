@@ -3,3 +3,6 @@ docs/PLAN.md
 dist/
 coverage/
 .expo/
+
+# The design hand-off, kept exactly as delivered.
+docs/design/

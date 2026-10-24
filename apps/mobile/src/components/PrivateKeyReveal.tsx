@@ -1,7 +1,8 @@
 import { useFocusEffect } from 'expo-router';
 import { usePreventScreenCapture } from 'expo-screen-capture';
 import { useCallback, useEffect, useState } from 'react';
-import { AppState, Platform, Pressable, StyleSheet, Text } from 'react-native';
+import { AppState, Platform, Pressable, StyleSheet } from 'react-native';
+import { Text } from './Text';
 import { confirmOwner } from '../lib/device-auth';
 import { RISK_COLORS, usePalette } from '../lib/theme';
 import { useWallet } from '../lib/wallet';

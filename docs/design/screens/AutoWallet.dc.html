@@ -1,0 +1,99 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Sift — Wallet and security</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&amp;family=JetBrains+Mono:wght@500;600&amp;display=swap" rel="stylesheet">
+<style>
+body{margin:0;background:#0B0D12}
+a{color:#A9B5FF}a:hover{color:#C9D1FF}
+button{font-family:inherit}
+</style>
+</helmet>
+<div style="width: 390px; height: 844px; box-sizing: border-box; background: #0B0D12; color: #F3F5F9; font-family: Manrope, system-ui, sans-serif; display: flex; flex-direction: column; overflow: hidden; position: relative">
+
+  <header style="padding: 56px 20px 0; display: flex; align-items: center; gap: 12px">
+    <a href="Portfolio.dc.html" aria-label="Back" style="width: 44px; height: 44px; border-radius: 14px; border: 1px solid #262C3A; background: #151922; color: #F3F5F9; display: flex; align-items: center; justify-content: center">
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m15 18-6-6 6-6"/></svg>
+    </a>
+    <h1 style="margin: 0; font-size: 24px; font-weight: 800; letter-spacing: -0.6px">Wallet &amp; security</h1>
+  </header>
+
+  <section aria-label="Sift wallet" style="margin: 16px 20px 0; padding: 16px; border-radius: 20px; background: #151922; border: 1px solid #1F2430">
+    <div style="display: flex; align-items: center; gap: 12px">
+      <div style="width: 44px; height: 44px; border-radius: 14px; background: {{accent}}; display: flex; align-items: center; justify-content: center; flex: none">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#0B0D12" stroke-width="2.4" stroke-linecap="round" aria-hidden="true"><path d="M4 7h16M7 12h10M10 17h4"/></svg>
+      </div>
+      <div style="flex: 1">
+        <div style="font-size: 16px; font-weight: 800">Sift wallet</div>
+        <div style="font-size: 12px; color: #9BA4B5; font-family: 'JetBrains Mono', monospace">4hQe…mX7a · 4.82 SOL</div>
+      </div>
+      <button aria-label="Copy address" style="width: 44px; height: 44px; border-radius: 12px; border: 1px solid #262C3A; background: transparent; color: #C9CFDA; display: flex; align-items: center; justify-content: center; cursor: pointer">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="9" y="9" width="12" height="12" rx="2"/><path d="M5 15V5a2 2 0 0 1 2-2h10"/></svg>
+      </button>
+    </div>
+    <p style="margin: 12px 0 0; font-size: 13px; line-height: 1.5; color: #C9CFDA">Created for you at sign-up. Sift runs your orders from it, even when your phone is off.</p>
+  </section>
+
+  <h2 style="margin: 20px 20px 6px; font-size: 13px; font-weight: 800; color: #9BA4B5; letter-spacing: 0.6px; text-transform: uppercase">Withdrawal protection</h2>
+  <div style="margin: 0 20px; padding: 2px 16px; border-radius: 20px; background: #151922; border: 1px solid #1F2430">
+    <sc-for list="{{protections}}" as="p" hint-placeholder-count="3">
+      <div style="{{p.row}}">
+        <div style="flex: 1">
+          <div style="font-size: 14px; font-weight: 700">{{p.title}}</div>
+          <div style="font-size: 12px; color: #9BA4B5; margin-top: 2px">{{p.sub}}</div>
+        </div>
+        <span style="{{p.statusStyle}}">{{p.status}}</span>
+      </div>
+    </sc-for>
+  </div>
+
+  <h2 style="margin: 20px 20px 6px; font-size: 13px; font-weight: 800; color: #9BA4B5; letter-spacing: 0.6px; text-transform: uppercase">Your keys</h2>
+  <div style="margin: 0 20px; padding: 2px 16px; border-radius: 20px; background: #151922; border: 1px solid #1F2430">
+    <a href="#" style="display: flex; align-items: center; gap: 12px; padding: 12px 0; border-bottom: 1px solid #1F2430; text-decoration: none; color: #F3F5F9">
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#FBBF24" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" style="flex: none"><circle cx="8" cy="15" r="4"/><path d="m10.8 12.2 9.2-9.2M17 6l3 3M14 9l2 2"/></svg>
+      <div style="flex: 1">
+        <div style="font-size: 14px; font-weight: 700">Export private key</div>
+        <div style="font-size: 12px; color: #9BA4B5; margin-top: 2px">Move your wallet to Phantom or any Solana app. Your money, your choice.</div>
+      </div>
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#9BA4B5" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m9 18 6-6-6-6"/></svg>
+    </a>
+    <a href="#" style="display: flex; align-items: center; gap: 12px; padding: 12px 0; text-decoration: none; color: #F3F5F9">
+      <div style="width: 20px; height: 20px; border-radius: 6px; background: #2A2350; flex: none"></div>
+      <div style="flex: 1">
+        <div style="font-size: 14px; font-weight: 700">Connect Phantom</div>
+        <div style="font-size: 12px; color: #9BA4B5; margin-top: 2px">Optional. Trade from your own wallet; you sign each trade. Auto orders stay in the Sift wallet.</div>
+      </div>
+      <span style="font-size: 13px; font-weight: 700; color: #A9B5FF">Connect</span>
+    </a>
+  </div>
+
+  <p style="margin: 14px 20px 0; font-size: 12px; line-height: 1.5; color: #8A93A5">Sift holds the key to your Sift wallet in a secure signing vault so it can run your orders. Keep only what you trade here.</p>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"accent":{"editor":"color","default":"#8B9CFF","options":["#8B9CFF","#34D399","#F5B544","#F3F5F9"]},"$preview":{"width":390,"height":844}}'>
+class Component extends DCLogic {
+  renderVals() {
+    const accent = this.props.accent ?? '#8B9CFF';
+    const list = [
+      ['Two-factor code', 'Needed for every withdrawal', 'On', true],
+      ['Saved withdrawal address', 'Phantom · 7xKp…9fQ2', 'Set', true],
+      ['24-hour wait on changes', 'New address or 2FA change', 'On', true]
+    ];
+    const protections = list.map(([title, sub, status, ok], i) => ({
+      title, sub, status,
+      row: 'display: flex; align-items: center; gap: 12px; padding: 12px 0; ' + (i < list.length - 1 ? 'border-bottom: 1px solid #1F2430' : ''),
+      statusStyle: 'height: 26px; padding: 0 10px; border-radius: 999px; font-size: 12px; font-weight: 800; display: flex; align-items: center; background: ' + (ok ? 'rgba(52,211,153,0.12)' : 'rgba(251,191,36,0.12)') + '; color: ' + (ok ? '#34D399' : '#FBBF24')
+    }));
+    return { accent, protections };
+  }
+}
+</script>
+</body>
+</html>

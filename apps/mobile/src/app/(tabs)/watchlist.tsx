@@ -1,7 +1,9 @@
 import type { PriceAlert } from '@sift/shared';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { Link } from 'expo-router';
-import { Pressable, RefreshControl, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Pressable, StyleSheet, View } from 'react-native';
+import { Screen } from '../../components/Screen';
+import { Text } from '../../components/Text';
 import { NotificationsCard } from '../../components/NotificationsCard';
 import { RiskBadge } from '../../components/RiskBadge';
 import { SignInCard } from '../../components/SignInCard';
@@ -23,26 +25,22 @@ export default function WatchlistScreen() {
   if (session.status === 'loading') return <Loading />;
   if (session.status === 'signed-out') {
     return (
-      <ScrollView contentContainerStyle={styles.screen}>
+      <Screen title="Watchlist">
         <SignInCard reason="Sign in to keep a watchlist and get price alerts." />
-      </ScrollView>
+      </Screen>
     );
   }
 
   const fired = (alerts.data?.alerts ?? []).filter((a) => a.triggeredAt);
   const active = (alerts.data?.alerts ?? []).filter((a) => !a.triggeredAt);
   return (
-    <ScrollView
-      contentContainerStyle={styles.screen}
-      refreshControl={
-        <RefreshControl
-          refreshing={watchlist.isRefetching || alerts.isRefetching}
-          onRefresh={() => {
-            void watchlist.refetch();
-            void alerts.refetch();
-          }}
-        />
-      }
+    <Screen
+      title="Watchlist"
+      refreshing={watchlist.isRefetching || alerts.isRefetching}
+      onRefresh={() => {
+        void watchlist.refetch();
+        void alerts.refetch();
+      }}
     >
       {fired.length > 0 ? (
         <>
@@ -92,7 +90,7 @@ export default function WatchlistScreen() {
       )}
 
       <NotificationsCard />
-    </ScrollView>
+    </Screen>
   );
 }
 
@@ -128,7 +126,6 @@ function AlertRow({ alert }: { alert: PriceAlert }) {
 }
 
 const styles = StyleSheet.create({
-  screen: { padding: 16, gap: 12, paddingBottom: 40 },
   heading: { fontSize: 17, fontWeight: '700', marginTop: 4 },
   row: {
     flexDirection: 'row',

@@ -1,0 +1,119 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Sift — Friends feed</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&amp;family=JetBrains+Mono:wght@500;600&amp;display=swap" rel="stylesheet">
+<style>
+body{margin:0;background:#0B0D12}
+a{color:#A9B5FF}a:hover{color:#C9D1FF}
+button{font-family:inherit}
+</style>
+</helmet>
+<div style="width: 390px; height: 844px; box-sizing: border-box; background: #0B0D12; color: #F3F5F9; font-family: Manrope, system-ui, sans-serif; display: flex; flex-direction: column; overflow: hidden; position: relative">
+
+  <header style="padding: 56px 20px 0; display: flex; align-items: center; justify-content: space-between">
+    <h1 style="margin: 0; font-size: 28px; font-weight: 800; letter-spacing: -0.8px">Friends</h1>
+    <button aria-label="Find friends" style="width: 44px; height: 44px; border-radius: 14px; border: 1px solid #262C3A; background: #151922; color: #F3F5F9; display: flex; align-items: center; justify-content: center; cursor: pointer">
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><circle cx="9" cy="8" r="3.5"/><path d="M3 20c0-3.3 2.7-6 6-6s6 2.7 6 6M19 8v6M16 11h6"/></svg>
+    </button>
+  </header>
+
+  <div style="padding: 16px 20px 0; display: flex; gap: 14px; overflow: hidden">
+    <sc-for list="{{friends}}" as="f" hint-placeholder-count="5">
+      <div style="display: flex; flex-direction: column; align-items: center; gap: 6px; width: 58px; flex: none">
+        <div style="{{f.ring}}"><div style="{{f.avatar}}">{{f.initial}}</div></div>
+        <span style="font-size: 12px; color: #C9CFDA">{{f.name}}</span>
+      </div>
+    </sc-for>
+  </div>
+
+  <div style="padding: 16px 20px 0; display: flex; flex-direction: column; gap: 10px">
+    <sc-for list="{{posts}}" as="p" hint-placeholder-count="3">
+      <article style="padding: 14px; border-radius: 20px; background: #151922; border: 1px solid #1F2430">
+        <div style="display: flex; align-items: center; gap: 10px">
+          <div style="{{p.avatar}}">{{p.initial}}</div>
+          <div style="flex: 1">
+            <div style="font-size: 14px; color: #C9CFDA"><b style="color: #F3F5F9">{{p.who}}</b> {{p.verb}} <b style="color: #F3F5F9">{{p.token}}</b></div>
+            <div style="font-size: 12px; color: #9BA4B5; margin-top: 2px">{{p.when}}</div>
+          </div>
+          <span style="{{p.verbBadge}}">{{p.side}}</span>
+        </div>
+        <a href="Token.dc.html" style="display: flex; align-items: center; gap: 10px; margin-top: 12px; padding: 10px 12px; border-radius: 14px; background: #1D2230; text-decoration: none; color: #F3F5F9">
+          <div style="{{p.tokenAvatar}}">{{p.tokenInitials}}</div>
+          <div style="flex: 1">
+            <div style="font-size: 14px; font-weight: 700">{{p.token}}</div>
+            <div style="font-size: 12px; color: #9BA4B5; font-family: 'JetBrains Mono', monospace">{{p.amount}}</div>
+          </div>
+          <span style="{{p.badge}}"><span style="{{p.dot}}"></span>{{p.risk}}</span>
+        </a>
+        <p style="margin: 10px 0 0; font-size: 14px; line-height: 1.45; color: #E2E6EE">{{p.note}}</p>
+        <div style="display: flex; gap: 8px; margin-top: 10px">
+          <button style="height: 36px; padding: 0 12px; border-radius: 10px; border: 1px solid #262C3A; background: transparent; color: #C9CFDA; font-size: 13px; font-weight: 700; display: flex; align-items: center; gap: 6px; cursor: pointer">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M19 14c1.5-1.5 3-3.2 3-5.5A5.5 5.5 0 0 0 16.5 3c-1.8 0-3 .5-4.5 2-1.5-1.5-2.7-2-4.5-2A5.5 5.5 0 0 0 2 8.5c0 2.3 1.5 4 3 5.5l7 7z"/></svg>{{p.likes}}</button>
+          <button style="height: 36px; padding: 0 12px; border-radius: 10px; border: 1px solid #262C3A; background: transparent; color: #C9CFDA; font-size: 13px; font-weight: 700; display: flex; align-items: center; gap: 6px; cursor: pointer">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>{{p.comments}}</button>
+        </div>
+      </article>
+    </sc-for>
+  </div>
+
+  <nav aria-label="Main" style="position: absolute; left: 0; right: 0; bottom: 0; padding: 10px 12px 28px; background: #0E1117; border-top: 1px solid #1F2430; display: flex; justify-content: space-around">
+    <a href="Main.dc.html" style="display: flex; flex-direction: column; align-items: center; gap: 4px; min-width: 64px; padding: 6px 0; text-decoration: none; color: #9BA4B5; font-size: 11px; font-weight: 600">
+      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="m15.5 8.5-2 5-5 2 2-5z"/></svg>Discover</a>
+    <a href="Feed.dc.html" style="display: flex; flex-direction: column; align-items: center; gap: 4px; min-width: 64px; padding: 6px 0; text-decoration: none; color: {{accent}}; font-size: 11px; font-weight: 700">
+      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><circle cx="9" cy="8" r="3.5"/><path d="M3 20c0-3.3 2.7-6 6-6s6 2.7 6 6"/><circle cx="17" cy="9" r="2.5"/><path d="M16 14.2c2.9.4 5 2.8 5 5.8"/></svg>Friends</a>
+    <a href="Watchlist.dc.html" style="display: flex; flex-direction: column; align-items: center; gap: 4px; min-width: 64px; padding: 6px 0; text-decoration: none; color: #9BA4B5; font-size: 11px; font-weight: 600">
+      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round" aria-hidden="true"><path d="m12 3 2.8 5.7 6.2.9-4.5 4.4 1 6.2L12 17.3 6.5 20.2l1-6.2L3 9.6l6.2-.9z"/></svg>Watchlist</a>
+    <a href="Portfolio.dc.html" style="display: flex; flex-direction: column; align-items: center; gap: 4px; min-width: 64px; padding: 6px 0; text-decoration: none; color: #9BA4B5; font-size: 11px; font-weight: 600">
+      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="6" width="18" height="14" rx="3"/><path d="M16 13h2M3 10h18M7 6V4h10v2"/></svg>Portfolio</a>
+  </nav>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"accent":{"editor":"color","default":"#8B9CFF","options":["#8B9CFF","#34D399","#F5B544","#F3F5F9"]},"$preview":{"width":390,"height":844}}'>
+class Component extends DCLogic {
+  renderVals() {
+    const accent = this.props.accent ?? '#8B9CFF';
+    const av = (hue, size, r) => 'width: ' + size + 'px; height: ' + size + 'px; border-radius: ' + r + 'px; background: ' + hue + '; display: flex; align-items: center; justify-content: center; font-size: ' + Math.round(size / 3) + 'px; font-weight: 800; color: #F3F5F9; flex: none';
+    const friends = [
+      ['Anya', '#7A3E5E', true], ['Max', '#2E5E7A', true], ['Lena', '#5E6B2E', false], ['Timur', '#6B4A2E', false], ['Dasha', '#3E3E7A', false]
+    ].map(([name, hue, live]) => ({
+      name, initial: name[0],
+      ring: 'width: 58px; height: 58px; border-radius: 50%; padding: 3px; box-sizing: border-box; border: 2px solid ' + (live ? accent : '#262C3A'),
+      avatar: av(hue, 48, 24).replace('border-radius: 24px', 'border-radius: 50%')
+    }));
+    const R = {
+      safe: { label: 'Safe', c: '#34D399', bg: 'rgba(52,211,153,0.12)' },
+      caution: { label: 'Caution', c: '#FBBF24', bg: 'rgba(251,191,36,0.12)' }
+    };
+    const raw = [
+      { who: 'Anya', hue: '#7A3E5E', verb: 'bought', side: 'BUY', token: 'Moon Cat', ti: 'MC', th: '#3B3F8F', amount: '1.2 SOL · 24.9M MOON', risk: 'safe', when: '2 min ago', note: 'Clean launch and the dev has no history of rugs. Small bag.', likes: 12, comments: 3 },
+      { who: 'Max', hue: '#2E5E7A', verb: 'sold', side: 'SELL', token: 'Be Like Poland', ti: 'BP', th: '#6B3A2E', amount: '0.8 SOL · +41%', risk: 'caution', when: '18 min ago', note: 'Took profit. Dev launched 3 tokens this week.', likes: 7, comments: 1 }
+    ];
+    const posts = raw.map((p) => {
+      const r = R[p.risk];
+      const buy = p.side === 'BUY';
+      return {
+        ...p,
+        initial: p.who[0],
+        avatar: av(p.hue, 40, 20).replace('border-radius: 20px', 'border-radius: 50%'),
+        tokenAvatar: av(p.th, 36, 12),
+        tokenInitials: p.ti,
+        risk: r.label,
+        badge: 'display: inline-flex; align-items: center; gap: 6px; height: 26px; padding: 0 10px; border-radius: 999px; font-size: 12px; font-weight: 800; background: ' + r.bg + '; color: ' + r.c,
+        dot: 'width: 7px; height: 7px; border-radius: 50%; background: ' + r.c,
+        verbBadge: 'height: 24px; padding: 0 8px; border-radius: 8px; font-size: 11px; font-weight: 800; letter-spacing: 0.4px; display: flex; align-items: center; background: ' + (buy ? 'rgba(52,211,153,0.12)' : 'rgba(248,113,113,0.12)') + '; color: ' + (buy ? '#34D399' : '#F87171')
+      };
+    });
+    return { accent, friends, posts };
+  }
+}
+</script>
+</body>
+</html>

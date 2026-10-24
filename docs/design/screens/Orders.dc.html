@@ -1,0 +1,102 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Sift — Open orders</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&amp;family=JetBrains+Mono:wght@500;600&amp;display=swap" rel="stylesheet">
+<style>
+body{margin:0;background:#0B0D12}
+a{color:#A9B5FF}a:hover{color:#C9D1FF}
+button{font-family:inherit}
+</style>
+</helmet>
+<div style="width: 390px; height: 844px; box-sizing: border-box; background: #0B0D12; color: #F3F5F9; font-family: Manrope, system-ui, sans-serif; display: flex; flex-direction: column; overflow: hidden; position: relative">
+
+  <header style="padding: 56px 20px 0; display: flex; align-items: center; gap: 12px">
+    <a href="Portfolio.dc.html" aria-label="Back" style="width: 44px; height: 44px; border-radius: 14px; border: 1px solid #262C3A; background: #151922; color: #F3F5F9; display: flex; align-items: center; justify-content: center">
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m15 18-6-6 6-6"/></svg>
+    </a>
+    <h1 style="margin: 0; font-size: 24px; font-weight: 800; letter-spacing: -0.6px">Orders</h1>
+  </header>
+
+  <section aria-label="Sift wallet" style="margin: 16px 20px 0; padding: 16px; border-radius: 20px; background: #151922; border: 1px solid #1F2430">
+    <div style="display: flex; align-items: center; justify-content: space-between">
+      <div>
+        <div style="display: flex; align-items: center; gap: 8px; font-size: 13px; color: #9BA4B5"><span style="width: 8px; height: 8px; border-radius: 50%; background: #34D399"></span>Sift wallet · orders active</div>
+        <div style="font-size: 26px; font-weight: 700; letter-spacing: -0.8px; margin-top: 4px; font-family: 'JetBrains Mono', monospace">4.82 SOL</div>
+        <div style="font-size: 12px; color: #9BA4B5">3 orders running, even with your phone off</div>
+      </div>
+      <div style="display: flex; flex-direction: column; gap: 6px">
+        <button style="height: 36px; padding: 0 12px; border-radius: 10px; border: none; background: {{accent}}; color: #0B0D12; font-size: 12px; font-weight: 800; cursor: pointer">Add funds</button>
+        <button style="height: 36px; padding: 0 12px; border-radius: 10px; border: 1px solid #262C3A; background: transparent; color: #F3F5F9; font-size: 12px; font-weight: 700; cursor: pointer">Withdraw</button>
+      </div>
+    </div>
+  </section>
+
+  <div style="padding: 16px 20px 0; display: flex; gap: 6px">
+    <sc-for list="{{tabs}}" as="t" hint-placeholder-count="2">
+      <button onClick="{{t.pick}}" style="{{t.style}}">{{t.label}}</button>
+    </sc-for>
+  </div>
+
+  <div style="padding: 12px 20px 0; display: flex; flex-direction: column; gap: 10px">
+    <sc-for list="{{orders}}" as="o" hint-placeholder-count="3">
+      <div style="padding: 14px; border-radius: 18px; background: #151922; border: 1px solid #1F2430">
+        <div style="display: flex; align-items: center; gap: 10px">
+          <span style="{{o.typeStyle}}">{{o.type}}</span>
+          <span style="font-size: 15px; font-weight: 700; flex: 1">{{o.token}}</span>
+          <span style="font-size: 12px; color: #9BA4B5">{{o.expires}}</span>
+        </div>
+        <div style="font-size: 14px; color: #E2E6EE; margin-top: 10px">{{o.rule}}</div>
+        <div style="margin-top: 10px; height: 6px; border-radius: 3px; background: #262C3A; overflow: hidden"><div style="{{o.bar}}"></div></div>
+        <div style="display: flex; justify-content: space-between; margin-top: 6px; font-size: 12px; color: #9BA4B5; font-family: 'JetBrains Mono', monospace">
+          <span>{{o.now}}</span><span>{{o.dist}}</span>
+        </div>
+        <div style="display: flex; gap: 8px; margin-top: 12px">
+          <button style="height: 36px; padding: 0 14px; border-radius: 10px; border: 1px solid #262C3A; background: transparent; color: #F3F5F9; font-size: 13px; font-weight: 700; cursor: pointer">Edit</button>
+          <button style="height: 36px; padding: 0 14px; border-radius: 10px; border: 1px solid rgba(248,113,113,0.35); background: transparent; color: #F87171; font-size: 13px; font-weight: 700; cursor: pointer">Cancel</button>
+        </div>
+      </div>
+    </sc-for>
+  </div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"accent":{"editor":"color","default":"#8B9CFF","options":["#8B9CFF","#34D399","#F5B544","#F3F5F9"]},"$preview":{"width":390,"height":844}}'>
+class Component extends DCLogic {
+  constructor(p) { super(p); this.state = { tab: 'open' }; }
+  renderVals() {
+    const accent = this.props.accent ?? '#8B9CFF';
+    const tabs = [['open', 'Open (3)'], ['filled', 'Filled']].map(([id, label]) => {
+      const on = this.state.tab === id;
+      return { label, pick: () => this.setState({ tab: id }), style: 'height: 36px; padding: 0 14px; border-radius: 10px; font-size: 13px; font-weight: 700; cursor: pointer; border: 1px solid ' + (on ? accent : '#262C3A') + '; background: ' + (on ? accent : '#151922') + '; color: ' + (on ? '#0B0D12' : '#C9CFDA') };
+    });
+    const K = {
+      'STOP LOSS': ['rgba(248,113,113,0.14)', '#F87171'],
+      'TAKE PROFIT': ['rgba(52,211,153,0.14)', '#34D399'],
+      'LIMIT BUY': ['rgba(139,156,255,0.16)', '#A9B5FF']
+    };
+    const raw = [
+      { type: 'STOP LOSS', token: 'Moon Cat', expires: '7 days left', rule: 'Sell 100% if price falls to $0.000038', now: 'Now $0.000048', dist: '21% away', fill: 79 },
+      { type: 'TAKE PROFIT', token: 'Moon Cat', expires: '7 days left', rule: 'Sell 50% when price reaches $0.000096', now: 'Now $0.000048', dist: '100% away', fill: 50 },
+      { type: 'LIMIT BUY', token: 'Desk Plant', expires: '2 days left', rule: 'Buy with 0.5 SOL at $0.000018', now: 'Now $0.000022', dist: '18% away', fill: 82 }
+    ];
+    const orders = raw.map((o) => {
+      const [bg, c] = K[o.type];
+      return {
+        ...o,
+        typeStyle: 'height: 24px; padding: 0 8px; border-radius: 8px; font-size: 11px; font-weight: 800; letter-spacing: 0.4px; display: flex; align-items: center; background: ' + bg + '; color: ' + c,
+        bar: 'height: 100%; width: ' + o.fill + '%; border-radius: 3px; background: ' + c
+      };
+    });
+    return { accent, tabs, orders };
+  }
+}
+</script>
+</body>
+</html>

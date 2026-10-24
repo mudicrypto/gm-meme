@@ -1,6 +1,8 @@
-import { Pressable, StyleSheet, Text, View } from 'react-native';
-import { usePalette } from '../lib/theme';
+import { Pressable, StyleSheet, View } from 'react-native';
+import { colors, radius } from '../lib/theme';
+import { Text } from './Text';
 
+/** A segmented control: a surface track with the selected option raised. */
 export function Segmented<T extends string>({
   options,
   value,
@@ -12,9 +14,8 @@ export function Segmented<T extends string>({
   onChange: (value: T) => void;
   compact?: boolean;
 }) {
-  const palette = usePalette();
   return (
-    <View style={[styles.row, { backgroundColor: palette.border }]} accessibilityRole="tablist">
+    <View style={[styles.row, compact && styles.compactRow]} accessibilityRole="tablist">
       {options.map((option) => {
         const selected = option.value === value;
         return (
@@ -26,14 +27,14 @@ export function Segmented<T extends string>({
             style={[
               styles.option,
               compact ? styles.compact : styles.fill,
-              selected && { backgroundColor: palette.card },
+              selected && styles.selected,
             ]}
           >
             <Text
               style={[
                 styles.label,
                 compact && styles.compactLabel,
-                { color: selected ? palette.text : palette.muted },
+                { color: selected ? colors.text : colors.muted },
               ]}
             >
               {option.label}
@@ -46,11 +47,26 @@ export function Segmented<T extends string>({
 }
 
 const styles = StyleSheet.create({
-  row: { flexDirection: 'row', borderRadius: 10, padding: 3 },
-  option: { paddingVertical: 8, borderRadius: 8, alignItems: 'center' },
+  row: {
+    flexDirection: 'row',
+    borderRadius: radius.input,
+    padding: 4,
+    backgroundColor: colors.surface,
+    borderWidth: 1,
+    borderColor: colors.borderStrong,
+  },
+  compactRow: { borderRadius: 12, padding: 3 },
+  option: { paddingVertical: 9, borderRadius: 10, alignItems: 'center' },
+  selected: { backgroundColor: colors.surface2 },
   fill: { flex: 1 },
   // Sized by its label: `flex: 0` collapses to zero width on web.
-  compact: { flexGrow: 0, flexShrink: 0, paddingVertical: 4, paddingHorizontal: 10 },
-  label: { fontSize: 14, fontWeight: '600' },
+  compact: {
+    flexGrow: 0,
+    flexShrink: 0,
+    paddingVertical: 6,
+    paddingHorizontal: 10,
+    borderRadius: 9,
+  },
+  label: { fontSize: 14, fontWeight: '700' },
   compactLabel: { fontSize: 12 },
 });

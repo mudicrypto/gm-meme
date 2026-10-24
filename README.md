@@ -152,7 +152,10 @@ Non-custodial, devnet only for now:
   iOS Keychain / Android Keystore (this device only, not in backups). It never leaves the
   phone; "Show private key" exports it in the format Phantom and Solflare import. The web build
   keeps the key in memory only, for testing.
-- **Phantom** (Portfolio → Connect Phantom, iOS and Android, works in Expo Go): Phantom's
+- **Wallet apps on Android** (Portfolio → Connect a wallet app): Mobile Wallet Adapter, so
+  Phantom, Solflare, Backpack and other Solana wallets work. It needs the installable build
+  (not Expo Go). Every signed answer is checked like Phantom's below.
+- **Phantom on iOS** (Portfolio → Connect Phantom; works in Expo Go): Phantom's
   deeplinks (`https://phantom.com/ul/v1/…`) with an encrypted channel (x25519 / TweetNaCl box).
   Phantom keeps the keys; Sift stores only the session token and its own channel key, in secure
   storage. After Phantom signs, the app checks it returned exactly the transaction you reviewed,

@@ -49,3 +49,5 @@ export const keyStore = secretItem('sift.wallet.seed');
 export const phantomStore = secretItem('sift.phantom.session');
 /** The Sift sign-in session (JSON): a bearer token for the API, not a wallet key. */
 export const authStore = secretItem('sift.auth.session');
+/** The Android wallet-app connection (JSON): address and the wallet's auth token, no keys. */
+export const walletAppStore = secretItem('sift.walletapp.session');

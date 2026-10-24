@@ -1,5 +1,6 @@
-import { base58Decode, base58Encode, decodeTransaction, solanaKeys } from '@sift/shared';
+import { base58Decode, base58Encode } from '@sift/shared';
 import nacl from 'tweetnacl';
+import { messageSignatureValid, signedTransactionProblem } from './signed-check';
 
 // Phantom's deeplink protocol (docs.phantom.com/phantom-deeplinks): the app opens
 // https://phantom.com/ul/v1/<method>, Phantom redirects back with the result in the query
@@ -111,15 +112,14 @@ export function parseSignTransaction(
   if (typeof data.transaction !== 'string')
     throw new PhantomError('BAD_RESPONSE', 'Phantom sent an unexpected response.');
   const signed = base58Decode(data.transaction);
-  const message = decodeTransaction(sent).message;
-  if (!sameBytes(messageOf(signed), message)) {
+  const problem = signedTransactionProblem(signed, sent, session.publicKey);
+  if (problem === 'MODIFIED') {
     throw new PhantomError(
       'MODIFIED',
       'Phantom returned a different transaction than the one you reviewed, so Sift did not send it.',
     );
   }
-  const signature = decodeTransaction(signed).signatures[0];
-  if (!signature || !solanaKeys.verify(signature, message, session.publicKey)) {
+  if (problem === 'BAD_SIGNATURE') {
     throw new PhantomError(
       'BAD_SIGNATURE',
       'Phantom’s signature didn’t check out, so Sift did not send it.',
@@ -162,7 +162,7 @@ export function parseSignMessage(
   if (typeof data.signature !== 'string')
     throw new PhantomError('BAD_RESPONSE', 'Phantom sent an unexpected response.');
   const signature = base58Decode(data.signature);
-  if (signature.length !== 64 || !solanaKeys.verify(signature, message, session.publicKey)) {
+  if (!messageSignatureValid(signature, message, session.publicKey)) {
     throw new PhantomError('BAD_SIGNATURE', 'Phantom’s signature didn’t check out.');
   }
   return signature;
@@ -223,16 +223,4 @@ function utf8(text: string): Uint8Array {
 }
 function fromUtf8(bytes: Uint8Array): string {
   return String.fromCharCode(...bytes);
-}
-
-function messageOf(transaction: Uint8Array): Uint8Array | null {
-  try {
-    return decodeTransaction(transaction).message;
-  } catch {
-    return null;
-  }
-}
-
-function sameBytes(a: Uint8Array | null, b: Uint8Array): boolean {
-  return a !== null && a.length === b.length && a.every((byte, i) => byte === b[i]);
 }

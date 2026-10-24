@@ -1,6 +1,7 @@
 import { useMutation } from '@tanstack/react-query';
 import { Link } from 'expo-router';
 import { Pressable, StyleSheet, Text } from 'react-native';
+import { mwaErrorMessage } from '../lib/mwa-results';
 import { isCancelled } from '../lib/phantom';
 import { useSession } from '../lib/session';
 import { usePalette } from '../lib/theme';
@@ -19,7 +20,8 @@ export function SignInCard({ reason }: { reason: string }) {
     return (
       <Card title="Set up a wallet first">
         <Text style={{ color: palette.muted }}>
-          Your wallet is your Sift account. {reason} Create one on this phone or connect Phantom.
+          Your wallet is your Sift account. {reason} Create one on this phone or connect your wallet
+          app.
         </Text>
         <Link href="/portfolio" asChild>
           <Pressable style={StyleSheet.flatten([styles.link, { backgroundColor: palette.accent }])}>
@@ -35,7 +37,9 @@ export function SignInCard({ reason }: { reason: string }) {
         {reason}{' '}
         {wallet.kind === 'phantom'
           ? 'Phantom will ask you to sign a short message.'
-          : 'Your wallet signs a short message on this phone.'}{' '}
+          : wallet.kind === 'walletApp'
+            ? 'Your wallet app will ask you to sign a short message.'
+            : 'Your wallet signs a short message on this phone.'}{' '}
         It proves the wallet is yours. It is not a transaction: it can’t move funds or cost
         anything.
       </Text>
@@ -44,8 +48,8 @@ export function SignInCard({ reason }: { reason: string }) {
         disabled={signIn.isPending}
         onPress={() => signIn.mutate()}
       />
-      {signIn.isError && !isCancelled(signIn.error) ? (
-        <Text style={{ color: palette.down }}>{signIn.error.message}</Text>
+      {signIn.isError && !isCancelled(signIn.error) && mwaErrorMessage(signIn.error) ? (
+        <Text style={{ color: palette.down }}>{mwaErrorMessage(signIn.error)}</Text>
       ) : null}
     </Card>
   );

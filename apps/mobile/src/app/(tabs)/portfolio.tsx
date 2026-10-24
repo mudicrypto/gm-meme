@@ -14,6 +14,7 @@ import { confirmOwner } from '../../lib/device-auth';
 import { formatCompact, shortAddress } from '../../lib/format';
 import { useMode } from '../../lib/mode';
 import { RISK_COLORS, usePalette } from '../../lib/theme';
+import { mwaErrorMessage } from '../../lib/mwa-results';
 import { cancelPhantomRequest, isCancelled } from '../../lib/phantom';
 import { type WalletKind, useWallet } from '../../lib/wallet';
 
@@ -80,8 +81,51 @@ function CreateWallet() {
       >
         <Text style={[styles.buttonText, { color: palette.accentText }]}>Create wallet</Text>
       </Pressable>
-      <ConnectPhantom />
+      <ConnectExternal />
     </Card>
+  );
+}
+
+/** Connect an existing wallet: any wallet app via MWA on Android, Phantom on iOS. */
+function ConnectExternal() {
+  const palette = usePalette();
+  const wallet = useWallet();
+  if (wallet.walletAppAvailable) return <ConnectWalletApp />;
+  if (wallet.phantomAvailable) return <ConnectPhantom />;
+  return (
+    <Text style={{ color: palette.muted, fontSize: 13 }}>
+      Wallet apps like Phantom connect in the Sift mobile app.
+    </Text>
+  );
+}
+
+function ConnectWalletApp() {
+  const palette = usePalette();
+  const wallet = useWallet();
+  const config = useQuery({ queryKey: ['config'], queryFn: api.config, staleTime: Infinity });
+  const connect = useMutation({
+    mutationFn: () => wallet.connectWalletApp(config.data?.cluster ?? 'devnet'),
+  });
+  const message = connect.isError ? mwaErrorMessage(connect.error) : null;
+  return (
+    <>
+      <Pressable
+        disabled={connect.isPending}
+        onPress={() => connect.mutate()}
+        style={[
+          styles.secondary,
+          { borderColor: palette.border, opacity: connect.isPending ? 0.5 : 1 },
+        ]}
+      >
+        <Text style={{ color: palette.text, fontWeight: '600' }}>
+          {connect.isPending ? 'Waiting for your wallet app…' : 'Connect a wallet app'}
+        </Text>
+      </Pressable>
+      <Text style={{ color: palette.muted, fontSize: 13 }}>
+        Phantom, Solflare, Backpack and other Solana wallets on this phone.
+      </Text>
+      {message ? <Text style={{ color: palette.down }}>{message}</Text> : null}
+    </>
   );
 }
 
@@ -135,11 +179,14 @@ function ConnectPhantom({ secondary = true }: { secondary?: boolean }) {
 function WalletSwitch({ kind }: { kind: WalletKind }) {
   const palette = usePalette();
   const wallet = useWallet();
-  if (!wallet.embeddedAddress || !wallet.phantomAddress) return null;
-  const options: { kind: WalletKind; label: string }[] = [
-    { kind: 'embedded', label: 'This phone' },
-    { kind: 'phantom', label: 'Phantom' },
-  ];
+  const options = (
+    [
+      { kind: 'embedded', label: 'This phone', address: wallet.embeddedAddress },
+      { kind: 'phantom', label: 'Phantom', address: wallet.phantomAddress },
+      { kind: 'walletApp', label: 'Wallet app', address: wallet.walletAppAddress },
+    ] as const
+  ).filter((option) => option.address);
+  if (options.length < 2) return null;
   return (
     <View style={[styles.switch, { borderColor: palette.border }]}>
       {options.map((option) => (
@@ -181,7 +228,16 @@ function OwnWallet({ address, kind }: { address: string; kind: WalletKind }) {
   return (
     <>
       <WalletSwitch kind={kind} />
-      <Holdings address={address} title={kind === 'phantom' ? 'Phantom wallet' : 'Your wallet'} />
+      <Holdings
+        address={address}
+        title={
+          kind === 'phantom'
+            ? 'Phantom wallet'
+            : kind === 'walletApp'
+              ? 'Wallet app'
+              : 'Your wallet'
+        }
+      />
 
       {config.data?.cluster === 'devnet' ? (
         <Card title="Test SOL">
@@ -209,27 +265,30 @@ function OwnWallet({ address, kind }: { address: string; kind: WalletKind }) {
         </Card>
       ) : null}
 
-      {kind === 'phantom' ? <PhantomWallet /> : <EmbeddedWallet />}
+      {kind === 'embedded' ? <EmbeddedWallet /> : <ExternalWallet kind={kind} />}
     </>
   );
 }
 
-function PhantomWallet() {
+function ExternalWallet({ kind }: { kind: 'phantom' | 'walletApp' }) {
   const palette = usePalette();
   const wallet = useWallet();
+  const name = kind === 'phantom' ? 'Phantom' : 'your wallet app';
+  const address = kind === 'phantom' ? wallet.phantomAddress : wallet.walletAppAddress;
+  const disconnect = kind === 'phantom' ? wallet.disconnectPhantom : wallet.disconnectWalletApp;
   return (
     <>
-      <Card title="Connected with Phantom">
+      <Card title={kind === 'phantom' ? 'Connected with Phantom' : 'Connected wallet app'}>
         <Text style={{ color: palette.muted }}>
-          Your keys stay in Phantom. Sift shows you the full cost first, then Phantom asks you to
+          Your keys stay in {name}. Sift shows you the full cost first, then {name} asks you to
           approve each trade.
         </Text>
-        {/* A fake "Phantom" app could answer the connect request: let people check. */}
+        {/* A fake wallet app could answer the connect request: let people check. */}
         <Text style={{ color: palette.muted, fontSize: 13 }}>
-          Check this matches the address shown in your Phantom app:
+          Check this matches the address shown in {name}:
         </Text>
         <Text style={[styles.secret, { color: palette.text, borderColor: palette.border }]}>
-          {wallet.phantomAddress}
+          {address}
         </Text>
       </Card>
       {!wallet.embeddedAddress ? (
@@ -239,11 +298,13 @@ function PhantomWallet() {
           </Text>
         </Pressable>
       ) : null}
-      <Pressable onPress={() => void wallet.disconnectPhantom()}>
-        <Text style={[styles.center, { color: palette.down }]}>Disconnect Phantom</Text>
+      <Pressable onPress={() => void disconnect()}>
+        <Text style={[styles.center, { color: palette.down }]}>
+          Disconnect {kind === 'phantom' ? 'Phantom' : 'wallet app'}
+        </Text>
       </Pressable>
       <Text style={{ color: palette.muted, fontSize: 13, textAlign: 'center' }}>
-        Your wallet and funds stay in Phantom.
+        Your wallet and funds stay in {name}.
       </Text>
     </>
   );
@@ -255,12 +316,15 @@ function EmbeddedWallet() {
   const [confirmRemove, setConfirmRemove] = useState(false);
   return (
     <>
-      {!wallet.phantomAddress && wallet.phantomAvailable ? (
-        <Card title="Use Phantom instead">
+      {!wallet.phantomAddress &&
+      !wallet.walletAppAddress &&
+      (wallet.phantomAvailable || wallet.walletAppAvailable) ? (
+        <Card title="Use your wallet app instead">
           <Text style={{ color: palette.muted }}>
-            Already have Phantom? Connect it to trade from that wallet. Your keys stay in Phantom.
+            Already have Phantom or another Solana wallet? Connect it to trade from that wallet.
+            Your keys stay in the wallet app.
           </Text>
-          <ConnectPhantom />
+          <ConnectExternal />
         </Card>
       ) : null}
 

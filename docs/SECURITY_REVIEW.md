@@ -26,7 +26,7 @@ something that takes their money.**
 | Critical |     1 |     1 | –               |
 | High     |     5 |     5 | –               |
 | Medium   |    14 |    14 | –               |
-| Low      |    16 |    15 | 1 (see below)   |
+| Low      |    16 |    16 | –               |
 
 The repository's git history contains no secrets. `.gitignore` covers `.env` files and key
 files, and only `.env.example` files are tracked, with empty values.
@@ -139,15 +139,18 @@ files, and only `.env.example` files are tracked, with empty values.
    - A quote that doesn't match is refused. If the network can't be reached, nothing is
      signed.
 
-## Accepted for now, to address before mainnet
-
-1. **Phantom deeplinks can't prove the answer came from the real Phantom app.**
-   - A fake "Phantom" app on an unprotected Android phone could bind its own address. It
-     still couldn't touch the user's real funds: every signature is checked against the
-     bound address.
-   - Mitigation: the full address is shown after connecting, to check against Phantom.
-   - Before mainnet: add Mobile Wallet Adapter on Android. It needs the installable test
-     build (`docs/DEPLOY.md`) to test.
+3. **Phantom deeplinks could be answered by a fake app** (Android). The fix has two parts:
+   - **Android uses Mobile Wallet Adapter.** Android's standard wallet connection
+     (`apps/mobile/src/lib/mwa.ts`) works with Phantom, Solflare, Backpack and others. The
+     session is encrypted between the two apps on the phone, with no answers coming back
+     through Sift's URL scheme that another app or web page could fake.
+   - **Every answer is checked, whichever app sent it.** Signed transactions must be
+     byte-for-byte what you reviewed, validly signed by the connected address. Message
+     signatures are verified. A wallet that switches accounts mid-session is refused.
+   - Deeplinks remain on iOS, where Phantom has no MWA.
+   - Honest limit: no wallet protocol can prove _which_ app the user picked. The checks
+     above mean a fake wallet can never get anything signed with the user's real key, and
+     the full connected address is shown to compare with the wallet.
 
 Other limits worth knowing (they are inherent, not bugs):
 
@@ -163,7 +166,7 @@ Other limits worth knowing (they are inherent, not bugs):
 - [ ] Deploy the API behind HTTPS. Set `TRUST_PROXY_HOPS` to the real proxy count and
       `CORS_ORIGINS` to the real web origin.
 - [x] Phone checks the price, decimals and deposits on chain (step 4).
-- [ ] Mobile Wallet Adapter for Phantom on Android (the accepted item above).
+- [x] Mobile Wallet Adapter on Android.
 - [ ] A mainnet RPC for the phone's checks (`EXPO_PUBLIC_SOLANA_RPC_URL`): the public one is
       rate-limited.
 - [ ] Get an external audit of the signing path (the plan's own risk list asks for one).

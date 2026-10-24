@@ -29,6 +29,7 @@ import { formatCompact, shortAddress } from '../../lib/format';
 import { useMode } from '../../lib/mode';
 import { RISK_COLORS, usePalette } from '../../lib/theme';
 import { createRpcReader, onChainProblems } from '../../lib/chain-check';
+import { mwaErrorMessage } from '../../lib/mwa-results';
 import { checkQuote } from '../../lib/trade-check';
 import { cancelPhantomRequest, isCancelled } from '../../lib/phantom';
 import { useWallet } from '../../lib/wallet';
@@ -129,8 +130,8 @@ export default function TradeScreen() {
       <View style={styles.screen}>
         <Card title="Set up a wallet to trade">
           <Text style={{ color: palette.muted }}>
-            Create a wallet on this phone or connect Phantom. Either way, your key never leaves your
-            device.
+            Create a wallet on this phone or connect your wallet app. Either way, your key never
+            leaves your device.
           </Text>
           <Link href="/portfolio" asChild>
             <Pressable
@@ -188,7 +189,10 @@ export default function TradeScreen() {
       setStage({ name: 'pending', quote, signature });
     } catch (err) {
       if (isCancelled(err)) setStage({ name: 'edit' });
-      else setStage({ name: 'failed', message: (err as Error).message });
+      else if (wallet.kind === 'walletApp') {
+        const message = mwaErrorMessage(err);
+        setStage(message ? { name: 'failed', message } : { name: 'edit' });
+      } else setStage({ name: 'failed', message: (err as Error).message });
     }
   };
 
@@ -329,7 +333,9 @@ export default function TradeScreen() {
               ? 'Waiting for the network to confirm…'
               : wallet.kind === 'phantom'
                 ? 'Approve the trade in Phantom…'
-                : 'Signing on this phone and sending…'}
+                : wallet.kind === 'walletApp'
+                  ? 'Approve the trade in your wallet app…'
+                  : 'Signing on this phone and sending…'}
           </Text>
           {stage.name === 'sending' && wallet.kind === 'phantom' ? (
             <Pressable onPress={cancelPhantomRequest}>

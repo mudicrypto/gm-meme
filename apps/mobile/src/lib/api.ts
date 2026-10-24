@@ -142,6 +142,7 @@ export const socialApi = {
     authed<void>(token, 'DELETE', `/me/alerts/${enc(id)}`),
   savePushToken: (token: string, pushToken: string) =>
     authed<void>(token, 'PUT', '/me/push-token', { token: pushToken }),
+  pushTest: (token: string) => authed<{ devices: number }>(token, 'POST', '/me/push-test', {}),
   deletePushToken: (token: string, pushToken: string) =>
     authed<void>(token, 'DELETE', '/me/push-token', { token: pushToken }),
 };

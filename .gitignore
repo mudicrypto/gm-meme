@@ -25,3 +25,7 @@ apps/mobile/android/
 # Solana keypairs
 *keypair*.json
 id.json
+
+# Firebase service account keys (the FCM sending key goes into Expo's credentials only)
+*firebase-adminsdk*.json
+*service-account*.json

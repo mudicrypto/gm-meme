@@ -2,7 +2,7 @@ import { DISPLAY_NAME_MAX, HANDLE_PATTERN, isSolanaAddress } from '@sift/shared'
 import type { FastifyPluginAsync, FastifyReply, FastifyRequest } from 'fastify';
 import { z } from 'zod';
 import { type Auth, AuthError } from '../social/auth';
-import { EXPO_PUSH_TOKEN } from '../social/push';
+import { EXPO_PUSH_TOKEN, type PushSender } from '../social/push';
 import { SocialError, type SocialService } from '../social/service';
 import { parseOrReply } from './validation';
 
@@ -49,10 +49,11 @@ const alertParams = z.object({ id: z.uuid() });
 const pushBody = z.object({ token: z.string().regex(EXPO_PUSH_TOKEN) });
 
 /** Profiles, follows, the friends feed, watchlists and price alerts. Sign in with a wallet. */
-export const socialRoutes: FastifyPluginAsync<{ auth: Auth; social: SocialService }> = async (
-  app,
-  { auth, social },
-) => {
+export const socialRoutes: FastifyPluginAsync<{
+  auth: Auth;
+  social: SocialService;
+  push: PushSender | null;
+}> = async (app, { auth, social, push }) => {
   const bearer = (request: FastifyRequest) => {
     const header = request.headers.authorization;
     return header?.startsWith('Bearer ') ? header.slice(7).trim() : null;
@@ -215,5 +216,28 @@ export const socialRoutes: FastifyPluginAsync<{ auth: Auth; social: SocialServic
     if (!body) return;
     await social.deletePushToken(wallet, body.token);
     return reply.status(204).send();
+  });
+
+  // Lets someone check notifications reach their phone, without waiting for an alert.
+  app.post('/me/push-test', async (request, reply) => {
+    const wallet = await signedIn(request, reply);
+    if (!wallet) return;
+    if (!push) {
+      return reply
+        .status(503)
+        .send({ error: 'Service Unavailable', message: 'Notifications are off on this server.' });
+    }
+    const devices = await social.pushDevices(wallet);
+    if (devices.length > 0) {
+      const gone = await push.send(
+        devices.map((to) => ({
+          to,
+          title: 'Sift notifications work',
+          body: 'Price alerts you set will arrive like this.',
+        })),
+      );
+      await Promise.all(gone.map((token) => social.deletePushToken(wallet, token)));
+    }
+    return { devices: devices.length };
   });
 };

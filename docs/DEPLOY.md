@@ -47,5 +47,26 @@ The first run creates the Expo project and the app's signing key; Expo stores th
 **iPhone** builds need an Apple Developer account ($99/year). Once you have one, the same
 button with `ios` works after a one-time Apple sign-in.
 
-**Push notifications for price alerts** also need a free Firebase project for Android. That
-comes next; until then, alerts show in the Watchlist tab.
+## 3. Notifications for price alerts (Android)
+
+Android delivers notifications through Google's Firebase, which is free.
+
+1. Go to https://console.firebase.google.com and click **Create a project**. Name it `sift`.
+   Google Analytics isn't needed.
+2. In the project, click the **Android** icon (**Add app**):
+   - **Package name:** `app.sift.mobile`
+   - Click **Register app**, then **Download google-services.json**.
+   - Skip the remaining SDK steps: Expo handles them.
+3. Put that file in the repo through GitHub's website: open the `gm-meme` repo, go into
+   `apps/mobile`, then **Add file** > **Upload files**, drop in `google-services.json`, and
+   commit. This file only holds public identifiers, so it's safe in the repo.
+4. Create the secret sending key: in Firebase, go to **Project settings** >
+   **Service accounts** > **Generate new private key**. A JSON file downloads. It is a real
+   secret, so keep it out of GitHub and out of chat.
+5. Upload that key to Expo: on expo.dev, open the `sift` project > **Credentials** >
+   **Android** > `app.sift.mobile` > **FCM V1 service account key** >
+   **Add a service account key**. Upload the file and save. You can then delete the file
+   from your computer.
+6. Build again (**Actions** > **Build test app**) and install the new build.
+7. In the app, sign in, open the **Watchlist** tab, and tap **Send a test notification**.
+   Allow notifications when Android asks. The test should appear within seconds.

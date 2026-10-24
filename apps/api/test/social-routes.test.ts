@@ -345,3 +345,29 @@ describe('watchlist and price alerts', () => {
     expect(await ctx.social.pushTokens([wallet])).toEqual([]);
   });
 });
+
+describe('test notification', () => {
+  it('sends one to each of your registered phones, and says how many', async () => {
+    const ctx = setup();
+    const token = await signIn(ctx.app, person());
+    const send = () => ctx.app.inject({ method: 'POST', url: '/me/push-test', headers: as(token) });
+    expect((await send()).json()).toEqual({ devices: 0 });
+    expect(ctx.push.send).not.toHaveBeenCalled();
+
+    await ctx.app.inject({
+      method: 'PUT',
+      url: '/me/push-token',
+      headers: as(token),
+      payload: { token: 'ExponentPushToken[abcdefghij12]' },
+    });
+    expect((await send()).json()).toEqual({ devices: 1 });
+    expect(ctx.push.send.mock.calls[0]![0]).toEqual([
+      expect.objectContaining({
+        to: 'ExponentPushToken[abcdefghij12]',
+        title: 'Sift notifications work',
+      }),
+    ]);
+    expect((await ctx.app.inject({ method: 'POST', url: '/me/push-test' })).statusCode).toBe(401);
+    await ctx.app.close();
+  });
+});

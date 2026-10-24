@@ -2,6 +2,7 @@ import type { PriceAlert } from '@sift/shared';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { Link } from 'expo-router';
 import { Pressable, RefreshControl, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { NotificationsCard } from '../../components/NotificationsCard';
 import { RiskBadge } from '../../components/RiskBadge';
 import { SignInCard } from '../../components/SignInCard';
 import { Empty, ErrorState, Loading } from '../../components/States';
@@ -89,6 +90,8 @@ export default function WatchlistScreen() {
       ) : (
         active.map((alert) => <AlertRow key={alert.id} alert={alert} />)
       )}
+
+      <NotificationsCard />
     </ScrollView>
   );
 }

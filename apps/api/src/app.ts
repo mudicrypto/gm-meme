@@ -68,6 +68,7 @@ const ROUTE_LIMITS: Record<string, { max: number; timeWindow?: number }> = {
   'PUT /me/profile': { max: 10 },
   'GET /profiles': { max: 30 },
   'POST /me/alerts': { max: 20 },
+  'POST /me/push-test': { max: 3, timeWindow: 60 * 60_000 },
 };
 // Authenticated by its own secret and called by Helius in bursts; health is for monitors.
 const UNLIMITED_ROUTES = new Set(['POST /webhooks/helius', 'GET /health', 'HEAD /health']);
@@ -151,12 +152,12 @@ export function buildApp(config: Config, deps: AppDeps = {}) {
   const socialRepository = deps.socialRepository ?? createSocialRepository(config, app.log);
   const auth = createAuth({ repository: socialRepository, now });
   const social = createSocialService({ social: socialRepository, tokens: repository, now });
-  app.register(socialRoutes, { auth, social });
-
   const push =
     deps.push !== undefined
       ? deps.push
       : createExpoPushSender({ accessToken: config.EXPO_ACCESS_TOKEN });
+  app.register(socialRoutes, { auth, social, push });
+
   if (config.ALERT_CHECK_INTERVAL_MS > 0) {
     let stopAlerts: (() => void) | undefined;
     app.addHook('onReady', async () => {

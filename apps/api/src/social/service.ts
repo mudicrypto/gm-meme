@@ -192,6 +192,8 @@ export function createSocialService(deps: {
     },
 
     savePushToken: (wallet: string, token: string) => social.savePushToken(wallet, token),
+    pushDevices: async (wallet: string) =>
+      (await social.pushTokens([wallet])).map((device) => device.token),
     deletePushToken: (wallet: string, token: string) => social.deletePushToken(wallet, token),
   };
 }

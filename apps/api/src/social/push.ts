@@ -12,6 +12,9 @@ export interface PushSender {
   send(messages: readonly PushMessage[]): Promise<string[]>;
 }
 
+// The Android channel the app creates for price alerts (lib/push.ts): high importance.
+export const PRICE_ALERT_CHANNEL = 'price-alerts';
+
 /** Expo push tokens look like ExponentPushToken[xxxx] (or ExpoPushToken[xxxx]). */
 export const EXPO_PUSH_TOKEN = /^Expo(nent)?PushToken\[[A-Za-z0-9_-]{10,100}\]$/;
 
@@ -44,7 +47,14 @@ export function createExpoPushSender(
             'content-type': 'application/json',
             ...(opts.accessToken ? { authorization: `Bearer ${opts.accessToken}` } : {}),
           },
-          body: JSON.stringify(chunk.map((m) => ({ ...m, sound: 'default' }))),
+          body: JSON.stringify(
+            chunk.map((m) => ({
+              ...m,
+              sound: 'default',
+              priority: 'high',
+              channelId: PRICE_ALERT_CHANNEL,
+            })),
+          ),
         });
         if (!res.ok) throw new Error(`Expo push failed: ${res.status}`);
         const tickets = ticketsSchema.safeParse(await res.json());

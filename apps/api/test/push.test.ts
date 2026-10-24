@@ -26,6 +26,12 @@ describe('Expo push sender', () => {
     const [url, init] = fetchFn.mock.calls[0]!;
     expect(url).toBe('https://exp.host/--/api/v2/push/send');
     expect(new Headers(init?.headers).get('authorization')).toBe('Bearer tok');
+    // Android shows alerts on the app's high-importance channel.
+    expect(JSON.parse(String(init?.body))[0]).toMatchObject({
+      channelId: 'price-alerts',
+      priority: 'high',
+      sound: 'default',
+    });
   });
 
   it('only accepts Expo push token shapes', () => {

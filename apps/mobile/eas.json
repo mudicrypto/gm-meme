@@ -7,7 +7,7 @@
     "base": {
       "pnpm": "10.28.0",
       "env": {
-        "EXPO_PUBLIC_API_URL": "https://sift-api.onrender.com"
+        "EXPO_PUBLIC_API_URL": "https://sift-api-ggmv.onrender.com"
       }
     },
     "preview": {

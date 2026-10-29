@@ -2,10 +2,11 @@ import type { TokenSummary } from '@sift/shared';
 import { useQuery } from '@tanstack/react-query';
 import { ShieldCheck } from 'lucide-react-native';
 import { useState } from 'react';
-import { FlatList, Pressable, RefreshControl, StyleSheet, View } from 'react-native';
+import { Animated, FlatList, Pressable, RefreshControl, StyleSheet, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Chip } from '../../components/Button';
 import { Logo } from '../../components/Logo';
+import { FadeIn, usePulse } from '../../components/Motion';
 import { ModeToggle } from '../../components/ModeToggle';
 import { SkeletonCards } from '../../components/Skeleton';
 import { Empty, ErrorState } from '../../components/States';
@@ -35,6 +36,7 @@ export default function DiscoverScreen() {
     refetchInterval: 15_000,
   });
 
+  const pulse = usePulse(0.3, 1000);
   const all = query.data?.tokens ?? [];
   const redCount = all.filter((token) => token.riskLevel === 'red').length;
   const tokens = all.filter((token) =>
@@ -49,10 +51,13 @@ export default function DiscoverScreen() {
       </View>
       <View>
         <Text style={typeScale.title}>Discover</Text>
-        <Text style={styles.subtitle}>
-          Every token checked for scam patterns before you see it
-          {mode === 'pro' ? ' · Solana devnet' : ''}
-        </Text>
+        <Text style={styles.subtitle}>Every token is checked for scam patterns first</Text>
+        <View style={styles.live}>
+          <Animated.View style={[styles.liveDot, { opacity: pulse }]} />
+          <Text style={styles.liveText}>
+            Live{mode === 'pro' ? ' · Solana devnet' : ''} · updates every 15 seconds
+          </Text>
+        </View>
       </View>
       <View style={styles.tabs}>
         {FEEDS.map((option) => (
@@ -103,7 +108,11 @@ export default function DiscoverScreen() {
         <FlatList
           data={tokens}
           keyExtractor={(token) => token.mint}
-          renderItem={({ item }) => <TokenRow token={item} />}
+          renderItem={({ item, index }) => (
+            <FadeIn index={index}>
+              <TokenRow token={item} />
+            </FadeIn>
+          )}
           ListHeaderComponent={header}
           contentContainerStyle={[styles.list, { paddingTop: insets.top + 16 }]}
           ItemSeparatorComponent={() => <View style={{ height: space.gap }} />}
@@ -137,6 +146,9 @@ const styles = StyleSheet.create({
   topBar: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
   subtitle: { marginTop: 4, fontSize: 14, color: colors.muted },
   tabs: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
+  live: { flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: 8 },
+  liveDot: { width: 7, height: 7, borderRadius: 4, backgroundColor: colors.up },
+  liveText: { fontSize: 12, color: colors.faint },
   filter: {
     flexDirection: 'row',
     alignItems: 'center',

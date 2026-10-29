@@ -27,28 +27,36 @@ export default function TabLayout() {
         name="index"
         options={{
           title: 'Discover',
-          tabBarIcon: ({ color }) => <TabIcon name="discover" color={color} />,
+          tabBarIcon: ({ color, focused }) => (
+            <TabIcon name="discover" color={color} focused={focused} />
+          ),
         }}
       />
       <Tabs.Screen
         name="friends"
         options={{
           title: 'Friends',
-          tabBarIcon: ({ color }) => <TabIcon name="friends" color={color} />,
+          tabBarIcon: ({ color, focused }) => (
+            <TabIcon name="friends" color={color} focused={focused} />
+          ),
         }}
       />
       <Tabs.Screen
         name="watchlist"
         options={{
           title: 'Watchlist',
-          tabBarIcon: ({ color }) => <TabIcon name="watchlist" color={color} />,
+          tabBarIcon: ({ color, focused }) => (
+            <TabIcon name="watchlist" color={color} focused={focused} />
+          ),
         }}
       />
       <Tabs.Screen
         name="portfolio"
         options={{
           title: 'Portfolio',
-          tabBarIcon: ({ color }) => <TabIcon name="portfolio" color={color} />,
+          tabBarIcon: ({ color, focused }) => (
+            <TabIcon name="portfolio" color={color} focused={focused} />
+          ),
         }}
       />
     </Tabs>

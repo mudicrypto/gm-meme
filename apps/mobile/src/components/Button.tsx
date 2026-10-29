@@ -1,6 +1,8 @@
 import type { ReactNode } from 'react';
-import { Pressable, StyleSheet, View } from 'react-native';
+import { StyleSheet, View } from 'react-native';
+import { haptic } from '../lib/motion';
 import { colors, tint } from '../lib/theme';
+import { PressableScale } from './Motion';
 import { Text } from './Text';
 
 /** Primary (accent, 54 tall) or secondary (surface) button. */
@@ -10,17 +12,23 @@ export function Button({
   variant = 'primary',
   disabled = false,
   small = false,
+  confirm = false,
 }: {
   label: string;
   onPress: () => void;
   variant?: 'primary' | 'secondary';
   disabled?: boolean;
   small?: boolean;
+  /** One firm haptic: for the button that commits (buy, sell, place order). */
+  confirm?: boolean;
 }) {
   const primary = variant === 'primary';
   return (
-    <Pressable
-      onPress={onPress}
+    <PressableScale
+      onPress={() => {
+        if (confirm) haptic.confirm();
+        onPress();
+      }}
       disabled={disabled}
       accessibilityRole="button"
       accessibilityState={{ disabled }}
@@ -34,7 +42,7 @@ export function Button({
       <Text style={[styles.label, { color: primary ? colors.onAccent : colors.text }]}>
         {label}
       </Text>
-    </Pressable>
+    </PressableScale>
   );
 }
 
@@ -51,15 +59,16 @@ export function IconButton({
   badge?: boolean;
 }) {
   return (
-    <Pressable
+    <PressableScale
       onPress={onPress}
       accessibilityRole="button"
       accessibilityLabel={label}
       style={styles.icon}
+      scaleTo={0.92}
     >
       {children}
       {badge ? <View style={styles.badge} /> : null}
-    </Pressable>
+    </PressableScale>
   );
 }
 
@@ -79,8 +88,11 @@ export function Chip({
   mono?: boolean;
 }) {
   return (
-    <Pressable
-      onPress={onPress}
+    <PressableScale
+      onPress={() => {
+        if (!selected) haptic.select();
+        onPress();
+      }}
       accessibilityRole="button"
       accessibilityState={{ selected }}
       style={[
@@ -101,7 +113,7 @@ export function Chip({
       >
         {label}
       </Text>
-    </Pressable>
+    </PressableScale>
   );
 }
 

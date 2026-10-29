@@ -1,9 +1,10 @@
 import type { RiskLevel, TokenSummary, TrendingToken } from '@sift/shared';
 import { Link } from 'expo-router';
-import { Pressable, StyleSheet, View } from 'react-native';
+import { StyleSheet, View } from 'react-native';
 import { formatAge, formatCompact, formatSol, shortAddress } from '../lib/format';
 import { useMode } from '../lib/mode';
 import { colors, radius } from '../lib/theme';
+import { PressableScale } from './Motion';
 import { RiskBadge } from './RiskBadge';
 import { Text } from './Text';
 import { TokenAvatar } from './TokenAvatar';
@@ -28,7 +29,7 @@ export function TokenRow({ token }: { token: TokenSummary | TrendingToken }) {
     <Link href={`/token/${token.mint}`} asChild>
       {/* One flat style object: on web, Link's asChild puts it on an <a>, which can't take
           style arrays or functions. */}
-      <Pressable style={StyleSheet.flatten([styles.card])}>
+      <PressableScale style={StyleSheet.flatten(styles.card)} scaleTo={0.98}>
         <View style={styles.top}>
           <TokenAvatar uri={token.imageUrl} label={token.name ?? token.symbol} seed={token.mint} />
           <View style={styles.middle}>
@@ -70,7 +71,7 @@ export function TokenRow({ token }: { token: TokenSummary | TrendingToken }) {
             {LEVEL_LINE[token.riskLevel ?? 'unknown']}
           </Text>
         </View>
-      </Pressable>
+      </PressableScale>
     </Link>
   );
 }

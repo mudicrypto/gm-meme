@@ -12,6 +12,7 @@ import { useState } from 'react';
 import { Pressable, StyleSheet, View } from 'react-native';
 import { BackHeader } from '../components/BackHeader';
 import { Button, Chip } from '../components/Button';
+import { FadeIn } from '../components/Motion';
 import { Screen } from '../components/Screen';
 import { SignInCard } from '../components/SignInCard';
 import { Empty, Loading } from '../components/States';
@@ -128,8 +129,10 @@ export default function OrdersScreen() {
               }
             />
           ) : (
-            shown.map((order) => (
-              <OrderCard key={order.id} order={order} price={prices.get(order.token.mint)} />
+            shown.map((order, index) => (
+              <FadeIn key={order.id} index={index}>
+                <OrderCard order={order} price={prices.get(order.token.mint)} />
+              </FadeIn>
             ))
           )}
         </>

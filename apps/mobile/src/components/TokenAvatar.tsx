@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { Image, StyleSheet, View } from 'react-native';
-import { colors } from '../lib/theme';
+import { colors, tint } from '../lib/theme';
 import { Text } from './Text';
 
 // Muted tile colours for tokens without an image, picked from the mint so a token keeps
@@ -45,7 +45,17 @@ export function initials(label?: string): string {
 }
 
 const styles = StyleSheet.create({
-  image: { backgroundColor: colors.surface2 },
-  tile: { alignItems: 'center', justifyContent: 'center' },
+  // A hairline ring keeps dark images and tiles from melting into dark cards.
+  image: {
+    backgroundColor: colors.surface2,
+    borderWidth: 1,
+    borderColor: tint(colors.text, 0.06),
+  },
+  tile: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 1,
+    borderColor: tint(colors.text, 0.08),
+  },
   initials: { fontWeight: '800', color: colors.text },
 });

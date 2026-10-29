@@ -1,6 +1,7 @@
 import { ChevronRight } from 'lucide-react-native';
 import type { ReactNode } from 'react';
 import { Pressable, StyleSheet, View } from 'react-native';
+import { haptic } from '../lib/motion';
 import { colors, radius, tint } from '../lib/theme';
 import { Text } from './Text';
 
@@ -65,7 +66,14 @@ export function SettingsRow({
   );
   const style = [styles.row, !last && styles.divider];
   return onPress ? (
-    <Pressable onPress={onPress} accessibilityRole="button" style={style}>
+    <Pressable
+      onPress={() => {
+        haptic.select();
+        onPress();
+      }}
+      accessibilityRole="button"
+      style={({ pressed }) => [style, pressed && styles.pressed]}
+    >
       {body}
     </Pressable>
   ) : (
@@ -93,6 +101,7 @@ const styles = StyleSheet.create({
   },
   row: { flexDirection: 'row', alignItems: 'center', gap: 12, paddingVertical: 13, minHeight: 56 },
   divider: { borderBottomWidth: 1, borderBottomColor: colors.border },
+  pressed: { opacity: 0.6 },
   flex: { flex: 1 },
   title: { fontSize: 14, fontWeight: '700' },
   subtitle: { fontSize: 12, color: colors.muted, marginTop: 2, lineHeight: 17 },

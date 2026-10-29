@@ -5,6 +5,7 @@ import { formatCompact } from '../lib/format';
 import { useSession } from '../lib/session';
 import { useOrders, useSiftBalance, useSiftWallet } from '../lib/social-hooks';
 import { colors, radius, tint } from '../lib/theme';
+import { FlashText } from './FlashText';
 import { Text } from './Text';
 
 /** The Sift wallet at the top of Portfolio: balance, running orders, and the way in. */
@@ -50,13 +51,14 @@ export function SiftWalletCard() {
               Sift wallet · {wallet.frozen ? 'frozen' : healthy ? 'orders active' : 'paused'}
             </Text>
           </View>
-          <Text mono style={styles.balance}>
-            {balance.data ? formatCompact(balance.data.solBalance) : '–'}
+          <View style={styles.balanceRow}>
+            <FlashText value={balance.data?.solBalance} style={styles.balance}>
+              {balance.data ? formatCompact(balance.data.solBalance) : '–'}
+            </FlashText>
             <Text mono style={styles.unit}>
-              {' '}
               SOL
             </Text>
-          </Text>
+          </View>
         </View>
         <View
           style={[
@@ -122,7 +124,8 @@ const styles = StyleSheet.create({
   status: { flexDirection: 'row', alignItems: 'center', gap: 8 },
   dot: { width: 8, height: 8, borderRadius: 4, marginTop: 2 },
   balance: { fontSize: 36, fontWeight: '600', letterSpacing: -1.2, marginTop: 4 },
-  unit: { fontSize: 16, fontWeight: '600', color: colors.muted, letterSpacing: 0 },
+  balanceRow: { flexDirection: 'row', alignItems: 'baseline', gap: 8 },
+  unit: { fontSize: 16, fontWeight: '600', color: colors.muted },
   shield: {
     width: 44,
     height: 44,

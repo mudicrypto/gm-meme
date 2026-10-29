@@ -9,6 +9,8 @@ import {
   ShieldCheck,
   Sparkles,
   Timer,
+  TrendingDown,
+  TrendingUp,
 } from 'lucide-react-native';
 import { useState } from 'react';
 import { Pressable, ScrollView, StyleSheet, View } from 'react-native';
@@ -17,6 +19,7 @@ import { IconButton } from '../../components/Button';
 import { Card } from '../../components/Card';
 import { ModeToggle } from '../../components/ModeToggle';
 import { PriceChart } from '../../components/PriceChart';
+import { FlashText } from '../../components/FlashText';
 import { ErrorState, Loading } from '../../components/States';
 import { Text } from '../../components/Text';
 import { TokenAvatar } from '../../components/TokenAvatar';
@@ -51,6 +54,11 @@ const CHECK_NAMES: Record<string, string> = {
   dev_history: 'Creator history',
   sell_test: 'Selling',
 };
+
+/** "5m old", or "just launched" for a brand-new token. */
+function ageLabel(age: string): string {
+  return age === 'just now' ? 'just launched' : `${age} old`;
+}
 
 const MARKS: Record<RiskLevel, string> = { green: '✓', amber: '!', red: '×' };
 
@@ -108,7 +116,7 @@ export default function TokenScreen() {
           <Text style={styles.sub} numberOfLines={1}>
             {[
               info?.symbol,
-              info ? `${formatAge(info.launchedAt ?? info.firstSeenAt)} old` : undefined,
+              info ? ageLabel(formatAge(info.launchedAt ?? info.firstSeenAt)) : undefined,
             ]
               .filter(Boolean)
               .join(' · ') || 'Token'}
@@ -150,6 +158,13 @@ export default function TokenScreen() {
   const level = risk.data.level;
   const VerdictIcon = level === 'green' ? ShieldCheck : ShieldAlert;
   const symbol = info?.symbol;
+  const trending = info && 'uniqueTraders' in info ? (info as { uniqueTraders: number }) : null;
+  const stats: Array<[string, string]> = [
+    ['Market cap', info?.marketCapUsd !== undefined ? `$${formatCompact(info.marketCapUsd)}` : ''],
+    ['Traded', formatSol(volume)],
+    ['Traders', trending ? String(trending.uniqueTraders) : ''],
+    ['Age', info ? formatAge(info.launchedAt ?? info.firstSeenAt).replace('just now', 'New') : ''],
+  ].filter((stat): stat is [string, string] => stat[1] !== '');
 
   return (
     <View style={styles.root}>
@@ -157,17 +172,32 @@ export default function TokenScreen() {
       <ScrollView contentContainerStyle={styles.content}>
         <View>
           {lastPrice ? (
-            <Text mono style={styles.price}>
-              {formatSolPrice(lastPrice)} SOL
-            </Text>
+            <FlashText value={lastPrice} style={styles.price}>
+              {`${formatSolPrice(lastPrice)} SOL`}
+            </FlashText>
           ) : (
             <Text style={styles.noPrice}>No trades yet</Text>
           )}
           <View style={styles.changeRow}>
             {change !== undefined ? (
-              <Text mono style={[styles.change, { color: change >= 0 ? colors.up : colors.down }]}>
-                {formatPct(change)}
-              </Text>
+              <View
+                style={[
+                  styles.changePill,
+                  { backgroundColor: tint(change >= 0 ? colors.up : colors.down, 0.12) },
+                ]}
+              >
+                {change >= 0 ? (
+                  <TrendingUp size={14} color={colors.up} strokeWidth={2.4} />
+                ) : (
+                  <TrendingDown size={14} color={colors.down} strokeWidth={2.4} />
+                )}
+                <Text
+                  mono
+                  style={[styles.change, { color: change >= 0 ? colors.up : colors.down }]}
+                >
+                  {formatPct(change)}
+                </Text>
+              </View>
             ) : null}
             <Text style={styles.sub}>
               {[
@@ -204,6 +234,16 @@ export default function TokenScreen() {
                 </Pressable>
               );
             })}
+          </View>
+          <View style={styles.stats}>
+            {stats.map(([label, value]) => (
+              <View key={label} style={styles.stat}>
+                <Text style={styles.statLabel}>{label}</Text>
+                <Text mono style={styles.statValue} numberOfLines={1}>
+                  {value}
+                </Text>
+              </View>
+            ))}
           </View>
           {mode === 'pro' ? (
             <Text style={styles.proLine}>
@@ -373,7 +413,28 @@ const styles = StyleSheet.create({
   price: { fontSize: 32, fontWeight: '600', letterSpacing: -1 },
   noPrice: { fontSize: 24, fontWeight: '800', color: colors.muted },
   changeRow: { flexDirection: 'row', alignItems: 'center', gap: 8, marginTop: 4 },
-  change: { fontSize: 14, fontWeight: '600' },
+  change: { fontSize: 13, fontWeight: '600' },
+  changePill: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    height: 26,
+    paddingHorizontal: 9,
+    borderRadius: 999,
+  },
+  stats: { flexDirection: 'row', gap: 8, marginTop: 12 },
+  stat: {
+    flex: 1,
+    paddingVertical: 10,
+    paddingHorizontal: 10,
+    borderRadius: 14,
+    backgroundColor: colors.surface,
+    borderWidth: 1,
+    borderColor: colors.border,
+    gap: 3,
+  },
+  statLabel: { fontSize: 11, color: colors.muted, fontWeight: '600' },
+  statValue: { fontSize: 13, fontWeight: '600' },
   ranges: { flexDirection: 'row', gap: 6, marginTop: 8 },
   range: { height: 32, paddingHorizontal: 12, borderRadius: 10, justifyContent: 'center' },
   rangeOn: { backgroundColor: colors.surface2 },

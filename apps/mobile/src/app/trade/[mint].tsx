@@ -11,7 +11,16 @@ import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { Link, Stack, router, useLocalSearchParams } from 'expo-router';
 import { type ReactNode, useEffect, useState } from 'react';
 import { Check, ShieldCheck, ShieldX } from 'lucide-react-native';
-import { ActivityIndicator, Linking, Pressable, ScrollView, StyleSheet, View } from 'react-native';
+import {
+  ActivityIndicator,
+  Animated,
+  Linking,
+  Pressable,
+  ScrollView,
+  StyleSheet,
+  View,
+} from 'react-native';
+import { NATIVE, haptic, useReduceMotion } from '../../lib/motion';
 import { Button, Chip } from '../../components/Button';
 import { Card } from '../../components/Card';
 import { DevnetBadge } from '../../components/DevnetBadge';
@@ -60,6 +69,26 @@ const PAYING_FROM = {
   walletApp: 'your wallet app',
 } as const;
 
+/** The done tick: pops in with one success haptic. */
+function SuccessCheck() {
+  const reduce = useReduceMotion();
+  const scale = useState(() => new Animated.Value(reduce ? 1 : 0.4))[0];
+  useEffect(() => {
+    haptic.success();
+    Animated.spring(scale, {
+      toValue: 1,
+      friction: 7,
+      tension: 140,
+      useNativeDriver: NATIVE,
+    }).start();
+  }, [scale]);
+  return (
+    <Animated.View style={[styles.doneIcon, { transform: [{ scale }] }]}>
+      <Check size={28} color={colors.up} strokeWidth={2.6} />
+    </Animated.View>
+  );
+}
+
 export default function TradeScreen() {
   const { mode } = useMode();
   const wallet = useWallet();
@@ -93,6 +122,12 @@ export default function TradeScreen() {
     queryFn: () => api.risk(mint),
     enabled: isSolanaAddress(mint),
   });
+  // A light warning buzz, once, when the token turns out to be red (the design's only
+  // risk haptic).
+  const isRed = risk.data?.level === 'red';
+  useEffect(() => {
+    if (isRed) haptic.warning();
+  }, [isRed]);
   const holdings = useQuery({
     queryKey: ['holdings', payer],
     queryFn: () => api.holdings(payer!),
@@ -441,9 +476,7 @@ export default function TradeScreen() {
 
       {stage.name === 'done' ? (
         <Card>
-          <View style={styles.doneIcon}>
-            <Check size={26} color={colors.up} strokeWidth={2.4} />
-          </View>
+          <SuccessCheck />
           <Text style={styles.doneTitle}>{stage.quote.side === 'buy' ? 'Bought' : 'Sold'}</Text>
           <Text style={styles.center}>
             Confirmed on Solana.{' '}
@@ -550,6 +583,7 @@ function Review({
       {payingFrom}
       {left > 0 ? (
         <Button
+          confirm
           label={`Confirm ${quote.side} · ${left}s`}
           onPress={onConfirm}
           disabled={!verified}

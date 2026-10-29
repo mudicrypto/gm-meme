@@ -5,6 +5,8 @@ export interface ChartGeometry {
   area: string;
   min: number;
   max: number;
+  /** Where the latest price sits, for a marker. */
+  end: { x: number; y: number };
 }
 
 /**
@@ -36,7 +38,7 @@ export function chartGeometry(
   const line = coords.map(([x, y], i) => `${i === 0 ? 'M' : 'L'}${x} ${y}`).join(' ');
   const last = coords[coords.length - 1]!;
   const area = `${line} L${last[0]} ${height} L${coords[0]![0]} ${height} Z`;
-  return { line, area, min, max };
+  return { line, area, min, max, end: { x: last[0], y: last[1] } };
 }
 
 function round(n: number): number {

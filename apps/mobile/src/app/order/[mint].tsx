@@ -377,6 +377,7 @@ export default function OrderScreen() {
         </View>
         {kind ? (
           <Button
+            confirm
             label={place.isPending ? 'Placing…' : CTA[kind]}
             disabled={!info || problems.length > 0 || !(Number(trigger) > 0) || place.isPending}
             onPress={() => place.mutate()}

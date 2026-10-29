@@ -10,6 +10,7 @@ import { ModeToggle } from '../../components/ModeToggle';
 import { PrivateKeyReveal } from '../../components/PrivateKeyReveal';
 import { RiskDot } from '../../components/RiskBadge';
 import { Screen, SectionTitle } from '../../components/Screen';
+import { SiftWalletCard } from '../../components/SiftWalletCard';
 import { Text, TextInput } from '../../components/Text';
 import { Empty, ErrorState, Loading } from '../../components/States';
 import { TokenAvatar } from '../../components/TokenAvatar';
@@ -51,6 +52,7 @@ export default function PortfolioScreen() {
         </View>
       }
     >
+      <SiftWalletCard />
       {wallet.status === 'loading' ? <Loading /> : null}
       {wallet.status === 'loading' ? null : wallet.address && wallet.kind ? (
         <OwnWallet address={wallet.address} kind={wallet.kind} />
@@ -248,7 +250,7 @@ function OwnWallet({ address, kind }: { address: string; kind: WalletKind }) {
             ? 'Phantom wallet'
             : kind === 'walletApp'
               ? 'Wallet app'
-              : 'Your wallet'
+              : 'Phone wallet'
         }
       />
 

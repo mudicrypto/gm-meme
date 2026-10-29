@@ -54,6 +54,12 @@ export default function RootLayout() {
             >
               <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
               <Stack.Screen name="token/[mint]" options={{ headerShown: false }} />
+              <Stack.Screen name="wallet" options={{ headerShown: false }} />
+              <Stack.Screen name="orders" options={{ headerShown: false }} />
+              <Stack.Screen
+                name="order/[mint]"
+                options={{ headerShown: false, presentation: 'modal' }}
+              />
               <Stack.Screen
                 name="trade/[mint]"
                 options={{ title: 'Trade', presentation: 'modal' }}

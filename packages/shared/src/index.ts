@@ -7,3 +7,4 @@ export * from './trade';
 export * from './social';
 export * from './sift-wallet';
 export * from './hpke';
+export * from './price-format';

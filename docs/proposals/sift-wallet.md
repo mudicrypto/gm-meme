@@ -1,6 +1,7 @@
 # Proposal: the Sift wallet (custodial, GMGN-style)
 
-Status: **waiting for founder approval. Nothing here is built.**
+Status: **approved 2026-10-29 with the recommended defaults (Privy, 1 SOL per order and 5 SOL a
+day, authenticator 2FA, phone wallet kept). First version built on devnet; see section 13.**
 Date: 2026-10-24. Scope: devnet only until an external security audit and a custody licence.
 
 ## 1. What changes, in one paragraph
@@ -286,3 +287,17 @@ Each step is tested and shown to you before the next one starts.
 3. 2FA: an authenticator app (TOTP), or passkey only? TOTP is stronger against phone theft,
    but adds a set-up step.
 4. Keep the phone wallet for existing users, or retire it after migration?
+
+## 13. What the first version does differently (2026-10-29)
+
+- **Wallet owner:** Sift's authorization key owns each wallet, not a user passkey. A
+  compromised Sift server could therefore change a wallet's policy. The 24-hour withdrawal
+  hold, 2FA and caps are enforced in Sift's server. Moving ownership to a key quorum that
+  includes the user is the next hardening step.
+- **Raising caps** needs a 2FA code but takes effect at once (no 24-hour delay yet).
+- **Device-signed requests** (section 4) are not built yet: a stolen session can place and
+  cancel orders within the caps, but can't withdraw or export without the 2FA code.
+- **Sign-up** doesn't create the wallet automatically: one tap on Portfolio or Wallet &
+  security does.
+- **The policy JSON** follows Privy's documented Solana examples but hasn't run against a
+  live Privy app yet. Verify it on devnet when the keys are set (the 2-day spike).

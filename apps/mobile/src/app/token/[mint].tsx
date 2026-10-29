@@ -2,7 +2,14 @@ import type { RiskLevel, TokenSummary } from '@sift/shared';
 import { RISK_DISCLAIMER, isSolanaAddress } from '@sift/shared';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { Link, router, useLocalSearchParams } from 'expo-router';
-import { ChevronLeft, ShieldAlert, ShieldCheck, Sparkles } from 'lucide-react-native';
+import {
+  ChevronLeft,
+  ChevronRight,
+  ShieldAlert,
+  ShieldCheck,
+  Sparkles,
+  Timer,
+} from 'lucide-react-native';
 import { useState } from 'react';
 import { Pressable, ScrollView, StyleSheet, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -284,6 +291,33 @@ export default function TokenScreen() {
           )}
         </Card>
 
+        {mode === 'pro' ? (
+          <Link
+            href={{
+              pathname: '/order/[mint]',
+              params: {
+                mint,
+                ...(info?.symbol ? { symbol: info.symbol } : {}),
+                ...(info?.name ? { name: info.name } : {}),
+              },
+            }}
+            asChild
+          >
+            <Pressable style={StyleSheet.flatten(styles.orderLink)}>
+              <View style={styles.orderIcon}>
+                <Timer size={18} color={colors.link} strokeWidth={2} />
+              </View>
+              <View style={styles.flex}>
+                <Text style={styles.checkName}>Set an order</Text>
+                <Text style={styles.sub}>
+                  Limit, stop loss or take profit · runs while your phone is off
+                </Text>
+              </View>
+              <ChevronRight size={18} color={colors.muted} strokeWidth={2} />
+            </Pressable>
+          </Link>
+        ) : null}
+
         <TokenWatch mint={mint} priceSol={lastPrice} />
         <Text style={styles.note}>{risk.data.disclaimer ?? RISK_DISCLAIMER}</Text>
       </ScrollView>
@@ -402,6 +436,24 @@ const styles = StyleSheet.create({
     borderTopColor: colors.border,
   },
   actions: { flexDirection: 'row', gap: 10 },
+  orderLink: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+    padding: 14,
+    borderRadius: 18,
+    backgroundColor: colors.surface,
+    borderWidth: 1,
+    borderColor: colors.border,
+  },
+  orderIcon: {
+    width: 36,
+    height: 36,
+    borderRadius: 12,
+    backgroundColor: tint(colors.accent, 0.14),
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
   action: { height: 54, borderRadius: 16, alignItems: 'center', justifyContent: 'center' },
   sell: {
     flex: 1,

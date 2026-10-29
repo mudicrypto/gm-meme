@@ -1,11 +1,14 @@
 import {
+  DEFAULT_ORDER_SLIPPAGE_BPS,
+  LAMPORTS_PER_SOL,
+  protectPreset,
   type TradeQuote,
   type TradeQuoteRequest,
   type TradeSide,
   isSolanaAddress,
 } from '@sift/shared';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { Link, Stack, useLocalSearchParams } from 'expo-router';
+import { Link, Stack, router, useLocalSearchParams } from 'expo-router';
 import { type ReactNode, useEffect, useState } from 'react';
 import { Check, ShieldCheck, ShieldX } from 'lucide-react-native';
 import { ActivityIndicator, Linking, Pressable, ScrollView, StyleSheet, View } from 'react-native';
@@ -18,7 +21,7 @@ import { ErrorState } from '../../components/States';
 import { Switch } from '../../components/Switch';
 import { Text, TextInput } from '../../components/Text';
 import { parseSolToLamports, percentOfRaw, rawToTokens } from '../../lib/amounts';
-import { FEE_WALLET, api } from '../../lib/api';
+import { FEE_WALLET, api, siftApi } from '../../lib/api';
 import { costLines, secondsLeft } from '../../lib/costs';
 import { formatCompact, shortAddress } from '../../lib/format';
 import { useMode } from '../../lib/mode';
@@ -27,6 +30,8 @@ import { createRpcReader, onChainProblems } from '../../lib/chain-check';
 import { mwaErrorMessage } from '../../lib/mwa-results';
 import { checkQuote } from '../../lib/trade-check';
 import { cancelPhantomRequest, isCancelled } from '../../lib/phantom';
+import { useSession } from '../../lib/session';
+import { useSiftWallet } from '../../lib/social-hooks';
 import { useWallet } from '../../lib/wallet';
 
 const BUY_PRESETS = ['0.01', '0.05', '0.1', '0.5'];
@@ -49,6 +54,7 @@ type Stage =
 const chain = createRpcReader();
 
 const PAYING_FROM = {
+  sift: 'Sift wallet',
   embedded: 'this phone’s wallet',
   phantom: 'Phantom',
   walletApp: 'your wallet app',
@@ -67,6 +73,20 @@ export default function TradeScreen() {
   const [understood, setUnderstood] = useState(false);
   const [stage, setStage] = useState<Stage>({ name: 'edit' });
   const [, tick] = useState(0);
+  const session = useSession();
+  const sift = useSiftWallet();
+  const siftWallet = sift.data?.wallet;
+  const siftUsable =
+    siftWallet !== undefined &&
+    siftWallet !== null &&
+    !siftWallet.frozen &&
+    siftWallet.signing === 'live';
+  // The Sift wallet pays by default once it exists; the phone wallet stays one tap away.
+  const [payWith, setPayWith] = useState<'sift' | 'phone' | null>(null);
+  const fromSift = siftUsable && payWith !== 'phone';
+  const payer = fromSift ? siftWallet.address : wallet.address;
+  const [protect, setProtect] = useState(true);
+  const [protectNote, setProtectNote] = useState<string | null>(null);
 
   const risk = useQuery({
     queryKey: ['risk', mint],
@@ -74,9 +94,9 @@ export default function TradeScreen() {
     enabled: isSolanaAddress(mint),
   });
   const holdings = useQuery({
-    queryKey: ['holdings', wallet.address],
-    queryFn: () => api.holdings(wallet.address!),
-    enabled: wallet.address !== null,
+    queryKey: ['holdings', payer],
+    queryFn: () => api.holdings(payer!),
+    enabled: payer !== null,
   });
   const holding = holdings.data?.holdings.find((h) => h.mint === mint);
 
@@ -148,13 +168,13 @@ export default function TradeScreen() {
     if (side === 'buy') {
       const lamports = parseSolToLamports(solInput);
       return lamports
-        ? { mint, wallet: wallet.address!, side, amount: lamports, slippageBps: Number(slippage) }
+        ? { mint, wallet: payer!, side, amount: lamports, slippageBps: Number(slippage) }
         : null;
     }
     if (!holding) return null;
     const amount = percentOfRaw(holding.amountRaw, sellPercent);
     return amount !== '0'
-      ? { mint, wallet: wallet.address!, side, amount, slippageBps: Number(slippage) }
+      ? { mint, wallet: payer!, side, amount, slippageBps: Number(slippage) }
       : null;
   };
 
@@ -179,8 +199,45 @@ export default function TradeScreen() {
     }
   };
 
+  // "Protect this trade": a stop loss at -30% and a take profit at 2x, from the buy price.
+  const placeProtection = async (quote: TradeQuote) => {
+    const tokens = rawToTokens(quote.tokenAmount, quote.tokenDecimals);
+    if (!(tokens > 0)) return;
+    const entry = quote.expectedLamports / LAMPORTS_PER_SOL / tokens;
+    try {
+      await siftApi.placeOrders(
+        session.token!,
+        protectPreset(entry).map((order) => ({
+          ...order,
+          mint,
+          slippageBps: DEFAULT_ORDER_SLIPPAGE_BPS,
+          expiresInDays: 30,
+        })),
+        true,
+      );
+      setProtectNote('Protection is on: Sift sells if it falls 30%, and sells half if it doubles.');
+      void queryClient.invalidateQueries({ queryKey: ['social', 'orders'] });
+    } catch (err) {
+      setProtectNote(
+        `The buy went through, but protection couldn’t be set: ${(err as Error).message}`,
+      );
+    }
+  };
+
   const confirm = async (quote: TradeQuote) => {
     setStage({ name: 'sending', quote });
+    if (fromSift) {
+      // Same checks as above already passed on this phone; Sift's server checks again,
+      // applies your limits, then signs through the signing vault.
+      try {
+        const { signature } = await siftApi.trade(session.token!, quote.quoteId);
+        setStage({ name: 'pending', quote, signature });
+        if (quote.side === 'buy' && protect) void placeProtection(quote);
+      } catch (err) {
+        setStage({ name: 'failed', message: (err as Error).message });
+      }
+      return;
+    }
     try {
       const signed = await wallet.signTransaction(quote.transaction);
       const { signature } = await api.submit(quote.quoteId, signed);
@@ -317,7 +374,24 @@ export default function TradeScreen() {
             </View>
           ) : null}
 
-          <PayingFrom kind={wallet.kind} address={wallet.address} solBalance={solBalance} />
+          {fromSift && side === 'buy' ? (
+            <ProtectCard
+              on={protect}
+              onChange={setProtect}
+              simple={mode === 'simple'}
+              onCustomize={() => router.push(`/order/${mint}?kind=stop_loss`)}
+            />
+          ) : null}
+          <PayingFrom
+            kind={fromSift ? 'sift' : wallet.kind}
+            address={payer!}
+            solBalance={solBalance}
+            onSwitch={
+              siftUsable && wallet.address
+                ? () => setPayWith(fromSift ? 'phone' : 'sift')
+                : undefined
+            }
+          />
           <Button
             label={stage.name === 'quoting' ? 'Getting price…' : `Review ${title.toLowerCase()}`}
             onPress={review}
@@ -329,7 +403,11 @@ export default function TradeScreen() {
       {stage.name === 'review' ? (
         <Review
           payingFrom={
-            <PayingFrom kind={wallet.kind} address={wallet.address} solBalance={solBalance} />
+            <PayingFrom
+              kind={fromSift ? 'sift' : wallet.kind}
+              address={payer!}
+              solBalance={solBalance}
+            />
           }
           quote={stage.quote}
           problems={stage.problems}
@@ -345,11 +423,13 @@ export default function TradeScreen() {
           <Text style={styles.center}>
             {stage.name === 'pending'
               ? 'Waiting for the network to confirm…'
-              : wallet.kind === 'phantom'
-                ? 'Approve the trade in Phantom…'
-                : wallet.kind === 'walletApp'
-                  ? 'Approve the trade in your wallet app…'
-                  : 'Signing on this phone and sending…'}
+              : fromSift
+                ? 'Signing from your Sift wallet…'
+                : wallet.kind === 'phantom'
+                  ? 'Approve the trade in Phantom…'
+                  : wallet.kind === 'walletApp'
+                    ? 'Approve the trade in your wallet app…'
+                    : 'Signing on this phone and sending…'}
           </Text>
           {stage.name === 'sending' && wallet.kind === 'phantom' ? (
             <Pressable onPress={cancelPhantomRequest}>
@@ -371,6 +451,7 @@ export default function TradeScreen() {
               ? 'The tokens are in your wallet.'
               : 'The SOL is in your wallet.'}
           </Text>
+          {protectNote ? <Text style={styles.protectNote}>{protectNote}</Text> : null}
           <Pressable onPress={() => Linking.openURL(explorerUrl(stage.signature))}>
             <Text style={[styles.center, styles.link]}>View on Solscan</Text>
           </Pressable>
@@ -485,19 +566,64 @@ function PayingFrom({
   kind,
   address,
   solBalance,
+  onSwitch,
 }: {
   kind: keyof typeof PAYING_FROM | null;
   address: string;
   solBalance: number | undefined;
+  onSwitch?: () => void;
 }) {
   return (
-    <Text style={styles.payingFrom}>
-      Paying from {kind ? PAYING_FROM[kind] : 'your wallet'}{' '}
-      <Text mono style={styles.payingFrom}>
-        {shortAddress(address)}
+    <View style={styles.payingRow}>
+      <Text style={styles.payingFrom}>
+        Paying from{' '}
+        <Text style={styles.payingStrong}>{kind ? PAYING_FROM[kind] : 'your wallet'}</Text>{' '}
+        <Text mono style={styles.payingFrom}>
+          {kind === 'sift' ? '' : shortAddress(address)}
+          {solBalance !== undefined
+            ? `${kind === 'sift' ? '' : ' '}· ${formatCompact(solBalance)} SOL`
+            : ''}
+        </Text>
       </Text>
-      {solBalance !== undefined ? ` · ${formatCompact(solBalance)} SOL` : ''}
-    </Text>
+      {onSwitch ? (
+        <Pressable onPress={onSwitch} accessibilityRole="button" hitSlop={10}>
+          <Text style={styles.switchLink}>Change</Text>
+        </Pressable>
+      ) : null}
+    </View>
+  );
+}
+
+/** "Protect this trade": on by default when buying from the Sift wallet. */
+function ProtectCard({
+  on,
+  onChange,
+  simple,
+  onCustomize,
+}: {
+  on: boolean;
+  onChange: (on: boolean) => void;
+  simple: boolean;
+  onCustomize: () => void;
+}) {
+  return (
+    <View style={[styles.protect, on ? styles.protectOn : null]}>
+      <View style={[styles.protectIcon, on ? styles.protectIconOn : null]}>
+        <ShieldCheck size={20} color={on ? colors.up : colors.muted} strokeWidth={2} />
+      </View>
+      <View style={styles.flex}>
+        <Text style={styles.protectTitle}>Protect this trade</Text>
+        <Text style={styles.protectBody}>
+          {simple
+            ? 'Auto-sell if it falls 30% · sell half when it doubles'
+            : 'Stop loss −30% (all) · take profit +100% (half)'}
+        </Text>
+        <Pressable onPress={onCustomize} accessibilityRole="link" hitSlop={8}>
+          <Text style={styles.switchLink}>Customize</Text>
+        </Pressable>
+      </View>
+      <Switch value={on} onValueChange={onChange} label="Protect this trade" />
+    </View>
   );
 }
 
@@ -550,7 +676,33 @@ const styles = StyleSheet.create({
   costLabel: { fontSize: 14, color: colors.text2 },
   costValue: { fontSize: 14, color: colors.text },
   costStrong: { fontSize: 15, fontWeight: '700', color: colors.text },
+  payingRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 10 },
   payingFrom: { fontSize: 13, color: colors.muted, textAlign: 'center' },
+  payingStrong: { fontSize: 13, fontWeight: '700', color: colors.body },
+  switchLink: { fontSize: 13, fontWeight: '700', color: colors.link },
+  protect: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+    padding: 14,
+    borderRadius: 16,
+    borderWidth: 1,
+    borderColor: colors.borderStrong,
+    backgroundColor: colors.surface,
+  },
+  protectOn: { backgroundColor: tint(colors.up, 0.08), borderColor: tint(colors.up, 0.3) },
+  protectIcon: {
+    width: 40,
+    height: 40,
+    borderRadius: 12,
+    backgroundColor: colors.surface2,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  protectIconOn: { backgroundColor: tint(colors.up, 0.14) },
+  protectTitle: { fontSize: 15, fontWeight: '800' },
+  protectBody: { fontSize: 12, lineHeight: 17, color: colors.text2, marginTop: 2, marginBottom: 4 },
+  protectNote: { fontSize: 13, lineHeight: 19, color: colors.up, textAlign: 'center' },
   linkButton: {
     height: 54,
     borderRadius: 16,

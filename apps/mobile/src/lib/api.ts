@@ -3,6 +3,9 @@ import type {
   AlertDirection,
   AlertsResponse,
   AuthChallenge,
+  CreateOrderRequest,
+  SiftOrder,
+  SiftWalletInfo,
   AuthSession,
   FeedResponse,
   MeResponse,
@@ -145,6 +148,51 @@ export const socialApi = {
   pushTest: (token: string) => authed<{ devices: number }>(token, 'POST', '/me/push-test', {}),
   deletePushToken: (token: string, pushToken: string) =>
     authed<void>(token, 'DELETE', '/me/push-token', { token: pushToken }),
+};
+
+/** The Sift wallet (keys held by the signing provider) and its automatic orders. */
+export const siftApi = {
+  wallet: (token: string) =>
+    authed<{ wallet: SiftWalletInfo | null; signing: SiftWalletInfo['signing'] }>(
+      token,
+      'GET',
+      '/me/sift-wallet',
+    ),
+  create: (token: string) =>
+    authed<{ wallet: SiftWalletInfo }>(token, 'POST', '/me/sift-wallet', {}),
+  setLimits: (
+    token: string,
+    limits: { perOrderLamports: number; dailyLamports: number; code?: string },
+  ) => authed<{ wallet: SiftWalletInfo }>(token, 'PUT', '/me/sift-wallet/limits', limits),
+  freeze: (token: string) =>
+    authed<{ wallet: SiftWalletInfo }>(token, 'POST', '/me/sift-wallet/freeze', {}),
+  unfreeze: (token: string, code?: string) =>
+    authed<{ wallet: SiftWalletInfo }>(token, 'POST', '/me/sift-wallet/unfreeze', { code }),
+  startTwoFactor: (token: string) =>
+    authed<{ secret: string; uri: string }>(token, 'POST', '/me/sift-wallet/2fa', {}),
+  confirmTwoFactor: (token: string, code: string) =>
+    authed<{ wallet: SiftWalletInfo }>(token, 'POST', '/me/sift-wallet/2fa/confirm', { code }),
+  setWithdrawalAddress: (token: string, address: string, code: string) =>
+    authed<{ wallet: SiftWalletInfo }>(token, 'PUT', '/me/sift-wallet/withdrawal-address', {
+      address,
+      code,
+    }),
+  withdraw: (token: string, lamports: number, code: string) =>
+    authed<{ signature: string }>(token, 'POST', '/me/sift-wallet/withdraw', { lamports, code }),
+  exportKey: (token: string, code: string, recipientPublicKey: string) =>
+    authed<{ ciphertext: string; encapsulatedKey: string }>(
+      token,
+      'POST',
+      '/me/sift-wallet/export',
+      { code, recipientPublicKey },
+    ),
+  trade: (token: string, quoteId: string) =>
+    authed<{ signature: string }>(token, 'POST', '/me/sift-wallet/trades', { quoteId }),
+  orders: (token: string) => authed<{ orders: SiftOrder[] }>(token, 'GET', '/me/orders'),
+  placeOrders: (token: string, orders: CreateOrderRequest[], protect = false) =>
+    authed<{ orders: SiftOrder[] }>(token, 'POST', '/me/orders', { orders, protect }),
+  cancelOrder: (token: string, id: string) =>
+    authed<void>(token, 'DELETE', `/me/orders/${enc(id)}`),
 };
 
 export const api = {

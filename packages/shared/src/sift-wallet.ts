@@ -1,3 +1,4 @@
+import { formatSolPrice } from './price-format';
 import { LAMPORTS_PER_SOL } from './solana';
 import type { FeedToken } from './social';
 
@@ -131,7 +132,7 @@ export function orderProgress(
 
 /** SOL price with enough significant digits for tiny meme coin prices. */
 export function formatOrderPrice(price: number): string {
-  return `${Number(price.toPrecision(3)).toString()} SOL`;
+  return `${formatSolPrice(price)} SOL`;
 }
 
 function solText(lamports: number): string {

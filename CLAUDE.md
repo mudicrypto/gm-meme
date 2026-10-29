@@ -7,9 +7,13 @@ one step at a time and stop after each step for the user to test.
 
 ## Non-negotiables
 
-- **Non-custodial only.** Sift never holds, receives, stores or logs private keys or seed
-  phrases. Transactions are built server-side at most, and are always signed on the user's
-  device (Phantom via its encrypted deeplinks, or the embedded wallet).
+- **Custody only through the signing provider.** Sift wallets' keys live only in Privy.
+  Sift never sees, stores or logs a private key or seed phrase (export is HPKE-encrypted
+  straight to the phone). The server signs only through Privy, only transactions that pass
+  `verifyTradeTransaction` (or `withdrawalProblems`) plus the user's caps and the provider
+  policy, and never while the account or `SIFT_SIGNING_FROZEN` is frozen. Phantom and
+  phone-wallet trades are still signed on the device. Sift wallet code lives in
+  `apps/api/src/sift-wallet/`. Devnet only until an external audit and a custody licence.
 - **Devnet until Step 8.** Default `SOLANA_CLUSTER` is `devnet`. Don't point anything at mainnet
   before the security review is done.
 - **Secrets stay in `.env`**, which is gitignored. Only `.env.example` files are committed.

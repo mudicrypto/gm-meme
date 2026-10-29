@@ -70,3 +70,23 @@ Android delivers notifications through Google's Firebase, which is free.
 6. Build again (**Actions** > **Build test app**) and install the new build.
 7. In the app, sign in, open the **Watchlist** tab, and tap **Send a test notification**.
    Allow notifications when Android asks. The test should appear within seconds.
+
+## 4. The Sift wallet (devnet)
+
+The Sift wallet's keys live in Privy, never on Sift's server. To switch it on:
+
+1. Run `supabase/migrations/20261029000000_sift_wallet.sql` in Supabase > **SQL Editor**.
+2. Create a free account at https://dashboard.privy.io and an app named `Sift`.
+3. In the app: **App settings** > **Basics**. Copy the **App ID** and **App secret**.
+4. In the **Wallets** section, open **Authorization keys** and click **New key**. Privy
+   shows the private key once (it starts with `wallet-auth:`): copy it now, because Privy
+   can't show it again. Copy the key's **ID** too.
+5. In Render, open the API service > **Environment** and add these four values. Paste them
+   into Render only, never into chat:
+   - `PRIVY_APP_ID`, `PRIVY_APP_SECRET`
+   - `PRIVY_AUTHORIZATION_KEY` (the `wallet-auth:` key)
+   - `PRIVY_OWNER_ID` (the key's ID)
+6. Save. Render redeploys. In the app, open **Portfolio** > **Get your Sift wallet**.
+
+Emergency stop: set `SIFT_SIGNING_FROZEN=true` in Render. Nothing is signed until you set it
+back. For a full stop at Privy too, delete the authorization key in the Privy dashboard.

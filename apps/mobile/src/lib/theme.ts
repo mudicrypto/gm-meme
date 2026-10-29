@@ -24,6 +24,8 @@ export const colors = {
   muted: '#9BA4B5',
   faint: '#8A93A5',
   accent: '#8B9CFF',
+  /** Shadows and glows (never shown as a surface). */
+  shadow: '#000000',
   /** Text and icons on an accent background. */
   onAccent: '#0B0D12',
   /** Links and accent labels. */
@@ -52,7 +54,13 @@ export const fonts = {
 } as const;
 
 export const radius = { chip: 12, input: 14, card: 18, cardLarge: 20, hero: 24, sheet: 28 };
-export const space = { screen: 20, gap: 10, card: 16 };
+export const space = {
+  screen: 20,
+  gap: 10,
+  card: 16,
+  /** Room at the bottom of tab screens so content clears the floating tab bar. */
+  tabBar: 120,
+};
 
 /** Type scale: size, weight and letter spacing. */
 export const type = {

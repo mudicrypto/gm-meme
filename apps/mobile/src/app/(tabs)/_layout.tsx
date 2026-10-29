@@ -1,7 +1,7 @@
 import { Tabs } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { TabIcon } from '../../components/TabIcon';
-import { colors, fonts } from '../../lib/theme';
+import { colors, fonts, tint } from '../../lib/theme';
 
 export default function TabLayout() {
   const insets = useSafeAreaInsets();
@@ -12,14 +12,29 @@ export default function TabLayout() {
         headerShown: false,
         tabBarActiveTintColor: colors.accent,
         tabBarInactiveTintColor: colors.muted,
+        // A floating bar: rounded, lifted off the bottom edge, content scrolls beneath it.
         tabBarStyle: {
-          backgroundColor: colors.tabBar,
-          borderTopColor: colors.border,
-          height: 70 + insets.bottom,
+          position: 'absolute',
+          left: 16,
+          right: 16,
+          bottom: Math.max(insets.bottom, 12),
+          height: 72,
           paddingTop: 6,
-          paddingBottom: insets.bottom + 6,
+          paddingBottom: 6,
+          borderRadius: 24,
+          borderTopWidth: 1,
+          borderWidth: 1,
+          borderColor: colors.borderStrong,
+          borderTopColor: colors.borderStrong,
+          backgroundColor: tint(colors.tabBar, 0.96),
+          shadowColor: colors.shadow,
+          shadowOpacity: 0.45,
+          shadowRadius: 24,
+          shadowOffset: { width: 0, height: 10 },
+          elevation: 18,
         },
-        tabBarLabelStyle: { fontFamily: fonts.ui[700], fontSize: 11, lineHeight: 16 },
+        tabBarLabelStyle: { fontFamily: fonts.ui[700], fontSize: 11, lineHeight: 14, marginTop: 2 },
+        tabBarItemStyle: { height: 58, paddingVertical: 2 },
         sceneStyle: { backgroundColor: colors.bg },
       }}
     >

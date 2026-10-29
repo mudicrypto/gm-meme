@@ -31,7 +31,12 @@ export function TokenRow({ token }: { token: TokenSummary | TrendingToken }) {
           style arrays or functions. */}
       <PressableScale style={StyleSheet.flatten(styles.card)} scaleTo={0.98}>
         <View style={styles.top}>
-          <TokenAvatar uri={token.imageUrl} label={token.name ?? token.symbol} seed={token.mint} />
+          <TokenAvatar
+            uri={token.imageUrl}
+            label={token.name ?? token.symbol}
+            seed={token.mint}
+            size={48}
+          />
           <View style={styles.middle}>
             <View style={styles.nameRow}>
               <Text style={styles.name} numberOfLines={1}>

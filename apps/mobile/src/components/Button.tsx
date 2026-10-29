@@ -126,7 +126,15 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   small: { height: 44, borderRadius: 14 },
-  primary: { backgroundColor: colors.accent },
+  // A soft accent glow under the main action.
+  primary: {
+    backgroundColor: colors.accent,
+    shadowColor: colors.accent,
+    shadowOpacity: 0.35,
+    shadowRadius: 16,
+    shadowOffset: { width: 0, height: 6 },
+    elevation: 6,
+  },
   secondary: { backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.borderStrong },
   label: { fontSize: 16, fontWeight: '800' },
   icon: {

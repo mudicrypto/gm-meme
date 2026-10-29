@@ -27,8 +27,10 @@ import { DevnetBadge } from '../../components/DevnetBadge';
 import { RiskBadge } from '../../components/RiskBadge';
 import { Segmented } from '../../components/Segmented';
 import { ErrorState } from '../../components/States';
+import { NumPad } from '../../components/NumPad';
+import { SlideToConfirm } from '../../components/SlideToConfirm';
 import { Switch } from '../../components/Switch';
-import { Text, TextInput } from '../../components/Text';
+import { Text } from '../../components/Text';
 import { parseSolToLamports, percentOfRaw, rawToTokens } from '../../lib/amounts';
 import { FEE_WALLET, api, siftApi } from '../../lib/api';
 import { costLines, secondsLeft } from '../../lib/costs';
@@ -323,14 +325,15 @@ export default function TradeScreen() {
               <View style={styles.amountBox}>
                 <Text style={styles.amountLabel}>You pay</Text>
                 <View style={styles.amountRow}>
-                  <TextInput
-                    value={solInput}
-                    onChangeText={setSolInput}
-                    keyboardType="decimal-pad"
-                    accessibilityLabel="Amount to spend in SOL"
+                  <Text
                     mono
-                    style={styles.amountInput}
-                  />
+                    style={[styles.amountInput, !solInput && styles.amountEmpty]}
+                    accessibilityLabel={`Amount to spend: ${solInput || 0} SOL`}
+                    numberOfLines={1}
+                    adjustsFontSizeToFit
+                  >
+                    {solInput || '0'}
+                  </Text>
                   <Text mono style={styles.amountUnit}>
                     SOL
                   </Text>
@@ -351,6 +354,7 @@ export default function TradeScreen() {
                   />
                 ))}
               </View>
+              <NumPad value={solInput} onChange={setSolInput} />
             </>
           ) : holding ? (
             <>
@@ -582,10 +586,9 @@ function Review({
 
       {payingFrom}
       {left > 0 ? (
-        <Button
-          confirm
-          label={`Confirm ${quote.side} · ${left}s`}
-          onPress={onConfirm}
+        <SlideToConfirm
+          label={`Slide to ${quote.side} · ${left}s`}
+          onConfirm={onConfirm}
           disabled={!verified}
         />
       ) : (
@@ -698,6 +701,7 @@ const styles = StyleSheet.create({
     minWidth: 80,
     padding: 0,
   },
+  amountEmpty: { color: colors.faint },
   amountUnit: { fontSize: 18, fontWeight: '600', color: colors.muted },
   presets: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, justifyContent: 'center' },
   slippage: { gap: 8 },

@@ -1,9 +1,12 @@
 import type { RiskLevel, TokenSummary } from '@sift/shared';
 import { RISK_DISCLAIMER, isSolanaAddress } from '@sift/shared';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
+import * as Clipboard from 'expo-clipboard';
 import { Link, router, useLocalSearchParams } from 'expo-router';
 import {
+  Check,
   ChevronLeft,
+  Copy,
   ChevronRight,
   ShieldAlert,
   ShieldCheck,
@@ -20,6 +23,7 @@ import { Card } from '../../components/Card';
 import { ModeToggle } from '../../components/ModeToggle';
 import { PriceChart } from '../../components/PriceChart';
 import { FlashText } from '../../components/FlashText';
+import { PressableScale } from '../../components/Motion';
 import { ErrorState, Loading } from '../../components/States';
 import { Text } from '../../components/Text';
 import { TokenAvatar } from '../../components/TokenAvatar';
@@ -35,6 +39,7 @@ import {
   shortAddress,
 } from '../../lib/format';
 import { useMode } from '../../lib/mode';
+import { haptic } from '../../lib/motion';
 import { RISK_COLORS, RISK_LABELS, colors, space, tint } from '../../lib/theme';
 
 // The chart API takes 5 minutes to 24 hours.
@@ -54,6 +59,59 @@ const CHECK_NAMES: Record<string, string> = {
   dev_history: 'Creator history',
   sell_test: 'Selling',
 };
+
+/** The token's big header: image, name, ticker, age, and its address to copy. */
+function TokenHero({ mint, info }: { mint: string; info: TokenSummary | undefined }) {
+  const [copied, setCopied] = useState(false);
+  // Token names are attacker-controlled metadata: display text only, capped.
+  const name = (info?.name ?? info?.symbol ?? shortAddress(mint)).slice(0, 32);
+  return (
+    <View style={styles.hero}>
+      <TokenAvatar uri={info?.imageUrl} label={info?.name ?? info?.symbol} seed={mint} size={64} />
+      <View style={styles.heroText}>
+        <Text style={styles.heroName} numberOfLines={1}>
+          {name}
+        </Text>
+        <View style={styles.chips}>
+          {info?.symbol ? (
+            <View style={styles.chip}>
+              <Text mono style={styles.chipText}>
+                ${info.symbol.slice(0, 12)}
+              </Text>
+            </View>
+          ) : null}
+          {info ? (
+            <View style={styles.chip}>
+              <Text style={styles.chipText}>
+                {ageLabel(formatAge(info.launchedAt ?? info.firstSeenAt))}
+              </Text>
+            </View>
+          ) : null}
+          <PressableScale
+            onPress={async () => {
+              await Clipboard.setStringAsync(mint);
+              haptic.select();
+              setCopied(true);
+              setTimeout(() => setCopied(false), 1800);
+            }}
+            accessibilityRole="button"
+            accessibilityLabel="Copy token address"
+            style={StyleSheet.flatten([styles.chip, styles.chipRow])}
+          >
+            {copied ? (
+              <Check size={12} color={colors.up} strokeWidth={2.6} />
+            ) : (
+              <Copy size={12} color={colors.muted} strokeWidth={2.2} />
+            )}
+            <Text mono style={[styles.chipText, copied && { color: colors.up }]}>
+              {copied ? 'Copied' : shortAddress(mint)}
+            </Text>
+          </PressableScale>
+        </View>
+      </View>
+    </View>
+  );
+}
 
 /** "5m old", or "just launched" for a brand-new token. */
 function ageLabel(age: string): string {
@@ -102,27 +160,7 @@ export default function TokenScreen() {
       >
         <ChevronLeft size={20} color={colors.text} strokeWidth={2} />
       </IconButton>
-      <View style={styles.identity}>
-        <TokenAvatar
-          uri={info?.imageUrl}
-          label={info?.name ?? info?.symbol}
-          seed={mint}
-          size={32}
-        />
-        <View style={styles.flexShrink}>
-          <Text style={styles.name} numberOfLines={1}>
-            {info?.name ?? info?.symbol ?? shortAddress(mint)}
-          </Text>
-          <Text style={styles.sub} numberOfLines={1}>
-            {[
-              info?.symbol,
-              info ? ageLabel(formatAge(info.launchedAt ?? info.firstSeenAt)) : undefined,
-            ]
-              .filter(Boolean)
-              .join(' · ') || 'Token'}
-          </Text>
-        </View>
-      </View>
+      <View style={styles.flex} />
       <ModeToggle />
     </View>
   );
@@ -170,6 +208,7 @@ export default function TokenScreen() {
     <View style={styles.root}>
       {header}
       <ScrollView contentContainerStyle={styles.content}>
+        <TokenHero mint={mint} info={info} />
         <View>
           {lastPrice ? (
             <FlashText value={lastPrice} style={styles.price}>
@@ -397,6 +436,19 @@ function Mark({ level }: { level: RiskLevel }) {
 
 const styles = StyleSheet.create({
   root: { flex: 1, backgroundColor: colors.bg },
+  hero: { flexDirection: 'row', alignItems: 'center', gap: 14, marginBottom: 4 },
+  heroText: { flex: 1, minWidth: 0, gap: 8 },
+  heroName: { fontSize: 26, fontWeight: '800', letterSpacing: -0.7 },
+  chips: { flexDirection: 'row', flexWrap: 'wrap', gap: 6 },
+  chip: {
+    height: 26,
+    paddingHorizontal: 9,
+    borderRadius: 8,
+    backgroundColor: colors.surface2,
+    justifyContent: 'center',
+  },
+  chipRow: { flexDirection: 'row', alignItems: 'center', gap: 5 },
+  chipText: { fontSize: 12, fontWeight: '600', color: colors.text2 },
   header: {
     flexDirection: 'row',
     alignItems: 'center',

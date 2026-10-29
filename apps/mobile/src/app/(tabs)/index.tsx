@@ -5,6 +5,7 @@ import { useState } from 'react';
 import { Animated, FlatList, Pressable, RefreshControl, StyleSheet, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Chip } from '../../components/Button';
+import { FeaturedToken } from '../../components/FeaturedToken';
 import { Logo } from '../../components/Logo';
 import { FadeIn, usePulse } from '../../components/Motion';
 import { ModeToggle } from '../../components/ModeToggle';
@@ -39,9 +40,13 @@ export default function DiscoverScreen() {
   const pulse = usePulse(0.3, 1000);
   const all = query.data?.tokens ?? [];
   const redCount = all.filter((token) => token.riskLevel === 'red').length;
-  const tokens = all.filter((token) =>
+  const visible = all.filter((token) =>
     feed === 'clean' ? token.riskLevel === 'green' : showRed || token.riskLevel !== 'red',
   );
+  // On Trending, the busiest token gets the big card (never a red one).
+  const featured =
+    feed === 'trending' && visible[0] && visible[0].riskLevel !== 'red' ? visible[0] : null;
+  const tokens = featured ? visible.slice(1) : visible;
 
   const header = (
     <View style={styles.header}>
@@ -94,6 +99,12 @@ export default function DiscoverScreen() {
         </Text>
       ) : null}
       {query.isPending ? <SkeletonCards count={5} /> : null}
+      {featured ? (
+        <FadeIn>
+          <FeaturedToken token={featured} />
+        </FadeIn>
+      ) : null}
+      {featured && tokens.length > 0 ? <Text style={styles.listLabel}>Also trending</Text> : null}
     </View>
   );
 
@@ -117,12 +128,14 @@ export default function DiscoverScreen() {
           contentContainerStyle={[styles.list, { paddingTop: insets.top + 16 }]}
           ItemSeparatorComponent={() => <View style={{ height: space.gap }} />}
           ListEmptyComponent={
-            query.isPending ? undefined : (
+            query.isPending || featured ? undefined : (
               <Empty
                 message={
                   feed === 'clean'
                     ? 'No trending token is free of red flags right now.'
-                    : 'No tokens yet. New launches appear here within seconds.'
+                    : redCount > 0 && !showRed
+                      ? 'Only red-flagged tokens right now. Tap Show above to see them.'
+                      : 'No tokens yet. New launches appear here within seconds.'
                 }
               />
             )
@@ -146,6 +159,7 @@ const styles = StyleSheet.create({
   topBar: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
   subtitle: { marginTop: 4, fontSize: 14, color: colors.muted },
   tabs: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
+  listLabel: { fontSize: 13, fontWeight: '800', color: colors.muted, marginTop: 4 },
   live: { flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: 8 },
   liveDot: { width: 7, height: 7, borderRadius: 4, backgroundColor: colors.up },
   liveText: { fontSize: 12, color: colors.faint },
@@ -164,5 +178,5 @@ const styles = StyleSheet.create({
   filterCount: { fontSize: 13, fontWeight: '700', color: colors.text },
   filterAction: { fontSize: 13, fontWeight: '700', color: colors.link },
   note: { fontSize: 13, color: colors.faint },
-  list: { paddingHorizontal: space.screen, paddingBottom: 40 },
+  list: { paddingHorizontal: space.screen, paddingBottom: space.tabBar },
 });

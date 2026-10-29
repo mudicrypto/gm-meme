@@ -70,7 +70,7 @@ export function SectionTitle({ title, right }: { title: string; right?: ReactNod
 
 const styles = StyleSheet.create({
   root: { flex: 1, backgroundColor: colors.bg },
-  content: { paddingHorizontal: space.screen, paddingBottom: 40, gap: space.gap },
+  content: { paddingHorizontal: space.screen, paddingBottom: space.tabBar, gap: space.gap },
   titleRow: { flexDirection: 'row', alignItems: 'center', gap: 12, marginBottom: 6 },
   flex: { flex: 1 },
   subtitle: { marginTop: 4, fontSize: 14, color: colors.muted },

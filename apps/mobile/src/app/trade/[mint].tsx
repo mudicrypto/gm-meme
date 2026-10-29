@@ -5,36 +5,50 @@ import {
   type TradeQuote,
   type TradeQuoteRequest,
   type TradeSide,
+  SIFT_PLATFORM_FEE_BPS,
   isSolanaAddress,
 } from '@sift/shared';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { Link, Stack, router, useLocalSearchParams } from 'expo-router';
 import { type ReactNode, useEffect, useState } from 'react';
-import { Check, ShieldCheck, ShieldX } from 'lucide-react-native';
+import {
+  AlertTriangle,
+  Check,
+  ChevronLeft,
+  ChevronRight,
+  Settings,
+  ShieldCheck,
+  ShieldX,
+} from 'lucide-react-native';
 import {
   ActivityIndicator,
   Animated,
+  KeyboardAvoidingView,
   Linking,
+  Platform,
   Pressable,
   ScrollView,
   StyleSheet,
   View,
 } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { NATIVE, haptic, useReduceMotion } from '../../lib/motion';
-import { Button, Chip } from '../../components/Button';
+import { Button, IconButton } from '../../components/Button';
 import { Card } from '../../components/Card';
-import { DevnetBadge } from '../../components/DevnetBadge';
-import { RiskBadge } from '../../components/RiskBadge';
+import { Confetti } from '../../components/Confetti';
+import { SolanaMark } from '../../components/market/Network';
+import { useTokenInfo } from '../../components/market/useTokenInfo';
 import { Segmented } from '../../components/Segmented';
 import { ErrorState } from '../../components/States';
-import { NumPad } from '../../components/NumPad';
+import { Sheet } from '../../components/Sheet';
 import { SlideToConfirm } from '../../components/SlideToConfirm';
 import { Switch } from '../../components/Switch';
-import { Text } from '../../components/Text';
+import { Text, TextInput } from '../../components/Text';
 import { parseSolToLamports, percentOfRaw, rawToTokens } from '../../lib/amounts';
 import { FEE_WALLET, api, siftApi } from '../../lib/api';
 import { costLines, secondsLeft } from '../../lib/costs';
 import { formatCompact, shortAddress } from '../../lib/format';
+import { useTokenStats } from '../../lib/market-hooks';
 import { useMode } from '../../lib/mode';
 import { RISK_COLORS, colors, radius, space, tint } from '../../lib/theme';
 import { createRpcReader, onChainProblems } from '../../lib/chain-check';
@@ -45,8 +59,11 @@ import { useSession } from '../../lib/session';
 import { useSiftWallet } from '../../lib/social-hooks';
 import { useWallet } from '../../lib/wallet';
 
-const BUY_PRESETS = ['0.01', '0.05', '0.1', '0.5'];
-const SELL_PRESETS = [25, 50, 100];
+const BUY_PRESETS = ['0.1', '0.5', '1'];
+const SELL_PRESETS = [25, 50, 75, 100];
+/** SOL kept back by "Max" for network fees and first-buy account deposits. */
+const FEE_RESERVE_SOL = 0.01;
+const PLATFORM_FEE_RATE = SIFT_PLATFORM_FEE_BPS / 10_000;
 const SLIPPAGES = [
   { value: '100', label: '1%' },
   { value: '500', label: '5%' },
@@ -66,7 +83,7 @@ const chain = createRpcReader();
 
 const PAYING_FROM = {
   sift: 'Sift wallet',
-  embedded: 'this phone’s wallet',
+  embedded: 'Phone wallet',
   phantom: 'Phantom',
   walletApp: 'your wallet app',
 } as const;
@@ -95,12 +112,22 @@ export default function TradeScreen() {
   const { mode } = useMode();
   const wallet = useWallet();
   const queryClient = useQueryClient();
-  const params = useLocalSearchParams<{ mint: string; side?: string }>();
+  const params = useLocalSearchParams<{
+    mint: string;
+    side?: string;
+    amount?: string;
+    slippage?: string;
+  }>();
   const mint = params.mint ?? '';
   const [side, setSide] = useState<TradeSide>(params.side === 'sell' ? 'sell' : 'buy');
-  const [solInput, setSolInput] = useState('0.05');
+  // The desktop panel passes its amount and slippage along; anything odd falls back.
+  const [solInput, setSolInput] = useState(
+    params.amount && /^\d{1,6}(\.\d{1,9})?$/.test(params.amount) ? params.amount : '0.1',
+  );
   const [sellPercent, setSellPercent] = useState(50);
-  const [slippage, setSlippage] = useState<(typeof SLIPPAGES)[number]['value']>('500');
+  const [slippage, setSlippage] = useState<(typeof SLIPPAGES)[number]['value']>(
+    SLIPPAGES.find((option) => option.value === params.slippage)?.value ?? '500',
+  );
   const [understood, setUnderstood] = useState(false);
   const [stage, setStage] = useState<Stage>({ name: 'edit' });
   const [, tick] = useState(0);
@@ -118,6 +145,11 @@ export default function TradeScreen() {
   const payer = fromSift ? siftWallet.address : wallet.address;
   const [protect, setProtect] = useState(true);
   const [protectNote, setProtectNote] = useState<string | null>(null);
+  const [settingsOpen, setSettingsOpen] = useState(false);
+  const insets = useSafeAreaInsets();
+  const tokenInfo = useTokenInfo(mint);
+  // The last trade in a day: new tokens can go quiet for an hour.
+  const priceStats = useTokenStats(mint, 1440, isSolanaAddress(mint));
 
   const risk = useQuery({
     queryKey: ['risk', mint],
@@ -290,227 +322,456 @@ export default function TradeScreen() {
 
   const title = side === 'buy' ? 'Buy' : 'Sell';
   const solBalance = holdings.data?.solBalance;
+  const symbol = (holding?.symbol ?? tokenInfo?.symbol ?? shortAddress(mint)).slice(0, 12);
+  const flags = risk.data?.reasons.filter((r) => r.level !== 'green') ?? [];
+  const editing = stage.name === 'edit' || stage.name === 'quoting';
+  // Keep enough SOL for fees and a first-buy account deposit when using "Max".
+  const maxSpend = solBalance !== undefined ? Math.max(0, solBalance - FEE_RESERVE_SOL) : 0;
+  const setSol = (sol: number) => setSolInput(String(Number(sol.toFixed(4))));
+  const lastPrice = priceStats.data?.priceSol;
+  const feeShare = 1 - PLATFORM_FEE_RATE;
+  const estimate =
+    lastPrice === undefined
+      ? null
+      : side === 'buy'
+        ? Number(solInput) > 0
+          ? `≈ ${formatCompact((Number(solInput) * feeShare) / lastPrice)} ${symbol}`
+          : null
+        : holding
+          ? `≈ ${formatCompact(rawToTokens(holding.amountRaw, holding.decimals) * (sellPercent / 100) * lastPrice * feeShare)} SOL`
+          : null;
+  const footerHeight = 112 + insets.bottom;
 
   return (
-    <ScrollView contentContainerStyle={styles.screen}>
-      <Stack.Screen
-        options={{
-          title: `${title} ${holding?.symbol ?? shortAddress(mint)}`,
-          headerRight: () => (
-            <View style={styles.headerBadge}>
-              <DevnetBadge />
-            </View>
-          ),
-        }}
-      />
+    <KeyboardAvoidingView
+      style={styles.root}
+      behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+    >
+      <Stack.Screen options={{ headerShown: false }} />
+      <View style={[styles.header, { paddingTop: insets.top + space.sm }]}>
+        <IconButton
+          label="Back"
+          onPress={() => (router.canGoBack() ? router.back() : router.replace(`/token/${mint}`))}
+        >
+          <ChevronLeft size={20} color={colors.text} strokeWidth={2} />
+        </IconButton>
+        <Text style={styles.headerTitle} numberOfLines={1}>
+          {stage.name === 'review' ? `Review ${title.toLowerCase()}` : `Trade ${symbol}`}
+        </Text>
+        <IconButton label="Trade settings" onPress={() => setSettingsOpen(true)}>
+          <Settings size={20} color={colors.text} strokeWidth={2} />
+        </IconButton>
+      </View>
 
-      {stage.name === 'edit' || stage.name === 'quoting' ? (
-        <>
-          <Segmented
-            value={side}
-            onChange={setSide}
-            options={[
-              { value: 'buy', label: 'Buy' },
-              { value: 'sell', label: 'Sell' },
-            ]}
-          />
-          <View style={styles.rowBetween}>
-            <RiskBadge level={risk.data?.level} />
-            <Text mono style={styles.muted}>
-              {solBalance !== undefined ? `${formatCompact(solBalance)} SOL available` : ' '}
-            </Text>
-          </View>
-          {side === 'buy' ? (
-            <>
-              <View style={styles.amountBox}>
-                <Text style={styles.amountLabel}>You pay</Text>
-                <View style={styles.amountRow}>
-                  <Text
-                    mono
-                    style={[styles.amountInput, !solInput && styles.amountEmpty]}
-                    accessibilityLabel={`Amount to spend: ${solInput || 0} SOL`}
-                    numberOfLines={1}
-                    adjustsFontSizeToFit
-                  >
-                    {solInput || '0'}
-                  </Text>
-                  <Text mono style={styles.amountUnit}>
-                    SOL
+      <ScrollView
+        contentContainerStyle={[
+          styles.screen,
+          editing && { paddingBottom: footerHeight + space.lg },
+        ]}
+        keyboardShouldPersistTaps="handled"
+      >
+        {editing ? (
+          <>
+            <SideToggle side={side} onChange={setSide} />
+
+            <View style={styles.field}>
+              <Text style={styles.fieldLabel}>Pay with</Text>
+              <Pressable
+                onPress={
+                  siftUsable && wallet.address
+                    ? () => setPayWith(fromSift ? 'phone' : 'sift')
+                    : undefined
+                }
+                accessibilityRole="button"
+                accessibilityLabel={`Paying from ${fromSift ? 'Sift wallet' : PAYING_FROM[wallet.kind ?? 'embedded']}${siftUsable ? ', tap to switch' : ''}`}
+                style={({ pressed }) => [styles.panelRow, pressed && siftUsable && styles.pressed]}
+              >
+                <SolanaMark size={18} />
+                <Text style={styles.payWith}>SOL</Text>
+                <Text style={styles.payFrom} numberOfLines={1}>
+                  {fromSift ? 'Sift wallet' : PAYING_FROM[wallet.kind ?? 'embedded']}
+                </Text>
+                {siftUsable && wallet.address ? (
+                  <ChevronRight size={16} color={colors.muted} strokeWidth={2} />
+                ) : null}
+                <View style={styles.flex} />
+                <Text mono style={styles.balance}>
+                  {solBalance !== undefined
+                    ? `Balance: ${formatCompact(solBalance)} SOL`
+                    : 'Loading…'}
+                </Text>
+              </Pressable>
+            </View>
+
+            {side === 'buy' ? (
+              <View style={styles.field}>
+                <View style={styles.fieldHead}>
+                  <Text style={styles.fieldLabel}>Amount</Text>
+                  <Text style={styles.fieldHint}>Test SOL, no real value</Text>
+                </View>
+                <View style={styles.amountPanel}>
+                  <View style={styles.amountRow}>
+                    <TextInput
+                      mono
+                      value={solInput}
+                      onChangeText={(text) =>
+                        setSolInput(text.replace(',', '.').replace(/[^0-9.]/g, ''))
+                      }
+                      keyboardType="decimal-pad"
+                      placeholder="0.00"
+                      accessibilityLabel="Amount to spend in SOL"
+                      style={styles.amountInput}
+                    />
+                    <Text style={styles.amountUnit}>SOL</Text>
+                  </View>
+                  <View style={styles.amountFoot}>
+                    <Text mono style={styles.available}>
+                      Available {formatCompact(solBalance ?? 0)} SOL
+                    </Text>
+                    <View style={styles.flex} />
+                    <Pressable
+                      onPress={() => setSol(maxSpend / 2)}
+                      hitSlop={10}
+                      accessibilityRole="button"
+                    >
+                      <Text style={styles.quick}>50%</Text>
+                    </Pressable>
+                    <Pressable
+                      onPress={() => setSol(maxSpend)}
+                      hitSlop={10}
+                      accessibilityRole="button"
+                    >
+                      <Text style={styles.quick}>Max</Text>
+                    </Pressable>
+                  </View>
+                </View>
+                <View style={styles.presets}>
+                  {BUY_PRESETS.map((p) => (
+                    <PresetButton
+                      key={p}
+                      label={p}
+                      selected={solInput === p}
+                      onPress={() => setSolInput(p)}
+                    />
+                  ))}
+                  <PresetButton
+                    label="Max"
+                    selected={maxSpend > 0 && Number(solInput) === Number(maxSpend.toFixed(4))}
+                    onPress={() => setSol(maxSpend)}
+                  />
+                </View>
+              </View>
+            ) : holding ? (
+              <View style={styles.field}>
+                <View style={styles.fieldHead}>
+                  <Text style={styles.fieldLabel}>Amount</Text>
+                  <Text mono style={styles.fieldHint}>
+                    Available {formatCompact(rawToTokens(holding.amountRaw, holding.decimals))}{' '}
+                    {symbol}
                   </Text>
                 </View>
-                <Text style={styles.caption}>
-                  Includes Sift’s fee. Network fees are added on top.
+                <View style={styles.amountPanel}>
+                  <View style={styles.amountRow}>
+                    <Text mono style={styles.amountInput}>
+                      {sellPercent}%
+                    </Text>
+                    <Text style={styles.amountUnit}>of {symbol}</Text>
+                  </View>
+                </View>
+                <View style={styles.presets}>
+                  {SELL_PRESETS.map((p) => (
+                    <PresetButton
+                      key={p}
+                      label={p === 100 ? 'All' : `${p}%`}
+                      selected={sellPercent === p}
+                      onPress={() => setSellPercent(p)}
+                    />
+                  ))}
+                </View>
+              </View>
+            ) : (
+              <View style={styles.panel}>
+                <Text style={styles.muted}>
+                  {holdings.isPending
+                    ? 'Loading your balance…'
+                    : `This wallet doesn’t hold ${symbol}.`}
                 </Text>
               </View>
-              <View style={styles.presets}>
-                {BUY_PRESETS.map((p) => (
-                  <Chip
-                    key={p}
-                    label={p}
-                    mono
-                    filled={false}
-                    selected={solInput === p}
-                    onPress={() => setSolInput(p)}
-                  />
-                ))}
-              </View>
-              <NumPad value={solInput} onChange={setSolInput} />
-            </>
-          ) : holding ? (
-            <>
-              <View style={styles.amountBox}>
-                <Text style={styles.amountLabel}>You sell</Text>
-                <Text mono style={styles.amountInput}>
-                  {sellPercent}%
+            )}
+
+            <View style={styles.panel}>
+              <View style={styles.fieldHead}>
+                <Text style={styles.fieldLabel}>
+                  Estimated {side === 'buy' ? 'receive' : 'proceeds'}
                 </Text>
-                <Text style={styles.caption}>
-                  of {formatCompact(rawToTokens(holding.amountRaw, holding.decimals))}{' '}
-                  {holding.symbol ?? 'tokens'}
-                </Text>
+                <Text style={styles.fieldHint}>At the last price</Text>
               </View>
-              <View style={styles.presets}>
-                {SELL_PRESETS.map((p) => (
-                  <Chip
-                    key={p}
-                    label={p === 100 ? 'All' : `${p}%`}
-                    mono
-                    filled={false}
-                    selected={sellPercent === p}
-                    onPress={() => setSellPercent(p)}
-                  />
-                ))}
-              </View>
-            </>
-          ) : (
-            <Card>
-              <Text style={styles.muted}>
-                {holdings.isPending ? 'Loading your balance…' : 'You don’t hold this token.'}
+              <Text mono style={styles.estimate}>
+                {estimate ?? '–'}
               </Text>
-            </Card>
-          )}
-          {mode === 'pro' ? (
-            <View style={styles.slippage}>
-              <Text style={styles.label}>Max slippage</Text>
-              <Segmented compact value={slippage} onChange={setSlippage} options={SLIPPAGES} />
+              <Text style={styles.caption}>
+                The review shows the exact amount, fees and minimum before you confirm.
+              </Text>
             </View>
-          ) : (
-            <Text style={styles.caption}>Max slippage 5% (change in Pro mode).</Text>
-          )}
 
-          {highRisk ? (
-            <View style={[styles.warning, styles.redBox]}>
-              <Text style={styles.redStrong}>Sift flagged this token as high risk.</Text>
-              <View style={styles.rowBetween}>
-                <Text style={[styles.red, styles.flex]}>
-                  I understand I could lose everything I put in.
+            <View style={styles.panel}>
+              <DetailRow
+                label="Slippage"
+                value={`${Number(slippage) / 100}%`}
+                onPress={() => setSettingsOpen(true)}
+              />
+              <DetailRow label="Sift fee" value={`${PLATFORM_FEE_RATE * 100}%`} />
+              <DetailRow label="Network fee" value="~0.000005 SOL + priority" />
+              <DetailRow label="Price impact" value="Shown in review" last />
+            </View>
+
+            {flags.length > 0 ? (
+              <View style={[styles.flagsBox, highRisk ? styles.flagsRed : null]}>
+                <View style={styles.flagsHead}>
+                  <AlertTriangle
+                    size={18}
+                    color={highRisk ? colors.down : colors.caution}
+                    strokeWidth={2}
+                  />
+                  <Text style={styles.flagsTitle}>
+                    {flags.length} risk {flags.length === 1 ? 'flag' : 'flags'}
+                    {highRisk ? ' · rated Risky' : ''}
+                  </Text>
+                </View>
+                <Text style={styles.flagsBody}>
+                  {flags
+                    .slice(0, 2)
+                    .map((f) => f.message)
+                    .join(' ')}
                 </Text>
-                <Switch
-                  value={understood}
-                  onValueChange={setUnderstood}
-                  label="I understand the risk"
-                />
+                <Pressable
+                  onPress={() => router.push(`/token/${mint}`)}
+                  accessibilityRole="link"
+                  hitSlop={8}
+                >
+                  <Text style={styles.quick}>Review token details</Text>
+                </Pressable>
+                {highRisk ? (
+                  <View style={styles.rowBetween}>
+                    <Text style={[styles.flagsBody, styles.flex]}>
+                      I understand I could lose everything I put in.
+                    </Text>
+                    <Switch
+                      value={understood}
+                      onValueChange={setUnderstood}
+                      label="I understand the risk"
+                    />
+                  </View>
+                ) : null}
               </View>
-            </View>
-          ) : null}
+            ) : null}
 
-          {fromSift && side === 'buy' ? (
-            <ProtectCard
-              on={protect}
-              onChange={setProtect}
-              simple={mode === 'simple'}
-              onCustomize={() => router.push(`/order/${mint}?kind=stop_loss`)}
-            />
-          ) : null}
-          <PayingFrom
-            kind={fromSift ? 'sift' : wallet.kind}
-            address={payer!}
-            solBalance={solBalance}
-            onSwitch={
-              siftUsable && wallet.address
-                ? () => setPayWith(fromSift ? 'phone' : 'sift')
-                : undefined
+            {fromSift && side === 'buy' ? (
+              <ProtectCard
+                on={protect}
+                onChange={setProtect}
+                simple={mode === 'simple'}
+                onCustomize={() => router.push(`/order/${mint}?kind=stop_loss`)}
+              />
+            ) : null}
+          </>
+        ) : null}
+
+        {stage.name === 'review' ? (
+          <Review
+            payingFrom={
+              <PayingFrom
+                kind={fromSift ? 'sift' : wallet.kind}
+                address={payer!}
+                solBalance={solBalance}
+              />
             }
+            quote={stage.quote}
+            problems={stage.problems}
+            onConfirm={() => confirm(stage.quote)}
+            onBack={() => setStage({ name: 'edit' })}
+            onRefresh={review}
           />
+        ) : null}
+
+        {stage.name === 'sending' || stage.name === 'pending' ? (
+          <Card>
+            <ActivityIndicator color={colors.accent} />
+            <Text style={styles.center}>
+              {stage.name === 'pending'
+                ? 'Waiting for the network to confirm…'
+                : fromSift
+                  ? 'Signing from your Sift wallet…'
+                  : wallet.kind === 'phantom'
+                    ? 'Approve the trade in Phantom…'
+                    : wallet.kind === 'walletApp'
+                      ? 'Approve the trade in your wallet app…'
+                      : 'Signing on this phone and sending…'}
+            </Text>
+            {stage.name === 'sending' && wallet.kind === 'phantom' ? (
+              <Pressable onPress={cancelPhantomRequest}>
+                <Text style={[styles.center, styles.muted]}>Cancel</Text>
+              </Pressable>
+            ) : null}
+          </Card>
+        ) : null}
+
+        {stage.name === 'done' ? (
+          <Card>
+            <SuccessCheck />
+            <Text style={styles.doneTitle}>{stage.quote.side === 'buy' ? 'Bought' : 'Sold'}</Text>
+            <Text style={styles.center}>
+              Confirmed on Solana.{' '}
+              {stage.quote.side === 'buy'
+                ? 'The tokens are in your wallet.'
+                : 'The SOL is in your wallet.'}
+            </Text>
+            {protectNote ? <Text style={styles.protectNote}>{protectNote}</Text> : null}
+            <Pressable onPress={() => Linking.openURL(explorerUrl(stage.signature))}>
+              <Text style={[styles.center, styles.link]}>View on Solscan</Text>
+            </Pressable>
+            <Button
+              label="Trade again"
+              variant="secondary"
+              onPress={() => setStage({ name: 'edit' })}
+            />
+          </Card>
+        ) : null}
+
+        {stage.name === 'failed' ? (
+          <Card title="Trade not completed">
+            <Text style={styles.bodyText}>{stage.message}</Text>
+            <Button label="Back" variant="secondary" onPress={() => setStage({ name: 'edit' })} />
+          </Card>
+        ) : null}
+
+        <Text style={styles.note}>
+          Trades run on Solana devnet with test SOL. Not financial advice.
+        </Text>
+      </ScrollView>
+
+      {editing ? (
+        <View style={[styles.footer, { paddingBottom: insets.bottom + space.md }]}>
           <Button
+            confirm
             label={stage.name === 'quoting' ? 'Getting price…' : `Review ${title.toLowerCase()}`}
             onPress={review}
             disabled={stage.name === 'quoting' || !request() || (highRisk && !understood)}
           />
-        </>
+          <Text style={styles.footNote}>You confirm before anything is signed.</Text>
+        </View>
       ) : null}
 
-      {stage.name === 'review' ? (
-        <Review
-          payingFrom={
-            <PayingFrom
-              kind={fromSift ? 'sift' : wallet.kind}
-              address={payer!}
-              solBalance={solBalance}
-            />
-          }
-          quote={stage.quote}
-          problems={stage.problems}
-          onConfirm={() => confirm(stage.quote)}
-          onBack={() => setStage({ name: 'edit' })}
-          onRefresh={review}
-        />
-      ) : null}
+      <Sheet visible={settingsOpen} onClose={() => setSettingsOpen(false)} title="Trade settings">
+        <Text style={styles.fieldLabel}>Max slippage</Text>
+        <Segmented value={slippage} onChange={setSlippage} options={SLIPPAGES} />
+        <Text style={styles.caption}>
+          If the price moves more than this before your trade lands, it cancels and you pay only
+          network fees. Wider slippage fills more often but can cost more.
+        </Text>
+        <Button small label="Done" onPress={() => setSettingsOpen(false)} />
+      </Sheet>
+      {stage.name === 'done' ? <Confetti /> : null}
+    </KeyboardAvoidingView>
+  );
+}
 
-      {stage.name === 'sending' || stage.name === 'pending' ? (
-        <Card>
-          <ActivityIndicator color={colors.accent} />
-          <Text style={styles.center}>
-            {stage.name === 'pending'
-              ? 'Waiting for the network to confirm…'
-              : fromSift
-                ? 'Signing from your Sift wallet…'
-                : wallet.kind === 'phantom'
-                  ? 'Approve the trade in Phantom…'
-                  : wallet.kind === 'walletApp'
-                    ? 'Approve the trade in your wallet app…'
-                    : 'Signing on this phone and sending…'}
-          </Text>
-          {stage.name === 'sending' && wallet.kind === 'phantom' ? (
-            <Pressable onPress={cancelPhantomRequest}>
-              <Text style={[styles.center, styles.muted]}>Cancel</Text>
-            </Pressable>
-          ) : null}
-        </Card>
-      ) : null}
-
-      {stage.name === 'done' ? (
-        <Card>
-          <SuccessCheck />
-          <Text style={styles.doneTitle}>{stage.quote.side === 'buy' ? 'Bought' : 'Sold'}</Text>
-          <Text style={styles.center}>
-            Confirmed on Solana.{' '}
-            {stage.quote.side === 'buy'
-              ? 'The tokens are in your wallet.'
-              : 'The SOL is in your wallet.'}
-          </Text>
-          {protectNote ? <Text style={styles.protectNote}>{protectNote}</Text> : null}
-          <Pressable onPress={() => Linking.openURL(explorerUrl(stage.signature))}>
-            <Text style={[styles.center, styles.link]}>View on Solscan</Text>
+function SideToggle({ side, onChange }: { side: TradeSide; onChange: (side: TradeSide) => void }) {
+  return (
+    <View style={styles.sides} accessibilityRole="tablist" accessibilityLabel="Buy or sell">
+      {(['buy', 'sell'] as const).map((value) => {
+        const selected = side === value;
+        return (
+          <Pressable
+            key={value}
+            onPress={() => {
+              if (!selected) haptic.select();
+              onChange(value);
+            }}
+            accessibilityRole="tab"
+            accessibilityState={{ selected }}
+            style={[styles.side, selected && (value === 'buy' ? styles.sideBuy : styles.sideSell)]}
+          >
+            <Text
+              style={[
+                styles.sideText,
+                selected && { color: value === 'buy' ? colors.onAccent : colors.text },
+              ]}
+            >
+              {value === 'buy' ? 'Buy' : 'Sell'}
+            </Text>
           </Pressable>
-          <Button
-            label="Trade again"
-            variant="secondary"
-            onPress={() => setStage({ name: 'edit' })}
-          />
-        </Card>
-      ) : null}
+        );
+      })}
+    </View>
+  );
+}
 
-      {stage.name === 'failed' ? (
-        <Card title="Trade not completed">
-          <Text style={styles.bodyText}>{stage.message}</Text>
-          <Button label="Back" variant="secondary" onPress={() => setStage({ name: 'edit' })} />
-        </Card>
-      ) : null}
-
-      <Text style={styles.note}>
-        Trades run on Solana devnet with test SOL. Not financial advice.
+function PresetButton({
+  label,
+  selected,
+  onPress,
+}: {
+  label: string;
+  selected: boolean;
+  onPress: () => void;
+}) {
+  return (
+    <Pressable
+      onPress={() => {
+        haptic.select();
+        onPress();
+      }}
+      accessibilityRole="button"
+      accessibilityState={{ selected }}
+      style={({ pressed }) => [
+        styles.preset,
+        selected && styles.presetOn,
+        pressed && styles.pressed,
+      ]}
+    >
+      <Text mono style={[styles.presetText, selected && { color: colors.text }]}>
+        {label}
       </Text>
-    </ScrollView>
+    </Pressable>
+  );
+}
+
+function DetailRow({
+  label,
+  value,
+  onPress,
+  last = false,
+}: {
+  label: string;
+  value: string;
+  onPress?: () => void;
+  last?: boolean;
+}) {
+  const body = (
+    <>
+      <Text style={styles.detailLabel}>{label}</Text>
+      <View style={styles.flex} />
+      <Text mono style={styles.detailValue}>
+        {value}
+      </Text>
+      {onPress ? <ChevronRight size={16} color={colors.muted} strokeWidth={2} /> : null}
+    </>
+  );
+  return onPress ? (
+    <Pressable
+      onPress={onPress}
+      accessibilityRole="button"
+      style={({ pressed }) => [
+        styles.detail,
+        !last && styles.detailDivider,
+        pressed && styles.pressed,
+      ]}
+    >
+      {body}
+    </Pressable>
+  ) : (
+    <View style={[styles.detail, !last && styles.detailDivider]}>{body}</View>
   );
 }
 
@@ -669,7 +930,124 @@ function explorerUrl(signature: string): string {
 }
 
 const styles = StyleSheet.create({
-  screen: { padding: space.screen, gap: 12, paddingBottom: 40 },
+  root: { flex: 1, backgroundColor: colors.bg },
+  screen: { padding: space.screen, gap: space.md, paddingBottom: 40 },
+  header: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: space.sm,
+    paddingHorizontal: space.screen,
+    paddingBottom: space.sm,
+  },
+  headerTitle: { flex: 1, textAlign: 'center', fontSize: 17, fontWeight: '600' },
+  pressed: { opacity: 0.7 },
+  sides: {
+    flexDirection: 'row',
+    gap: 4,
+    padding: 4,
+    borderRadius: radius.card,
+    borderWidth: 1,
+    borderColor: colors.border,
+    backgroundColor: colors.surface,
+  },
+  side: {
+    flex: 1,
+    minHeight: 44,
+    borderRadius: radius.input - 2,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  sideBuy: { backgroundColor: colors.accent },
+  sideSell: {
+    backgroundColor: tint(colors.down, 0.22),
+    borderWidth: 1,
+    borderColor: tint(colors.down, 0.5),
+  },
+  sideText: { fontSize: 15, fontWeight: '600', color: colors.text2 },
+  field: { gap: space.sm },
+  fieldHead: {
+    flexDirection: 'row',
+    alignItems: 'baseline',
+    justifyContent: 'space-between',
+    gap: 8,
+  },
+  fieldLabel: { fontSize: 14, color: colors.text2, fontWeight: '500' },
+  fieldHint: { fontSize: 13, color: colors.muted },
+  panelRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+    minHeight: 56,
+    paddingHorizontal: 14,
+    borderRadius: radius.card,
+    borderWidth: 1,
+    borderColor: colors.border,
+    backgroundColor: colors.surface,
+  },
+  payWith: { fontSize: 16, fontWeight: '600' },
+  payFrom: { fontSize: 13, color: colors.muted, flexShrink: 1 },
+  balance: { fontSize: 13, color: colors.muted },
+  amountPanel: {
+    padding: 16,
+    gap: 8,
+    borderRadius: radius.card,
+    borderWidth: 1,
+    borderColor: colors.border,
+    backgroundColor: colors.surface,
+  },
+  amountFoot: { flexDirection: 'row', alignItems: 'center', gap: 16 },
+  available: { fontSize: 13, color: colors.muted },
+  quick: { fontSize: 14, fontWeight: '600', color: colors.accent },
+  panel: {
+    padding: 16,
+    gap: 6,
+    borderRadius: radius.card,
+    borderWidth: 1,
+    borderColor: colors.border,
+    backgroundColor: colors.surface,
+  },
+  estimate: { fontSize: 24, fontWeight: '700', letterSpacing: -0.4 },
+  preset: {
+    flex: 1,
+    minHeight: 44,
+    borderRadius: radius.input,
+    borderWidth: 1,
+    borderColor: colors.border,
+    backgroundColor: colors.surface,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  presetOn: { backgroundColor: colors.surface2, borderColor: colors.borderStrong },
+  presetText: { fontSize: 15, fontWeight: '600', color: colors.text2 },
+  detail: { flexDirection: 'row', alignItems: 'center', gap: 6, minHeight: 40 },
+  detailDivider: { borderBottomWidth: 1, borderBottomColor: colors.divider },
+  detailLabel: { fontSize: 14, color: colors.text2 },
+  detailValue: { fontSize: 14, color: colors.text },
+  flagsBox: {
+    padding: 14,
+    gap: 6,
+    borderRadius: radius.card,
+    borderWidth: 1,
+    borderColor: tint(colors.caution, 0.55),
+    backgroundColor: tint(colors.caution, 0.06),
+  },
+  flagsRed: { borderColor: tint(colors.down, 0.55), backgroundColor: tint(colors.down, 0.06) },
+  flagsHead: { flexDirection: 'row', alignItems: 'center', gap: 10 },
+  flagsTitle: { fontSize: 15, fontWeight: '600' },
+  flagsBody: { fontSize: 13, lineHeight: 19, color: colors.text2 },
+  footer: {
+    position: 'absolute',
+    left: 0,
+    right: 0,
+    bottom: 0,
+    gap: 8,
+    paddingHorizontal: space.screen,
+    paddingTop: space.md,
+    backgroundColor: colors.bg,
+    borderTopWidth: 1,
+    borderTopColor: colors.border,
+  },
+  footNote: { fontSize: 12, textAlign: 'center', color: colors.muted },
   flex: { flex: 1 },
   headerBadge: { marginRight: 12 },
   rowBetween: {
@@ -692,18 +1070,18 @@ const styles = StyleSheet.create({
     gap: 4,
   },
   amountLabel: { fontSize: 13, color: colors.muted },
-  amountRow: { flexDirection: 'row', alignItems: 'baseline', gap: 8 },
+  amountRow: { flexDirection: 'row', alignItems: 'center', gap: 8 },
   amountInput: {
-    fontSize: 44,
-    fontWeight: '600',
-    letterSpacing: -1.5,
-    textAlign: 'center',
-    minWidth: 80,
+    flex: 1,
+    minWidth: 0,
+    fontSize: 40,
+    fontWeight: '700',
+    letterSpacing: -1,
     padding: 0,
   },
   amountEmpty: { color: colors.faint },
-  amountUnit: { fontSize: 18, fontWeight: '600', color: colors.muted },
-  presets: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, justifyContent: 'center' },
+  amountUnit: { fontSize: 18, fontWeight: '600', color: colors.text2 },
+  presets: { flexDirection: 'row', gap: 8 },
   slippage: { gap: 8 },
   warning: { borderRadius: radius.input, padding: 14, gap: 6, borderWidth: 1 },
   redBox: { backgroundColor: RISK_COLORS.red.bg, borderColor: tint(colors.down, 0.3) },

@@ -1,7 +1,7 @@
 import type { ReactNode } from 'react';
-import { RefreshControl, ScrollView, StyleSheet, View } from 'react-native';
+import { RefreshControl, ScrollView, StyleSheet, View, useWindowDimensions } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { colors, space, type as typeScale } from '../lib/theme';
+import { breakpoints, colors, space, type as typeScale } from '../lib/theme';
 import { Text } from './Text';
 
 /** A tab screen: safe-area top, 20px sides, optional big title and pull-to-refresh. */
@@ -28,10 +28,16 @@ export function Screen({
   footer?: ReactNode;
 }) {
   const insets = useSafeAreaInsets();
+  // Tablets and desktops: the terminal header sits above, and content keeps a reading width.
+  const wide = useWindowDimensions().width >= breakpoints.tablet;
   return (
     <View style={styles.root}>
       <ScrollView
-        contentContainerStyle={[styles.content, { paddingTop: insets.top + 16 }]}
+        contentContainerStyle={[
+          styles.content,
+          { paddingTop: wide ? space.xl : insets.top + 16 },
+          wide && styles.wide,
+        ]}
         refreshControl={
           onRefresh ? (
             <RefreshControl
@@ -72,6 +78,7 @@ const styles = StyleSheet.create({
   root: { flex: 1, backgroundColor: colors.bg },
   content: { paddingHorizontal: space.screen, paddingBottom: space.tabBar, gap: space.gap },
   titleRow: { flexDirection: 'row', alignItems: 'center', gap: 12, marginBottom: 6 },
+  wide: { width: '100%', maxWidth: 760, alignSelf: 'center', paddingHorizontal: space.xl },
   flex: { flex: 1 },
   subtitle: { marginTop: 4, fontSize: 14, color: colors.muted },
   section: {

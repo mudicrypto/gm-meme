@@ -3,6 +3,9 @@ import type {
   AlertDirection,
   AlertsResponse,
   AuthChallenge,
+  LeaderboardResponse,
+  TokenActivityResponse,
+  TokenStatsResponse,
   CreateOrderRequest,
   SiftOrder,
   SiftWalletInfo,
@@ -197,7 +200,14 @@ export const siftApi = {
 
 export const api = {
   newTokens: () => getJson<TokenListResponse>('/tokens/new?limit=50'),
-  trending: () => getJson<TrendingResponse>('/tokens/trending?limit=50&windowMinutes=60'),
+  trending: (windowMinutes = 60) =>
+    getJson<TrendingResponse>(`/tokens/trending?limit=50&windowMinutes=${windowMinutes}`),
+  stats: (mints: readonly string[], windowMinutes: number) =>
+    getJson<TokenStatsResponse>(
+      `/tokens/stats?mints=${mints.map(enc).join(',')}&windowMinutes=${windowMinutes}`,
+    ),
+  activity: (mint: string) => getJson<TokenActivityResponse>(`/tokens/${enc(mint)}/activity`),
+  leaderboard: (days: 1 | 7 | 30) => getJson<LeaderboardResponse>(`/leaderboard?days=${days}`),
   risk: (mint: string) => getJson<RiskScore>(`/tokens/${enc(mint)}/risk`),
   summary: (mint: string) => getJson<TokenExplanation>(`/tokens/${enc(mint)}/summary`),
   chart: (mint: string, windowMinutes: number) =>

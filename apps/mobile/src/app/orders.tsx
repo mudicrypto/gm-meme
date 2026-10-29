@@ -238,7 +238,7 @@ function OrderCard({ order, price }: { order: SiftOrder; price: number | undefin
 
       {order.message ? <Text style={styles.message}>{order.message}</Text> : null}
       {!live && order.filledAt ? (
-        <Text style={styles.muted}>{formatAgo(order.filledAt)} ago</Text>
+        <Text style={styles.muted}>{formatAgo(order.filledAt)}</Text>
       ) : null}
 
       {order.status === 'open' ? (

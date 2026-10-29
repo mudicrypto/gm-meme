@@ -1,9 +1,10 @@
 import type { MyProfile } from '@sift/shared';
 import { useQuery } from '@tanstack/react-query';
-import { Link } from 'expo-router';
+import { Link, router } from 'expo-router';
+import { Trophy } from 'lucide-react-native';
 import { useState } from 'react';
 import { Pressable, ScrollView, StyleSheet, View } from 'react-native';
-import { Button } from '../../components/Button';
+import { Button, IconButton } from '../../components/Button';
 import { Card } from '../../components/Card';
 import { PersonAvatar } from '../../components/PersonAvatar';
 import { Screen, SectionTitle } from '../../components/Screen';
@@ -29,7 +30,7 @@ export default function FriendsScreen() {
     );
   if (session.status === 'signed-out') {
     return (
-      <Screen title="Friends" subtitle="Trades your friends chose to share">
+      <Screen title="Friends" subtitle="Trades your friends chose to share" right={<TopTraders />}>
         <SignInCard reason="Sign in to follow friends and see the trades they share." />
       </Screen>
     );
@@ -48,6 +49,15 @@ export default function FriendsScreen() {
     );
   }
   return <Feed profile={me.data.profile} />;
+}
+
+/** Opens the leaderboard of shared trades. */
+function TopTraders() {
+  return (
+    <IconButton label="Top traders" onPress={() => router.push('/leaderboard')}>
+      <Trophy size={20} color={colors.text} strokeWidth={2} />
+    </IconButton>
+  );
 }
 
 function Feed({ profile }: { profile: MyProfile }) {
@@ -72,6 +82,7 @@ function Feed({ profile }: { profile: MyProfile }) {
     <Screen
       title="Friends"
       subtitle="Trades your friends chose to share"
+      right={<TopTraders />}
       refreshing={feed.isRefetching}
       onRefresh={() => void feed.refetch()}
     >

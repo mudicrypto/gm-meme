@@ -1,133 +1,50 @@
-import type { RiskLevel, TokenSummary } from '@sift/shared';
-import { RISK_DISCLAIMER, isSolanaAddress } from '@sift/shared';
-import { useQuery, useQueryClient } from '@tanstack/react-query';
+import { isSolanaAddress } from '@sift/shared';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import * as Clipboard from 'expo-clipboard';
 import { Link, router, useLocalSearchParams } from 'expo-router';
 import {
   Check,
   ChevronLeft,
   Copy,
-  ChevronRight,
-  ShieldAlert,
-  ShieldCheck,
-  Sparkles,
+  ExternalLink,
+  MoreHorizontal,
+  Star,
   Timer,
-  TrendingDown,
-  TrendingUp,
 } from 'lucide-react-native';
-import { useState } from 'react';
-import { Pressable, ScrollView, StyleSheet, View } from 'react-native';
+import { type ReactNode, useState } from 'react';
+import { Linking, Pressable, ScrollView, StyleSheet, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { IconButton } from '../../components/Button';
-import { Card } from '../../components/Card';
-import { ModeToggle } from '../../components/ModeToggle';
-import { PriceChart } from '../../components/PriceChart';
 import { FlashText } from '../../components/FlashText';
-import { PressableScale } from '../../components/Motion';
-import { ErrorState, Loading } from '../../components/States';
+import { CandleChart } from '../../components/market/CandleChart';
+import { Change } from '../../components/market/Change';
+import { Tabs } from '../../components/market/Tabs';
+import { ActivityList, Metrics, RiskSignals } from '../../components/market/TokenPanels';
+import { useTokenInfo } from '../../components/market/useTokenInfo';
+import { Sheet } from '../../components/Sheet';
+import { ErrorState } from '../../components/States';
 import { Text } from '../../components/Text';
 import { TokenAvatar } from '../../components/TokenAvatar';
 import { TokenWatch } from '../../components/TokenWatch';
-import { api } from '../../lib/api';
-import {
-  formatAge,
-  formatCompact,
-  formatPct,
-  formatSol,
-  formatSolPrice,
-  priceChangePct,
-  shortAddress,
-} from '../../lib/format';
-import { useMode } from '../../lib/mode';
+import { api, socialApi } from '../../lib/api';
+import { formatSolPrice, shortAddress } from '../../lib/format';
+import { CHART_WINDOWS } from '../../lib/market';
+import { useTokenStats } from '../../lib/market-hooks';
 import { haptic } from '../../lib/motion';
-import { RISK_COLORS, RISK_LABELS, colors, space, tint } from '../../lib/theme';
+import { useSession } from '../../lib/session';
+import { useWatchlist } from '../../lib/social-hooks';
+import { colors, radius, space } from '../../lib/theme';
 
-// The chart API takes 5 minutes to 24 hours.
-const WINDOWS = [
-  { value: 5, label: '5M' },
-  { value: 60, label: '1H' },
-  { value: 360, label: '6H' },
-  { value: 1440, label: '24H' },
-] as const;
-
-const CHECK_NAMES: Record<string, string> = {
-  mint_authority: 'Minting',
-  freeze_authority: 'Freezing',
-  token_extensions: 'Transfer rules',
-  holder_concentration: 'Holders',
-  liquidity: 'Liquidity',
-  dev_history: 'Creator history',
-  sell_test: 'Selling',
-};
-
-/** The token's big header: image, name, ticker, age, and its address to copy. */
-function TokenHero({ mint, info }: { mint: string; info: TokenSummary | undefined }) {
-  const [copied, setCopied] = useState(false);
-  // Token names are attacker-controlled metadata: display text only, capped.
-  const name = (info?.name ?? info?.symbol ?? shortAddress(mint)).slice(0, 32);
-  return (
-    <View style={styles.hero}>
-      <TokenAvatar uri={info?.imageUrl} label={info?.name ?? info?.symbol} seed={mint} size={64} />
-      <View style={styles.heroText}>
-        <Text style={styles.heroName} numberOfLines={1}>
-          {name}
-        </Text>
-        <View style={styles.chips}>
-          {info?.symbol ? (
-            <View style={styles.chip}>
-              <Text mono style={styles.chipText}>
-                ${info.symbol.slice(0, 12)}
-              </Text>
-            </View>
-          ) : null}
-          {info ? (
-            <View style={styles.chip}>
-              <Text style={styles.chipText}>
-                {ageLabel(formatAge(info.launchedAt ?? info.firstSeenAt))}
-              </Text>
-            </View>
-          ) : null}
-          <PressableScale
-            onPress={async () => {
-              await Clipboard.setStringAsync(mint);
-              haptic.select();
-              setCopied(true);
-              setTimeout(() => setCopied(false), 1800);
-            }}
-            accessibilityRole="button"
-            accessibilityLabel="Copy token address"
-            style={StyleSheet.flatten([styles.chip, styles.chipRow])}
-          >
-            {copied ? (
-              <Check size={12} color={colors.up} strokeWidth={2.6} />
-            ) : (
-              <Copy size={12} color={colors.muted} strokeWidth={2.2} />
-            )}
-            <Text mono style={[styles.chipText, copied && { color: colors.up }]}>
-              {copied ? 'Copied' : shortAddress(mint)}
-            </Text>
-          </PressableScale>
-        </View>
-      </View>
-    </View>
-  );
-}
-
-/** "5m old", or "just launched" for a brand-new token. */
-function ageLabel(age: string): string {
-  return age === 'just now' ? 'just launched' : `${age} old`;
-}
-
-const MARKS: Record<RiskLevel, string> = { green: '✓', amber: '!', red: '×' };
+type Section = 'activity' | 'holders' | 'info';
 
 export default function TokenScreen() {
   const insets = useSafeAreaInsets();
-  const { mode } = useMode();
-  const queryClient = useQueryClient();
   const { mint = '' } = useLocalSearchParams<{ mint: string }>();
-  const [window, setWindow] = useState<(typeof WINDOWS)[number]['value']>(60);
-  const [showDetails, setShowDetails] = useState(false);
   const valid = isSolanaAddress(mint);
+  const [windowMinutes, setWindowMinutes] = useState(60);
+  const [section, setSection] = useState<Section>('activity');
+  const [moreOpen, setMoreOpen] = useState(false);
+  const info = useTokenInfo(mint);
 
   const risk = useQuery({
     queryKey: ['risk', mint],
@@ -140,28 +57,41 @@ export default function TokenScreen() {
     enabled: valid,
   });
   const chart = useQuery({
-    queryKey: ['chart', mint, window],
-    queryFn: () => api.chart(mint, window),
+    queryKey: ['chart', mint, windowMinutes],
+    queryFn: () => api.chart(mint, windowMinutes),
     enabled: valid,
     refetchInterval: 15_000,
   });
+  const stats = useTokenStats(mint, windowMinutes, valid);
+  const activity = useQuery({
+    queryKey: ['activity', mint],
+    queryFn: () => api.activity(mint),
+    enabled: valid && section === 'activity',
+    refetchInterval: 15_000,
+  });
 
-  // Name, symbol and image come from the Discover lists already loaded, if any.
-  const info = queryClient
-    .getQueriesData<{ tokens: TokenSummary[] }>({ queryKey: ['feed'] })
-    .flatMap(([, data]) => data?.tokens ?? [])
-    .find((token) => token.mint === mint);
+  const symbol = (info?.symbol ?? shortAddress(mint)).slice(0, 12);
+  const name = (info?.name ?? info?.symbol ?? shortAddress(mint)).slice(0, 32);
+  const windowLabel = CHART_WINDOWS.find((w) => w.minutes === windowMinutes)?.label ?? '1h';
+  const price = stats.data?.priceSol;
+  const footerHeight = 76 + insets.bottom;
 
   const header = (
-    <View style={[styles.header, { paddingTop: insets.top + 12 }]}>
+    <View style={[styles.header, { paddingTop: insets.top + space.sm }]}>
       <IconButton
         label="Back"
         onPress={() => (router.canGoBack() ? router.back() : router.replace('/'))}
       >
         <ChevronLeft size={20} color={colors.text} strokeWidth={2} />
       </IconButton>
-      <View style={styles.flex} />
-      <ModeToggle />
+      <Text style={styles.pair} numberOfLines={1}>
+        {symbol}
+        <Text style={styles.pairQuote}> / SOL</Text>
+      </Text>
+      <WatchStar mint={mint} />
+      <IconButton label="More" onPress={() => setMoreOpen(true)}>
+        <MoreHorizontal size={20} color={colors.text} strokeWidth={2} />
+      </IconButton>
     </View>
   );
 
@@ -172,410 +102,322 @@ export default function TokenScreen() {
         <ErrorState message="That isn't a valid token address." />
       </View>
     );
-  if (risk.isPending)
-    return (
-      <View style={styles.root}>
-        {header}
-        <Loading label="Checking this token…" />
-      </View>
-    );
-  if (risk.isError)
-    return (
-      <View style={styles.root}>
-        {header}
-        <ErrorState message={risk.error.message} onRetry={() => risk.refetch()} />
-      </View>
-    );
-
-  const points = chart.data?.points ?? [];
-  const lastPrice = points[points.length - 1]?.priceSol;
-  const change = priceChangePct(points);
-  const volume = points.reduce((total, p) => total + p.volumeSol, 0);
-  const reasons = risk.data.reasons;
-  const passed = reasons.filter((r) => r.level === 'green').length;
-  const level = risk.data.level;
-  const VerdictIcon = level === 'green' ? ShieldCheck : ShieldAlert;
-  const symbol = info?.symbol;
-  const trending = info && 'uniqueTraders' in info ? (info as { uniqueTraders: number }) : null;
-  const stats: Array<[string, string]> = [
-    ['Market cap', info?.marketCapUsd !== undefined ? `$${formatCompact(info.marketCapUsd)}` : ''],
-    ['Traded', formatSol(volume)],
-    ['Traders', trending ? String(trending.uniqueTraders) : ''],
-    ['Age', info ? formatAge(info.launchedAt ?? info.firstSeenAt).replace('just now', 'New') : ''],
-  ].filter((stat): stat is [string, string] => stat[1] !== '');
 
   return (
     <View style={styles.root}>
       {header}
-      <ScrollView contentContainerStyle={styles.content}>
-        <TokenHero mint={mint} info={info} />
-        <View>
-          {lastPrice ? (
-            <FlashText value={lastPrice} style={styles.price}>
-              {`${formatSolPrice(lastPrice)} SOL`}
+      <ScrollView
+        contentContainerStyle={[styles.content, { paddingBottom: footerHeight + space.lg }]}
+      >
+        <View style={styles.identity}>
+          <TokenAvatar
+            uri={info?.imageUrl}
+            label={info?.name ?? info?.symbol}
+            seed={mint}
+            size={56}
+          />
+          <View style={styles.flex}>
+            <Text style={styles.name} numberOfLines={1}>
+              {name}
+            </Text>
+            <CopyAddress address={mint} />
+          </View>
+        </View>
+
+        <View style={styles.priceRow}>
+          {price ? (
+            <FlashText value={price} style={styles.price}>
+              {`${formatSolPrice(price)} SOL`}
             </FlashText>
           ) : (
-            <Text style={styles.noPrice}>No trades yet</Text>
-          )}
-          <View style={styles.changeRow}>
-            {change !== undefined ? (
-              <View
-                style={[
-                  styles.changePill,
-                  { backgroundColor: tint(change >= 0 ? colors.up : colors.down, 0.12) },
-                ]}
-              >
-                {change >= 0 ? (
-                  <TrendingUp size={14} color={colors.up} strokeWidth={2.4} />
-                ) : (
-                  <TrendingDown size={14} color={colors.down} strokeWidth={2.4} />
-                )}
-                <Text
-                  mono
-                  style={[styles.change, { color: change >= 0 ? colors.up : colors.down }]}
-                >
-                  {formatPct(change)}
-                </Text>
-              </View>
-            ) : null}
-            <Text style={styles.sub}>
-              {[
-                `last ${WINDOWS.find((w) => w.value === window)?.label.toLowerCase()}`,
-                info?.marketCapUsd !== undefined
-                  ? `MC $${formatCompact(info.marketCapUsd)}`
-                  : undefined,
-              ]
-                .filter(Boolean)
-                .join(' · ')}
+            <Text style={styles.noPrice}>
+              {stats.isPending ? 'Loading price…' : 'No trades yet'}
             </Text>
-          </View>
+          )}
+          <Change pct={stats.data?.changePct} size={17} arrow />
+          <Text style={styles.windowText}>{windowLabel}</Text>
         </View>
 
-        <View>
-          <PriceChart points={points} />
-          <View style={styles.ranges}>
-            {WINDOWS.map((option) => {
-              const selected = option.value === window;
-              return (
-                <Pressable
-                  key={option.value}
-                  onPress={() => setWindow(option.value)}
-                  accessibilityRole="button"
-                  accessibilityState={{ selected }}
-                  style={[styles.range, selected && styles.rangeOn]}
-                >
-                  <Text
-                    mono
-                    style={[styles.rangeLabel, { color: selected ? colors.text : colors.muted }]}
-                  >
-                    {option.label}
-                  </Text>
-                </Pressable>
-              );
-            })}
-          </View>
-          <View style={styles.stats}>
-            {stats.map(([label, value]) => (
-              <View key={label} style={styles.stat}>
-                <Text style={styles.statLabel}>{label}</Text>
-                <Text mono style={styles.statValue} numberOfLines={1}>
-                  {value}
+        <Tabs
+          compact
+          label="Chart window"
+          options={CHART_WINDOWS.map((w) => ({ value: w.minutes, label: w.label }))}
+          value={windowMinutes}
+          onChange={setWindowMinutes}
+        />
+        {chart.isError ? (
+          <ErrorState message="Couldn’t load the chart." onRetry={() => chart.refetch()} />
+        ) : (
+          <CandleChart points={chart.data?.points ?? []} windowMinutes={windowMinutes} />
+        )}
+
+        <Metrics stats={stats.data} token={info} windowLabel={windowLabel} />
+        {risk.isError ? (
+          <ErrorState message={risk.error.message} onRetry={() => risk.refetch()} />
+        ) : (
+          <RiskSignals risk={risk.data} />
+        )}
+
+        <View style={styles.sectionTabs} accessibilityRole="tablist">
+          {(
+            [
+              ['activity', 'Activity'],
+              ['holders', 'Holders'],
+              ['info', 'Info'],
+            ] as const
+          ).map(([value, label]) => {
+            const selected = section === value;
+            return (
+              <Pressable
+                key={value}
+                onPress={() => setSection(value)}
+                accessibilityRole="tab"
+                accessibilityState={{ selected }}
+                style={[styles.sectionTab, selected && styles.sectionTabOn]}
+              >
+                <Text style={[styles.sectionLabel, selected && { color: colors.text }]}>
+                  {label}
                 </Text>
-              </View>
-            ))}
-          </View>
-          {mode === 'pro' ? (
-            <Text style={styles.proLine}>
-              {formatSol(volume)} traded · prices from trades Sift recorded · {mint}
-            </Text>
-          ) : null}
+              </Pressable>
+            );
+          })}
         </View>
 
-        <Card>
-          <View style={styles.verdictRow}>
-            <View style={styles.verdict}>
-              <View
-                style={[styles.verdictIcon, { backgroundColor: tint(RISK_COLORS[level].fg, 0.14) }]}
-              >
-                <VerdictIcon size={22} color={RISK_COLORS[level].fg} strokeWidth={2} />
-              </View>
-              <View>
-                <Text style={[styles.verdictLabel, { color: RISK_COLORS[level].fg }]}>
-                  {RISK_LABELS[level]}
-                </Text>
-                <Text style={styles.sub}>
-                  {passed} of {reasons.length} checks passed
-                </Text>
-              </View>
-            </View>
-            <Pressable
-              onPress={() => setShowDetails((value) => !value)}
-              accessibilityRole="button"
-              hitSlop={12}
-            >
-              <Text style={styles.link}>{showDetails || mode === 'pro' ? 'Less' : 'Details'}</Text>
-            </Pressable>
-          </View>
-          {showDetails || mode === 'pro' ? (
-            <View style={styles.details}>
-              {reasons.map((reason) => (
-                <View key={reason.check} style={styles.detail}>
-                  <Mark level={reason.level} />
-                  <View style={styles.flex}>
-                    <Text style={styles.checkName}>
-                      {CHECK_NAMES[reason.check] ?? reason.check}
-                    </Text>
-                    <Text style={styles.checkText}>{reason.message}</Text>
-                  </View>
-                </View>
-              ))}
-            </View>
-          ) : (
-            <View style={styles.grid}>
-              {reasons.map((reason) => (
-                <View key={reason.check} style={styles.cell}>
-                  <Mark level={reason.level} />
-                  <Text style={styles.checkText} numberOfLines={1}>
-                    {CHECK_NAMES[reason.check] ?? reason.check}
+        {section === 'activity' ? (
+          <ActivityList
+            trades={activity.data?.trades}
+            symbol={symbol}
+            loading={activity.isPending}
+          />
+        ) : section === 'holders' ? (
+          <View style={styles.sectionBody}>
+            {(risk.data?.reasons ?? [])
+              .filter((r) => r.check === 'holder_concentration' || r.check === 'dev_history')
+              .map((r) => (
+                <View key={r.check} style={styles.infoRow}>
+                  <Text style={styles.infoLabel}>
+                    {r.check === 'holder_concentration' ? 'Top holders' : 'Creator'}
                   </Text>
+                  <Text style={styles.infoText}>{r.message}</Text>
                 </View>
               ))}
-            </View>
-          )}
-        </Card>
-
-        <Card>
-          <View style={styles.eyebrowRow}>
-            <Sparkles size={14} color={colors.link} strokeWidth={2} />
-            <Text style={styles.eyebrow}>In plain words</Text>
-            {summary.data?.source === 'ai' ? <Text style={styles.aiTag}>AI</Text> : null}
+            <Text style={styles.note}>
+              Sift checks the 20 largest accounts. A full holder list isn’t available yet.
+            </Text>
           </View>
-          {summary.isPending ? (
-            <Text style={styles.checkText}>Writing a summary…</Text>
-          ) : summary.isError ? (
-            <Text style={styles.checkText}>Summary unavailable right now.</Text>
-          ) : (
-            <>
-              <Text style={styles.body}>{summary.data.summary}</Text>
-              {summary.data.redFlags.length > 0 ? (
-                <View style={styles.flags}>
-                  {summary.data.redFlags.map((flag) => (
-                    <Text key={flag} style={styles.flag}>
-                      {flag}
-                    </Text>
-                  ))}
-                </View>
-              ) : null}
-            </>
-          )}
-        </Card>
-
-        {mode === 'pro' ? (
-          <Link
-            href={{
-              pathname: '/order/[mint]',
-              params: {
-                mint,
-                ...(info?.symbol ? { symbol: info.symbol } : {}),
-                ...(info?.name ? { name: info.name } : {}),
-              },
-            }}
-            asChild
-          >
-            <Pressable style={StyleSheet.flatten(styles.orderLink)}>
-              <View style={styles.orderIcon}>
-                <Timer size={18} color={colors.link} strokeWidth={2} />
-              </View>
-              <View style={styles.flex}>
-                <Text style={styles.checkName}>Set an order</Text>
-                <Text style={styles.sub}>
-                  Limit, stop loss or take profit · runs while your phone is off
-                </Text>
-              </View>
-              <ChevronRight size={18} color={colors.muted} strokeWidth={2} />
-            </Pressable>
-          </Link>
-        ) : null}
-
-        <TokenWatch mint={mint} priceSol={lastPrice} />
-        <Text style={styles.note}>{risk.data.disclaimer ?? RISK_DISCLAIMER}</Text>
+        ) : (
+          <View style={styles.sectionBody}>
+            <View style={styles.infoRow}>
+              <Text style={styles.infoLabel}>
+                In plain words{summary.data?.source === 'ai' ? ' · AI' : ''}
+              </Text>
+              <Text style={styles.infoText}>
+                {summary.isPending
+                  ? 'Writing a summary…'
+                  : summary.isError
+                    ? 'Summary unavailable right now.'
+                    : summary.data.summary}
+              </Text>
+            </View>
+            <View style={styles.infoRow}>
+              <Text style={styles.infoLabel}>Token address</Text>
+              <Text mono selectable style={styles.infoText}>
+                {mint}
+              </Text>
+            </View>
+            <TokenWatch mint={mint} priceSol={price} />
+          </View>
+        )}
       </ScrollView>
 
-      <View style={[styles.footer, { paddingBottom: insets.bottom + 14 }]}>
-        <View style={styles.actions}>
-          <Link href={`/trade/${mint}?side=sell`} asChild>
-            <Pressable style={StyleSheet.flatten([styles.action, styles.sell])}>
-              <Text style={styles.sellText}>Sell</Text>
-            </Pressable>
-          </Link>
-          <Link href={`/trade/${mint}?side=buy`} asChild>
-            <Pressable style={StyleSheet.flatten([styles.action, styles.buy])}>
-              <Text style={styles.buyText}>{symbol ? `Buy ${symbol}` : 'Buy'}</Text>
-            </Pressable>
-          </Link>
-        </View>
-        <Text style={styles.footNote}>
+      <View style={[styles.footer, { paddingBottom: insets.bottom + space.md }]}>
+        <Link href={`/trade/${mint}?side=buy`} asChild>
+          <Pressable
+            style={StyleSheet.flatten([styles.action, styles.buy])}
+            accessibilityRole="button"
+            accessibilityLabel={`Buy ${symbol}`}
+          >
+            <Text style={styles.buyText}>Buy</Text>
+          </Pressable>
+        </Link>
+        <Link href={`/trade/${mint}?side=sell`} asChild>
+          <Pressable
+            style={StyleSheet.flatten([styles.action, styles.sell])}
+            accessibilityRole="button"
+            accessibilityLabel={`Sell ${symbol}`}
+          >
+            <Text style={styles.sellText}>Sell</Text>
+          </Pressable>
+        </Link>
+      </View>
+
+      <Sheet visible={moreOpen} onClose={() => setMoreOpen(false)} title={name}>
+        <MoreRow
+          icon={<Timer size={18} color={colors.text} strokeWidth={2} />}
+          label="Set an order (limit, stop loss, take profit)"
+          onPress={() => {
+            setMoreOpen(false);
+            router.push({ pathname: '/order/[mint]', params: { mint, symbol, name } });
+          }}
+        />
+        <MoreRow
+          icon={<ExternalLink size={18} color={colors.text} strokeWidth={2} />}
+          label="View on Solscan"
+          onPress={() => void Linking.openURL(`https://solscan.io/token/${mint}?cluster=devnet`)}
+        />
+        <Text style={styles.note}>
           Safety checks reduce risk, they don’t remove it. Not financial advice.
         </Text>
-      </View>
+      </Sheet>
     </View>
   );
 }
 
-function Mark({ level }: { level: RiskLevel }) {
-  const { fg } = RISK_COLORS[level];
+function MoreRow({
+  icon,
+  label,
+  onPress,
+}: {
+  icon: ReactNode;
+  label: string;
+  onPress: () => void;
+}) {
   return (
-    <View
-      style={[styles.mark, { backgroundColor: tint(fg, 0.16) }]}
-      accessibilityLabel={RISK_LABELS[level]}
+    <Pressable
+      onPress={onPress}
+      accessibilityRole="button"
+      style={({ pressed }) => [styles.moreRow, pressed && { opacity: 0.7 }]}
     >
-      <Text style={[styles.markText, { color: fg }]}>{MARKS[level]}</Text>
-    </View>
+      {icon}
+      <Text style={styles.moreText}>{label}</Text>
+    </Pressable>
+  );
+}
+
+function CopyAddress({ address }: { address: string }) {
+  const [copied, setCopied] = useState(false);
+  return (
+    <Pressable
+      onPress={async () => {
+        await Clipboard.setStringAsync(address);
+        haptic.select();
+        setCopied(true);
+        setTimeout(() => setCopied(false), 1800);
+      }}
+      accessibilityRole="button"
+      accessibilityLabel="Copy token address"
+      hitSlop={10}
+      style={styles.copy}
+    >
+      <Text mono style={[styles.address, copied && { color: colors.up }]}>
+        {copied ? 'Copied' : shortAddress(address)}
+      </Text>
+      {copied ? (
+        <Check size={14} color={colors.up} strokeWidth={2.4} />
+      ) : (
+        <Copy size={14} color={colors.muted} strokeWidth={2} />
+      )}
+    </Pressable>
+  );
+}
+
+/** Watchlist star: needs sign-in; filled when watching. */
+export function WatchStar({ mint }: { mint: string }) {
+  const { token } = useSession();
+  const queryClient = useQueryClient();
+  const watchlist = useWatchlist();
+  const watching = watchlist.data?.tokens.some((t) => t.mint === mint) ?? false;
+  const toggle = useMutation({
+    mutationFn: () => (watching ? socialApi.unwatch(token!, mint) : socialApi.watch(token!, mint)),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['social'] }),
+  });
+  return (
+    <IconButton
+      label={watching ? 'Remove from watchlist' : 'Add to watchlist'}
+      onPress={() => {
+        if (!token) {
+          router.push('/watchlist');
+          return;
+        }
+        haptic.select();
+        toggle.mutate();
+      }}
+    >
+      <Star
+        size={20}
+        color={watching ? colors.caution : colors.text}
+        fill={watching ? colors.caution : 'none'}
+        strokeWidth={2}
+      />
+    </IconButton>
   );
 }
 
 const styles = StyleSheet.create({
   root: { flex: 1, backgroundColor: colors.bg },
-  hero: { flexDirection: 'row', alignItems: 'center', gap: 14, marginBottom: 4 },
-  heroText: { flex: 1, minWidth: 0, gap: 8 },
-  heroName: { fontSize: 26, fontWeight: '800', letterSpacing: -0.7 },
-  chips: { flexDirection: 'row', flexWrap: 'wrap', gap: 6 },
-  chip: {
-    height: 26,
-    paddingHorizontal: 9,
-    borderRadius: 8,
-    backgroundColor: colors.surface2,
-    justifyContent: 'center',
-  },
-  chipRow: { flexDirection: 'row', alignItems: 'center', gap: 5 },
-  chipText: { fontSize: 12, fontWeight: '600', color: colors.text2 },
+  flex: { flex: 1, minWidth: 0 },
   header: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 12,
+    gap: space.sm,
     paddingHorizontal: space.screen,
-    paddingBottom: 8,
+    paddingBottom: space.sm,
   },
-  identity: { flex: 1, flexDirection: 'row', alignItems: 'center', gap: 10, minWidth: 0 },
-  flex: { flex: 1 },
-  flexShrink: { flexShrink: 1 },
-  name: { fontSize: 16, fontWeight: '800' },
-  sub: { fontSize: 12, color: colors.muted },
-  content: { paddingHorizontal: space.screen, paddingTop: 10, paddingBottom: 24, gap: space.gap },
-  price: { fontSize: 32, fontWeight: '600', letterSpacing: -1 },
-  noPrice: { fontSize: 24, fontWeight: '800', color: colors.muted },
-  changeRow: { flexDirection: 'row', alignItems: 'center', gap: 8, marginTop: 4 },
-  change: { fontSize: 13, fontWeight: '600' },
-  changePill: {
+  pair: { flex: 1, textAlign: 'center', fontSize: 17, fontWeight: '600' },
+  pairQuote: { color: colors.muted, fontWeight: '500' },
+  content: { paddingHorizontal: space.screen, paddingTop: space.sm, gap: space.md },
+  identity: { flexDirection: 'row', alignItems: 'center', gap: space.md },
+  name: { fontSize: 22, fontWeight: '700', letterSpacing: -0.4 },
+  copy: { flexDirection: 'row', alignItems: 'center', gap: 6, minHeight: 28 },
+  address: { fontSize: 14, color: colors.muted },
+  priceRow: { flexDirection: 'row', alignItems: 'baseline', gap: 10, flexWrap: 'wrap' },
+  price: { fontSize: 32, fontWeight: '700', letterSpacing: -0.8 },
+  noPrice: { fontSize: 24, fontWeight: '600', color: colors.muted },
+  windowText: { fontSize: 14, color: colors.muted },
+  sectionTabs: {
     flexDirection: 'row',
-    alignItems: 'center',
     gap: 4,
-    height: 26,
-    paddingHorizontal: 9,
-    borderRadius: 999,
+    borderBottomWidth: 1,
+    borderBottomColor: colors.border,
   },
-  stats: { flexDirection: 'row', gap: 8, marginTop: 12 },
-  stat: {
-    flex: 1,
-    paddingVertical: 10,
-    paddingHorizontal: 10,
-    borderRadius: 14,
-    backgroundColor: colors.surface,
-    borderWidth: 1,
-    borderColor: colors.border,
-    gap: 3,
-  },
-  statLabel: { fontSize: 11, color: colors.muted, fontWeight: '600' },
-  statValue: { fontSize: 13, fontWeight: '600' },
-  ranges: { flexDirection: 'row', gap: 6, marginTop: 8 },
-  range: { height: 32, paddingHorizontal: 12, borderRadius: 10, justifyContent: 'center' },
-  rangeOn: { backgroundColor: colors.surface2 },
-  rangeLabel: { fontSize: 12, fontWeight: '600' },
-  proLine: { fontSize: 12, color: colors.faint, marginTop: 8 },
-  verdictRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
-  verdict: { flexDirection: 'row', alignItems: 'center', gap: 10 },
-  verdictIcon: {
-    width: 40,
-    height: 40,
-    borderRadius: 12,
-    alignItems: 'center',
+  sectionTab: {
+    minHeight: 44,
+    paddingHorizontal: 16,
     justifyContent: 'center',
+    borderBottomWidth: 2,
+    borderBottomColor: 'transparent',
   },
-  verdictLabel: { fontSize: 18, fontWeight: '800' },
-  link: { fontSize: 13, fontWeight: '700', color: colors.link },
-  grid: { flexDirection: 'row', flexWrap: 'wrap', rowGap: 8, marginTop: 4 },
-  cell: { width: '50%', flexDirection: 'row', alignItems: 'center', gap: 8, paddingRight: 8 },
-  details: { gap: 12, marginTop: 4 },
-  detail: { flexDirection: 'row', gap: 10, alignItems: 'flex-start' },
-  mark: { width: 18, height: 18, borderRadius: 9, alignItems: 'center', justifyContent: 'center' },
-  markText: { fontSize: 11, fontWeight: '800' },
-  checkName: { fontSize: 14, fontWeight: '700' },
-  checkText: { fontSize: 13, color: colors.text2, flexShrink: 1 },
-  eyebrowRow: { flexDirection: 'row', alignItems: 'center', gap: 8 },
-  eyebrow: {
-    fontSize: 12,
-    fontWeight: '800',
-    letterSpacing: 0.6,
-    textTransform: 'uppercase',
-    color: colors.link,
-  },
-  aiTag: {
-    fontSize: 11,
-    fontWeight: '700',
-    color: colors.link,
-    borderWidth: 1,
-    borderColor: tint(colors.link, 0.35),
-    borderRadius: 6,
-    paddingHorizontal: 6,
-  },
-  body: { fontSize: 14, lineHeight: 21, color: colors.body },
-  flags: { flexDirection: 'row', flexWrap: 'wrap', gap: 6 },
-  flag: {
-    fontSize: 12,
-    fontWeight: '700',
-    color: RISK_COLORS.red.fg,
-    backgroundColor: RISK_COLORS.red.bg,
-    paddingHorizontal: 10,
-    paddingVertical: 4,
-    borderRadius: 999,
-    overflow: 'hidden',
-  },
-  note: { fontSize: 12, color: colors.faint, textAlign: 'center', marginTop: 4 },
+  sectionTabOn: { borderBottomColor: colors.accent },
+  sectionLabel: { fontSize: 15, fontWeight: '600', color: colors.muted },
+  sectionBody: { gap: space.md, paddingTop: space.sm },
+  infoRow: { gap: 4 },
+  infoLabel: { fontSize: 13, color: colors.muted },
+  infoText: { fontSize: 14, lineHeight: 21, color: colors.body },
+  note: { fontSize: 12, lineHeight: 17, color: colors.faint },
   footer: {
-    paddingTop: 12,
+    position: 'absolute',
+    left: 0,
+    right: 0,
+    bottom: 0,
+    flexDirection: 'row',
+    gap: space.sm,
     paddingHorizontal: space.screen,
+    paddingTop: space.md,
     backgroundColor: colors.bg,
     borderTopWidth: 1,
     borderTopColor: colors.border,
   },
-  actions: { flexDirection: 'row', gap: 10 },
-  orderLink: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 12,
-    padding: 14,
-    borderRadius: 18,
-    backgroundColor: colors.surface,
-    borderWidth: 1,
-    borderColor: colors.border,
-  },
-  orderIcon: {
-    width: 36,
-    height: 36,
-    borderRadius: 12,
-    backgroundColor: tint(colors.accent, 0.14),
+  action: {
+    flex: 1,
+    height: 52,
+    borderRadius: radius.input,
     alignItems: 'center',
     justifyContent: 'center',
   },
-  action: { height: 54, borderRadius: 16, alignItems: 'center', justifyContent: 'center' },
-  sell: {
-    flex: 1,
-    backgroundColor: colors.surface,
-    borderWidth: 1,
-    borderColor: colors.borderStrong,
-  },
-  buy: { flex: 2, backgroundColor: colors.accent },
-  sellText: { fontSize: 16, fontWeight: '800', color: colors.text },
-  buyText: { fontSize: 16, fontWeight: '800', color: colors.onAccent },
-  footNote: { marginTop: 8, textAlign: 'center', fontSize: 11, color: colors.faint },
+  buy: { backgroundColor: colors.accent },
+  sell: { backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.borderStrong },
+  buyText: { fontSize: 16, fontWeight: '700', color: colors.onAccent },
+  sellText: { fontSize: 16, fontWeight: '700', color: colors.text },
+  moreRow: { flexDirection: 'row', alignItems: 'center', gap: 12, minHeight: 48 },
+  moreText: { fontSize: 15, fontWeight: '500' },
 });

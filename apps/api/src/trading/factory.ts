@@ -3,6 +3,7 @@ import { Connection, PublicKey } from '@solana/web3.js';
 import type { FastifyBaseLogger } from 'fastify';
 import type { Config } from '../config';
 import { heliusRpcUrl } from '../helius/client';
+import { type WalletChain, createWalletChain } from '../sift-wallet/chain';
 import { createPriorityFeeEstimator } from './priority';
 import { createPumpTrader } from './pump-trader';
 import { type ConfirmedTrade, type TradeService, createTradeService } from './service';
@@ -24,6 +25,13 @@ export function createDefaultTradeService(
     log,
     onConfirmed,
   });
+}
+
+/** Balances and sends for the Sift wallet, over the same Helius RPC as trading. */
+export function createDefaultWalletChain(config: Config, apiKey: string): WalletChain {
+  return createWalletChain(
+    new Connection(heliusRpcUrl(config.SOLANA_CLUSTER, apiKey), 'confirmed'),
+  );
 }
 
 /** Devnet faucet: returns the airdrop signature. */

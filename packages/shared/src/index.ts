@@ -5,3 +5,5 @@ export * from './summary';
 export * from './token';
 export * from './trade';
 export * from './social';
+export * from './sift-wallet';
+export * from './hpke';

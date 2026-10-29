@@ -29,6 +29,7 @@ const fakeTrades = () => ({
   quote: vi.fn(async (_request: TradeQuoteRequest) => ({ quoteId: 'q' }) as unknown as TradeQuote),
   submit: vi.fn(async (_quoteId: string, _tx: string) => 'sig'),
   status: vi.fn(async (signature: string) => ({ signature, status: 'confirmed' as const })),
+  issuedQuote: vi.fn(() => null),
 });
 
 describe('trade routes', () => {

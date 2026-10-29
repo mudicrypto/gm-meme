@@ -83,6 +83,24 @@ const ConfigSchema = z
       .int()
       .refine((ms) => ms === 0 || ms >= 10_000, { message: 'must be 0 (off) or at least 10000' })
       .default(60_000),
+    // Sift wallet signing provider (Privy). All four, or none (then no Sift wallets).
+    // PRIVY_AUTHORIZATION_KEY is the private half of the key that owns the wallets: it signs
+    // requests to Privy, but it is not a wallet key and cannot sign transactions by itself.
+    PRIVY_APP_ID: optionalSecret,
+    PRIVY_APP_SECRET: optionalSecret,
+    PRIVY_AUTHORIZATION_KEY: optionalSecret,
+    PRIVY_OWNER_ID: optionalSecret,
+    // Emergency switch: true stops all Sift wallet signing (orders, trades, withdrawals).
+    SIFT_SIGNING_FROZEN: z
+      .enum(['true', 'false'])
+      .default('false')
+      .transform((value) => value === 'true'),
+    // How often the order engine checks prices. 0 = off.
+    ORDER_CHECK_INTERVAL_MS: z.coerce
+      .number()
+      .int()
+      .refine((ms) => ms === 0 || ms >= 5_000, { message: 'must be 0 (off) or at least 5000' })
+      .default(15_000),
     // Optional: Expo push access token, if "enhanced push security" is on for the project.
     EXPO_ACCESS_TOKEN: optionalSecret,
     // This server's public https address. When set (Render sets RENDER_EXTERNAL_URL itself),
@@ -106,6 +124,22 @@ const ConfigSchema = z
           .filter(Boolean),
       ),
   })
+  .refine(
+    (config) =>
+      new Set(
+        [
+          config.PRIVY_APP_ID,
+          config.PRIVY_APP_SECRET,
+          config.PRIVY_AUTHORIZATION_KEY,
+          config.PRIVY_OWNER_ID,
+        ].map(Boolean),
+      ).size === 1,
+    {
+      message:
+        'set all of PRIVY_APP_ID, PRIVY_APP_SECRET, PRIVY_AUTHORIZATION_KEY and PRIVY_OWNER_ID, or none',
+      path: ['PRIVY_APP_ID'],
+    },
+  )
   .refine((config) => !config.SUPABASE_URL === !config.SUPABASE_SERVICE_ROLE_KEY, {
     message: 'set both SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY, or neither',
     path: ['SUPABASE_URL'],

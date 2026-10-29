@@ -30,6 +30,8 @@ export interface TradeService {
   /** Relay a quote's transaction once the user has signed it. Returns the signature. */
   submit(quoteId: string, signedTransaction: string): Promise<string>;
   status(signature: string): Promise<TradeStatusResponse>;
+  /** A quote Sift issued that hasn't been submitted or expired yet. */
+  issuedQuote(quoteId: string): TradeQuote | null;
 }
 
 /** A trade Sift relayed that the network confirmed. */
@@ -68,6 +70,7 @@ const SIMULATION_COMPUTE_UNITS = 400_000;
 const MIN_COMPUTE_UNITS = 60_000;
 
 interface IssuedQuote {
+  quote: TradeQuote;
   message: Uint8Array;
   wallet: string;
   expiresAt: number;
@@ -296,6 +299,7 @@ export function createTradeService(options: TradeServiceOptions): TradeService {
         throw new TradeError('BUSY', 'Sift is busy right now. Try again in a minute.');
       }
       issued.set(quote.quoteId, {
+        quote,
         message: tx.message.serialize(),
         wallet: request.wallet,
         expiresAt: now().getTime() + ttlMs,
@@ -359,6 +363,11 @@ export function createTradeService(options: TradeServiceOptions): TradeService {
           'The network rejected the trade. Review it again to get a fresh quote.',
         );
       }
+    },
+
+    issuedQuote(quoteId) {
+      prune();
+      return issued.get(quoteId)?.quote ?? null;
     },
 
     async status(signature) {

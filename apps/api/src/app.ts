@@ -10,8 +10,20 @@ import { createRiskQueue } from './risk/queue';
 import { createRiskService } from './risk/service';
 import { type SummaryModel, createClaudeSummaryModel } from './summary/claude';
 import { createSummaryService } from './summary/service';
-import { type Airdrop, createAirdrop, createDefaultTradeService } from './trading/factory';
+import {
+  type Airdrop,
+  createAirdrop,
+  createDefaultTradeService,
+  createDefaultWalletChain,
+} from './trading/factory';
 import type { ConfirmedTrade, TradeService } from './trading/service';
+import { siftWalletRoutes } from './routes/sift-wallet';
+import type { WalletChain } from './sift-wallet/chain';
+import { InMemorySiftWalletRepository } from './sift-wallet/memory-repository';
+import type { SiftWalletRepository } from './sift-wallet/repository';
+import { createSiftWalletService } from './sift-wallet/service';
+import { type WalletSigner, createPrivySigner } from './sift-wallet/signer';
+import { SupabaseSiftWalletRepository } from './sift-wallet/supabase-repository';
 import { createAuth } from './social/auth';
 import { startAlertChecker } from './social/alerts';
 import { InMemorySocialRepository } from './social/memory-repository';
@@ -48,6 +60,10 @@ export interface AppDeps {
   /** Pass null to disable trading. */
   tradeService?: TradeService | null;
   airdrop?: Airdrop;
+  siftWalletRepository?: SiftWalletRepository;
+  /** Pass null to run without a signing provider (no Sift wallets). */
+  walletSigner?: WalletSigner | null;
+  walletChain?: WalletChain | null;
   now?: () => Date;
 }
 
@@ -69,6 +85,16 @@ const ROUTE_LIMITS: Record<string, { max: number; timeWindow?: number }> = {
   'GET /profiles': { max: 30 },
   'POST /me/alerts': { max: 20 },
   'POST /me/push-test': { max: 3, timeWindow: 60 * 60_000 },
+  'POST /me/sift-wallet': { max: 5 },
+  'PUT /me/sift-wallet/limits': { max: 10 },
+  'POST /me/sift-wallet/unfreeze': { max: 10 },
+  'POST /me/sift-wallet/2fa': { max: 5 },
+  'POST /me/sift-wallet/2fa/confirm': { max: 10 },
+  'PUT /me/sift-wallet/withdrawal-address': { max: 5 },
+  'POST /me/sift-wallet/withdraw': { max: 5, timeWindow: 60 * 60_000 },
+  'POST /me/sift-wallet/export': { max: 3, timeWindow: 60 * 60_000 },
+  'POST /me/sift-wallet/trades': { max: 20 },
+  'POST /me/orders': { max: 20 },
 };
 // Authenticated by its own secret and called by Helius in bursts; health is for monitors.
 const UNLIMITED_ROUTES = new Set(['POST /webhooks/helius', 'GET /health', 'HEAD /health']);
@@ -202,6 +228,10 @@ export function buildApp(config: Config, deps: AppDeps = {}) {
   app.register(tokenRoutes, { repository, now, scoreLater: (mints) => rescore?.(mints) });
   app.register(chartRoutes, { repository, now });
 
+  // Without Helius there is no default trade service, but tests can still pass one in.
+  let trades: TradeService | null = deps.tradeService ?? null;
+  let walletChain: WalletChain | null = deps.walletChain ?? null;
+
   // Newly launched tokens are scored in the background for the feeds' risk badges.
   let onLaunched: ((mints: string[]) => void) | undefined;
 
@@ -233,7 +263,7 @@ export function buildApp(config: Config, deps: AppDeps = {}) {
     });
 
     const tradingEnabled = config.SOLANA_CLUSTER === 'devnet' || config.ALLOW_MAINNET_TRADING;
-    const trades =
+    trades =
       deps.tradeService !== undefined
         ? deps.tradeService
         : tradingEnabled && config.HELIUS_API_KEY
@@ -241,6 +271,8 @@ export function buildApp(config: Config, deps: AppDeps = {}) {
           : null;
     if (!trades)
       app.log.warn('trading disabled (mainnet needs ALLOW_MAINNET_TRADING after Step 8)');
+    if (deps.walletChain === undefined && trades && config.HELIUS_API_KEY)
+      walletChain = createDefaultWalletChain(config, config.HELIUS_API_KEY);
     app.register(tradeRoutes, {
       trades,
       cluster: config.SOLANA_CLUSTER,
@@ -272,6 +304,47 @@ export function buildApp(config: Config, deps: AppDeps = {}) {
     app.log.warn('HELIUS_API_KEY not set: GET /tokens/:mint/risk and /summary are disabled');
   }
 
+  const walletSigner =
+    deps.walletSigner !== undefined ? deps.walletSigner : createWalletSigner(config);
+  if (!walletSigner) app.log.warn('Privy not configured: Sift wallets are disabled');
+  const wallets = createSiftWalletService({
+    repo: deps.siftWalletRepository ?? createSiftWalletRepository(config),
+    signer: walletSigner,
+    trades,
+    chain: walletChain,
+    tokens: repository,
+    feeWallet: config.FEE_WALLET ?? null,
+    platformFeeBps: config.FEE_WALLET ? config.PLATFORM_FEE_BPS : 0,
+    signingFrozen: config.SIFT_SIGNING_FROZEN,
+    log: app.log,
+    now,
+    notify: async (owner, title, body) => {
+      if (!push) return;
+      const devices = await socialRepository.pushTokens([owner]);
+      if (devices.length === 0) return;
+      await push.send(devices.map((device) => ({ to: device.token, title, body })));
+    },
+  });
+  app.register(siftWalletRoutes, { auth, wallets });
+  if (config.ORDER_CHECK_INTERVAL_MS > 0) {
+    let timer: NodeJS.Timeout | undefined;
+    let running = false;
+    app.addHook('onReady', async () => {
+      timer = setInterval(() => {
+        if (running) return;
+        running = true;
+        wallets
+          .runOrders()
+          .catch((err: unknown) => app.log.error({ err }, 'order engine pass failed'))
+          .finally(() => {
+            running = false;
+          });
+      }, config.ORDER_CHECK_INTERVAL_MS);
+      timer.unref();
+    });
+    app.addHook('onClose', async () => clearInterval(timer));
+  }
+
   const discovery = createDiscoveryService({ repository, helius, log: app.log, now, onLaunched });
 
   if (config.HELIUS_WEBHOOK_SECRET) {
@@ -295,6 +368,33 @@ export function buildApp(config: Config, deps: AppDeps = {}) {
   }
 
   return app;
+}
+
+function createWalletSigner(config: Config): WalletSigner | null {
+  if (
+    !config.PRIVY_APP_ID ||
+    !config.PRIVY_APP_SECRET ||
+    !config.PRIVY_AUTHORIZATION_KEY ||
+    !config.PRIVY_OWNER_ID
+  )
+    return null;
+  return createPrivySigner({
+    appId: config.PRIVY_APP_ID,
+    appSecret: config.PRIVY_APP_SECRET,
+    authorizationKey: config.PRIVY_AUTHORIZATION_KEY,
+    ownerId: config.PRIVY_OWNER_ID,
+    // The policy's ceiling on any single SOL transfer (withdrawals): 50 SOL on devnet.
+    maxTransferLamports: 50 * LAMPORTS_PER_SOL,
+  });
+}
+
+function createSiftWalletRepository(config: Config): SiftWalletRepository {
+  if (config.SUPABASE_URL && config.SUPABASE_SERVICE_ROLE_KEY) {
+    return new SupabaseSiftWalletRepository(
+      createSupabaseRpc(config.SUPABASE_URL, config.SUPABASE_SERVICE_ROLE_KEY),
+    );
+  }
+  return new InMemorySiftWalletRepository();
 }
 
 function createSocialRepository(config: Config, log: FastifyBaseLogger): SocialRepository {

@@ -1,7 +1,7 @@
 import type { ReactNode } from 'react';
 import { StyleSheet, View } from 'react-native';
 import { haptic } from '../lib/motion';
-import { colors, tint } from '../lib/theme';
+import { colors, radius, tint } from '../lib/theme';
 import { PressableScale } from './Motion';
 import { Text } from './Text';
 
@@ -119,28 +119,20 @@ export function Chip({
 
 const styles = StyleSheet.create({
   button: {
-    height: 54,
-    borderRadius: 16,
+    height: 52,
+    borderRadius: radius.input,
     paddingHorizontal: 18,
     alignItems: 'center',
     justifyContent: 'center',
   },
-  small: { height: 44, borderRadius: 14 },
-  // A soft accent glow under the main action.
-  primary: {
-    backgroundColor: colors.accent,
-    shadowColor: colors.accent,
-    shadowOpacity: 0.35,
-    shadowRadius: 16,
-    shadowOffset: { width: 0, height: 6 },
-    elevation: 6,
-  },
+  small: { height: 44, borderRadius: radius.input },
+  primary: { backgroundColor: colors.accent },
   secondary: { backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.borderStrong },
-  label: { fontSize: 16, fontWeight: '800' },
+  label: { fontSize: 16, fontWeight: '600' },
   icon: {
     width: 44,
     height: 44,
-    borderRadius: 14,
+    borderRadius: radius.input,
     borderWidth: 1,
     borderColor: colors.borderStrong,
     backgroundColor: colors.surface,
@@ -157,14 +149,14 @@ const styles = StyleSheet.create({
     backgroundColor: colors.accent,
   },
   chip: {
-    height: 40,
-    paddingHorizontal: 16,
-    borderRadius: 12,
+    minHeight: 44,
+    paddingHorizontal: 14,
+    borderRadius: radius.chip,
     borderWidth: 1,
     borderColor: colors.borderStrong,
     backgroundColor: colors.surface,
     alignItems: 'center',
     justifyContent: 'center',
   },
-  chipLabel: { fontSize: 14, fontWeight: '700' },
+  chipLabel: { fontSize: 14, fontWeight: '600' },
 });

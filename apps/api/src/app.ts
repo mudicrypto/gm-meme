@@ -75,6 +75,7 @@ const ROUTE_LIMITS: Record<string, { max: number; timeWindow?: number }> = {
   'GET /tokens/:mint/summary': { max: 10 },
   'GET /tokens/:mint/risk': { max: 20 },
   'GET /wallets/:address/holdings': { max: 30 },
+  'GET /tokens/stats': { max: 30 },
   'POST /trades/quote': { max: 20 },
   'POST /trades/submit': { max: 20 },
   'GET /trades/:signature': { max: 60 },

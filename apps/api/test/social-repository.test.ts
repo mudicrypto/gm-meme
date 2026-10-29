@@ -129,6 +129,21 @@ describe.each(implementations)('SocialRepository: %s', (_name, create) => {
     expect(await repo.tradesBy(BOB, 10)).toEqual([]);
   });
 
+  it('lists every shared trade in a window, newest first, for the leaderboard', async () => {
+    await repo.saveProfile(profile(ALICE, 'alice', true));
+    await repo.saveProfile(profile(BOB, 'bob', true));
+    await repo.recordTrade(trade({ signature: 'a1', at: at(1) }));
+    await repo.recordTrade(trade({ signature: 'b1', wallet: BOB, side: 'sell', at: at(5) }));
+    await repo.recordTrade(trade({ signature: 'a0', at: at(0) }));
+    const rows = await repo.sharedTradesSince(at(1), 10);
+    expect(rows.map((r) => [r.signature, r.handle])).toEqual([
+      ['b1', 'bob'],
+      ['a1', 'alice'],
+    ]);
+    expect(rows[0]).not.toHaveProperty('wallet');
+    expect(await repo.sharedTradesSince(at(0), 1)).toHaveLength(1);
+  });
+
   it('turning sharing off deletes shared trades', async () => {
     await repo.saveProfile(profile(ALICE, 'alice', true));
     await repo.recordTrade(trade({}));

@@ -17,16 +17,17 @@ function weightOf(style: TextStyle): Weight {
 }
 
 /**
- * The font for a style: Manrope by weight, or JetBrains Mono for numbers, prices and
- * addresses. Native platforms need one font family per weight, so the weight picks it.
+ * Inter at the style's weight; `mono` (numbers, prices, addresses) adds tabular figures so
+ * columns of numbers line up. Native platforms need one family per weight.
  */
 function fontStyle(style: TextStyle, mono: boolean): TextStyle {
   const weight = weightOf(style);
-  const useMono = mono || style.fontFamily === 'monospace';
   return {
-    fontFamily: useMono ? fonts.mono[weight >= 600 ? 600 : 500] : fonts.ui[weight],
+    // The terminal look tops out at bold: 800 reads as 700.
+    fontFamily: fonts.ui[weight === 800 ? 700 : weight],
     // The family already carries the weight; a second one makes Android fall back.
     fontWeight: undefined,
+    ...(mono || style.fontFamily === 'monospace' ? { fontVariant: ['tabular-nums'] } : {}),
   };
 }
 

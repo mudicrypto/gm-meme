@@ -69,6 +69,8 @@ export interface SocialRepository {
   feed(viewer: string, limit: number): Promise<SharedTradeRecord[]>;
   /** One person's shared trades, newest first (none while sharing is off). */
   tradesBy(wallet: string, limit: number): Promise<SharedTradeRecord[]>;
+  /** Every shared trade since a time, newest first (for the leaderboard). */
+  sharedTradesSince(since: string, limit: number): Promise<SharedTradeRecord[]>;
 
   watch(wallet: string, mint: string, at: string): Promise<void>;
   unwatch(wallet: string, mint: string): Promise<void>;

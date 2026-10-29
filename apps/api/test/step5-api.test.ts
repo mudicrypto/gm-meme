@@ -92,8 +92,8 @@ describe('buildChart', () => {
       buckets: 60,
     });
     expect(points).toEqual([
-      { t: '2026-10-19T11:00:00.000Z', priceSol: 2, volumeSol: 4 },
-      { t: '2026-10-19T11:30:00.000Z', priceSol: 5, volumeSol: 1 },
+      { t: '2026-10-19T11:00:00.000Z', priceSol: 2, open: 1, high: 2, low: 1, volumeSol: 4 },
+      { t: '2026-10-19T11:30:00.000Z', priceSol: 5, open: 5, high: 5, low: 5, volumeSol: 1 },
     ]);
   });
 
@@ -103,7 +103,9 @@ describe('buildChart', () => {
       now,
       buckets: 60,
     });
-    expect(points).toEqual([{ t: '2026-10-19T11:59:00.000Z', priceSol: 7, volumeSol: 1 }]);
+    expect(points).toEqual([
+      { t: '2026-10-19T11:59:00.000Z', priceSol: 7, open: 7, high: 7, low: 7, volumeSol: 1 },
+    ]);
   });
 });
 
@@ -200,8 +202,22 @@ describe('Step 5 routes', () => {
       mint: MINT_A,
       windowMinutes: 60,
       points: [
-        { t: '2026-10-19T11:50:00.000Z', priceSol: 0.001, volumeSol: 1 },
-        { t: '2026-10-19T11:55:00.000Z', priceSol: 0.002, volumeSol: 2 },
+        {
+          t: '2026-10-19T11:50:00.000Z',
+          priceSol: 0.001,
+          open: 0.001,
+          high: 0.001,
+          low: 0.001,
+          volumeSol: 1,
+        },
+        {
+          t: '2026-10-19T11:55:00.000Z',
+          priceSol: 0.002,
+          open: 0.002,
+          high: 0.002,
+          low: 0.002,
+          volumeSol: 2,
+        },
       ],
     });
     expect(

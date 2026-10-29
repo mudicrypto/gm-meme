@@ -139,6 +139,11 @@ export class SupabaseSocialRepository implements SocialRepository {
     return rows.map(toTrade);
   }
 
+  async sharedTradesSince(since: string, limit: number) {
+    const rows = await this.call<TradeRow>('shared_trades_since', { since, max_rows: limit });
+    return rows.map(toTrade);
+  }
+
   async watch(wallet: string, mint: string, at: string) {
     await this.call('watch_token', { watcher: wallet, token_mint: mint, at_time: at });
   }

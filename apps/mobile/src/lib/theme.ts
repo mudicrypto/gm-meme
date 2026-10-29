@@ -1,38 +1,42 @@
 import type { RiskLevel } from '@sift/shared';
 
-// Sift's design system (docs/design/DESIGN.md): dark, calm, flat. Every colour, size and
-// font the screens use comes from here; screens never hard-code them.
+// Sift's design system: a graphite trading terminal (docs/design/TERMINAL.md). Every colour,
+// size and font the screens use comes from here; screens never hard-code them.
 
 export const colors = {
-  bg: '#0B0D12',
-  surface: '#151922',
-  surface2: '#1D2230',
-  /** Card borders. */
-  border: '#1F2430',
+  bg: '#0B0D10',
+  /** Panels, cards, inputs, sheets. */
+  surface: '#12161C',
+  /** Raised controls on a panel: selected segments, chips, hover. */
+  surface2: '#1A2028',
+  /** Panel and table borders. */
+  border: '#242B35',
   /** Button and input borders. */
-  borderStrong: '#262C3A',
-  /** Hairlines between list rows. */
-  divider: '#1A1E28',
-  tabBar: '#0E1117',
+  borderStrong: '#2C3440',
+  /** Hairlines between table rows. */
+  divider: '#1A1F27',
+  tabBar: '#0E1115',
   /** Off state of a switch track. */
-  track: '#2A3040',
-  text: '#F3F5F9',
-  /** Body text on cards. */
-  text2: '#C9CFDA',
+  track: '#2C3440',
+  text: '#F3F5F7',
+  /** Body text on panels. */
+  text2: '#C9D0DB',
   /** Long-form body text (summaries, notes). */
-  body: '#E2E6EE',
-  muted: '#9BA4B5',
-  faint: '#8A93A5',
-  accent: '#8B9CFF',
-  /** Shadows and glows (never shown as a surface). */
+  body: '#E1E5EB',
+  /** Secondary text: labels, column headers. */
+  muted: '#A0AABA',
+  /** Captions and disclaimers (still 4.5:1 on the background). */
+  faint: '#8590A1',
+  accent: '#63E6BE',
+  /** Shadows (never shown as a surface). */
   shadow: '#000000',
   /** Text and icons on an accent background. */
-  onAccent: '#0B0D12',
+  onAccent: '#06130F',
   /** Links and accent labels. */
-  link: '#A9B5FF',
-  up: '#34D399',
-  caution: '#FBBF24',
-  down: '#F87171',
+  link: '#63E6BE',
+  up: '#63E6BE',
+  caution: '#F5B544',
+  down: '#FF786E',
 } as const;
 
 /** A colour at `alpha` opacity: tinted badge backgrounds (~0.12) and borders (~0.3). */
@@ -41,32 +45,40 @@ export function tint(hex: string, alpha: number): string {
   return `rgba(${(n >> 16) & 255},${(n >> 8) & 255},${n & 255},${alpha})`;
 }
 
-/** Font families as loaded in the root layout (one family per weight on native). */
+/** Inter, one family per weight (native platforms need that). Numbers use tabular figures. */
 export const fonts = {
   ui: {
-    400: 'Manrope_400Regular',
-    500: 'Manrope_500Medium',
-    600: 'Manrope_600SemiBold',
-    700: 'Manrope_700Bold',
-    800: 'Manrope_800ExtraBold',
+    400: 'Inter_400Regular',
+    500: 'Inter_500Medium',
+    600: 'Inter_600SemiBold',
+    700: 'Inter_700Bold',
+    800: 'Inter_800ExtraBold',
   },
-  mono: { 500: 'JetBrainsMono_500Medium', 600: 'JetBrainsMono_600SemiBold' },
 } as const;
 
-export const radius = { chip: 12, input: 14, card: 18, cardLarge: 20, hero: 24, sheet: 28 };
+/** 8px grid; radii 8–12. */
+export const radius = { chip: 8, input: 10, card: 12, cardLarge: 12, hero: 12, sheet: 16 };
 export const space = {
-  screen: 20,
-  gap: 10,
+  xs: 4,
+  sm: 8,
+  md: 12,
+  lg: 16,
+  xl: 24,
+  screen: 16,
+  gap: 8,
   card: 16,
-  /** Room at the bottom of tab screens so content clears the floating tab bar. */
-  tabBar: 120,
+  /** Room at the bottom of tab screens so content clears the tab bar. */
+  tabBar: 24,
 };
+
+/** Width breakpoints: phones up to 767, tablets to 1199, desktops from 1200. */
+export const breakpoints = { tablet: 768, desktop: 1200 } as const;
 
 /** Type scale: size, weight and letter spacing. */
 export const type = {
-  title: { fontSize: 28, fontWeight: '800', letterSpacing: -0.8 },
-  section: { fontSize: 17, fontWeight: '800' },
-  cardTitle: { fontSize: 16, fontWeight: '700' },
+  title: { fontSize: 26, fontWeight: '700', letterSpacing: -0.6 },
+  section: { fontSize: 16, fontWeight: '700' },
+  cardTitle: { fontSize: 15, fontWeight: '600' },
   body: { fontSize: 14 },
   label: { fontSize: 13 },
   caption: { fontSize: 12 },

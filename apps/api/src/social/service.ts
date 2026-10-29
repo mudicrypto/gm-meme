@@ -1,5 +1,6 @@
 import { createHash, randomUUID } from 'node:crypto';
 import type {
+  LeaderboardResponse,
   AlertDirection,
   FeedToken,
   MeResponse,
@@ -13,6 +14,7 @@ import type {
 } from '@sift/shared';
 import { RISK_BADGE_MAX_AGE_MS, type TokenRepository } from '../tokens/repository';
 import { crossed, formatPriceSol } from './alerts';
+import { buildLeaderboard } from './leaderboard';
 import type { ProfileRecord, SharedTradeRecord, SocialRepository } from './repository';
 
 /** A request we refuse, with a message for the user. */
@@ -121,6 +123,11 @@ export function createSocialService(deps: {
     async unfollow(viewer: string, handle: string) {
       const target = await profileOrThrow(handle);
       await social.unfollow(viewer, target.wallet);
+    },
+
+    async leaderboard(days: number): Promise<LeaderboardResponse> {
+      const since = new Date(now().getTime() - days * 24 * 60 * 60_000).toISOString();
+      return { days, entries: buildLeaderboard(await social.sharedTradesSince(since, 5000)) };
     },
 
     async feed(viewer: string): Promise<SharedTrade[]> {

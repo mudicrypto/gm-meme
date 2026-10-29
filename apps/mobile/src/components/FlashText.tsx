@@ -42,7 +42,7 @@ export function FlashText({
   return (
     <Animated.Text
       style={[
-        { fontFamily: fonts.mono[600], color: colors.text },
+        { fontFamily: fonts.ui[600], fontVariant: ['tabular-nums'], color: colors.text },
         style,
         { fontWeight: undefined },
         {

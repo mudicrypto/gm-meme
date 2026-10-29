@@ -136,3 +136,24 @@ export interface PriceAlert {
 export interface AlertsResponse {
   alerts: PriceAlert[];
 }
+
+/** One trader on the leaderboard. Only people who share their trades appear. */
+export interface LeaderboardEntry {
+  rank: number;
+  handle: string;
+  displayName: string;
+  /**
+   * Profit or loss on what they sold in the window, in lamports: sale proceeds minus the
+   * average cost of those tokens. Positions still held don't count.
+   */
+  realizedLamports: number;
+  trades: number;
+  /** Tokens sold at a profit, and tokens sold in all. */
+  winningTokens: number;
+  soldTokens: number;
+}
+
+export interface LeaderboardResponse {
+  days: number;
+  entries: LeaderboardEntry[];
+}

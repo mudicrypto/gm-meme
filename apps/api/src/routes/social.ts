@@ -46,6 +46,12 @@ const alertBody = z.object({
   priceSol: z.number().positive().finite().max(1e9),
 });
 const alertParams = z.object({ id: z.uuid() });
+const leaderboardQuery = z.object({
+  days: z.coerce
+    .number()
+    .pipe(z.union([z.literal(1), z.literal(7), z.literal(30)]))
+    .default(7),
+});
 const pushBody = z.object({ token: z.string().regex(EXPO_PUSH_TOKEN) });
 
 /** Profiles, follows, the friends feed, watchlists and price alerts. Sign in with a wallet. */
@@ -145,6 +151,14 @@ export const socialRoutes: FastifyPluginAsync<{
     if (!params) return;
     await social.unfollow(wallet, params.handle);
     return reply.status(204).send();
+  });
+
+  // Public, like profiles: handles and display names only, never wallet addresses.
+  app.get('/leaderboard', async (request, reply) => {
+    const query = parseOrReply(leaderboardQuery, request.query, reply);
+    if (!query) return;
+    reply.header('cache-control', 'public, max-age=60');
+    return social.leaderboard(query.days);
   });
 
   app.get('/feed', async (request, reply) => {

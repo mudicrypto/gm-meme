@@ -98,6 +98,11 @@ export class InMemorySocialRepository implements SocialRepository {
     return this.sharedTrades((trade) => trade.wallet === wallet, limit);
   }
 
+  async sharedTradesSince(since: string, limit: number) {
+    const from = Date.parse(since);
+    return this.sharedTrades((trade) => Date.parse(trade.at) >= from, limit);
+  }
+
   async watch(wallet: string, mint: string, at: string) {
     if (!this.watching.has(key(wallet, mint))) {
       this.watching.set(key(wallet, mint), { wallet, mint, addedAt: at });

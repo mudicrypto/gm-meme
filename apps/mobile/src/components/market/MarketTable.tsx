@@ -63,7 +63,7 @@ export function MarketTable({
       { key: 'change', label: `${windowLabel} %`, flex: 0.9, align: 'right', sort: 'change' },
       { key: 'volume', label: 'Volume', flex: 1.1, align: 'right', sort: 'volume' },
       { key: 'txns', label: 'Buys / sells', flex: 1, align: 'right', minWidth: 1050 },
-      { key: 'mcap', label: 'Mkt cap', flex: 1.1, align: 'right', sort: 'marketCap' },
+      { key: 'mcap', label: 'Mkt cap', flex: 1.3, align: 'right', sort: 'marketCap' },
       { key: 'risk', label: 'Risk', flex: 1.3, minWidth: 820 },
       { key: 'trend', label: 'Trend', flex: 1.3, align: 'center', minWidth: 900 },
       { key: 'action', label: 'Action', flex: 0.9, align: 'right' },
@@ -156,21 +156,21 @@ export function MarketTable({
                     </View>
                   </View>
                 ) : column.key === 'price' ? (
-                  <Text mono style={styles.value}>
+                  <Text mono style={styles.value} numberOfLines={1}>
                     {s?.priceSol ? formatSolPrice(s.priceSol) : '–'}
                   </Text>
                 ) : column.key === 'change' ? (
                   <Change pct={s?.changePct} size={14} />
                 ) : column.key === 'volume' ? (
-                  <Text mono style={styles.value}>
+                  <Text mono style={styles.value} numberOfLines={1}>
                     {s ? formatSol(s.volumeSol) : '–'}
                   </Text>
                 ) : column.key === 'txns' ? (
-                  <Text mono style={styles.value}>
+                  <Text mono style={styles.value} numberOfLines={1}>
                     {s ? `${s.buys} / ${s.sells}` : '–'}
                   </Text>
                 ) : column.key === 'mcap' ? (
-                  <Text mono style={styles.value}>
+                  <Text mono style={styles.value} numberOfLines={1}>
                     {s?.marketCapSol ? `${formatCompact(s.marketCapSol)} SOL` : '–'}
                   </Text>
                 ) : column.key === 'risk' ? (

@@ -124,22 +124,24 @@ const ConfigSchema = z
           .filter(Boolean),
       ),
   })
-  .refine(
-    (config) =>
-      new Set(
-        [
-          config.PRIVY_APP_ID,
-          config.PRIVY_APP_SECRET,
-          config.PRIVY_AUTHORIZATION_KEY,
-          config.PRIVY_OWNER_ID,
-        ].map(Boolean),
-      ).size === 1,
-    {
-      message:
-        'set all of PRIVY_APP_ID, PRIVY_APP_SECRET, PRIVY_AUTHORIZATION_KEY and PRIVY_OWNER_ID, or none',
-      path: ['PRIVY_APP_ID'],
-    },
-  )
+  .superRefine((config, ctx) => {
+    // All four Privy values, or none. Name the missing ones (names only, never values).
+    const privy = {
+      PRIVY_APP_ID: config.PRIVY_APP_ID,
+      PRIVY_APP_SECRET: config.PRIVY_APP_SECRET,
+      PRIVY_AUTHORIZATION_KEY: config.PRIVY_AUTHORIZATION_KEY,
+      PRIVY_OWNER_ID: config.PRIVY_OWNER_ID,
+    };
+    const missing = Object.entries(privy)
+      .filter(([, value]) => !value)
+      .map(([name]) => name);
+    if (missing.length > 0 && missing.length < 4)
+      ctx.addIssue({
+        code: 'custom',
+        message: `set all of PRIVY_APP_ID, PRIVY_APP_SECRET, PRIVY_AUTHORIZATION_KEY and PRIVY_OWNER_ID, or none (missing: ${missing.join(', ')})`,
+        path: ['PRIVY_APP_ID'],
+      });
+  })
   .refine((config) => !config.SUPABASE_URL === !config.SUPABASE_SERVICE_ROLE_KEY, {
     message: 'set both SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY, or neither',
     path: ['SUPABASE_URL'],

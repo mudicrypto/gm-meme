@@ -15,6 +15,13 @@ describe('loadConfig', () => {
     expect(config.SUPABASE_URL).toBeUndefined();
   });
 
+  it('names the missing Privy values without echoing the ones that are set', () => {
+    const run = () =>
+      loadConfig({ PRIVY_APP_ID: 'app-id-value', PRIVY_APP_SECRET: 'secret-value' });
+    expect(run).toThrow(/missing: PRIVY_AUTHORIZATION_KEY, PRIVY_OWNER_ID/);
+    expect(run).not.toThrow(/secret-value/);
+  });
+
   it('rejects an unknown cluster', () => {
     expect(() => loadConfig({ SOLANA_CLUSTER: 'testnet' })).toThrow(/SOLANA_CLUSTER/);
   });

@@ -1,4 +1,4 @@
-import { createPrivateKey, sign } from 'node:crypto';
+import { type KeyObject, createECDH, createPrivateKey, sign } from 'node:crypto';
 import {
   ASSOCIATED_TOKEN_PROGRAM,
   COMPUTE_BUDGET_PROGRAM,
@@ -127,14 +127,62 @@ export interface PrivySignerOptions {
   fetchFn?: typeof fetch;
 }
 
+/**
+ * Reads Sift's P-256 authorization key as Privy hands it out: "wallet-auth:" plus PKCS#8
+ * base64, PKCS#8 or SEC1 (base64 or PEM), or the bare 32-byte private number (base64 or
+ * hex). Errors name the problem, never the key.
+ */
+export function parseAuthorizationKey(input: string): KeyObject {
+  const text = input
+    .trim()
+    .replace(/^wallet-auth:/, '')
+    .trim();
+  if (text.startsWith('-----BEGIN')) {
+    try {
+      return createPrivateKey({ key: text.replace(/\\n/g, '\n'), format: 'pem' });
+    } catch {
+      throw new Error('PRIVY_AUTHORIZATION_KEY is a PEM block that isn’t a P-256 private key');
+    }
+  }
+  const compact = text.replace(/\s+/g, '');
+  const bytes = /^[0-9a-fA-F]{64}$/.test(compact)
+    ? Buffer.from(compact, 'hex')
+    : Buffer.from(compact.replace(/-/g, '+').replace(/_/g, '/'), 'base64');
+  if (bytes.length === 32) {
+    // The bare private number: rebuild the key with its public point.
+    const ecdh = createECDH('prime256v1');
+    ecdh.setPrivateKey(bytes);
+    const point = ecdh.getPublicKey();
+    return createPrivateKey({
+      key: {
+        kty: 'EC',
+        crv: 'P-256',
+        d: bytes.toString('base64url'),
+        x: point.subarray(1, 33).toString('base64url'),
+        y: point.subarray(33, 65).toString('base64url'),
+      },
+      format: 'jwk',
+    });
+  }
+  for (const type of ['pkcs8', 'sec1'] as const) {
+    try {
+      const key = createPrivateKey({ key: bytes, format: 'der', type });
+      if (key.asymmetricKeyDetails?.namedCurve === 'prime256v1') return key;
+    } catch {
+      // Try the next format.
+    }
+  }
+  throw new Error(
+    `PRIVY_AUTHORIZATION_KEY isn’t a P-256 private key (${bytes.length} bytes after decoding). ` +
+      'Copy the private key Privy showed when you created it (it starts with "wallet-auth:").',
+  );
+}
+
 /** WalletSigner on Privy's REST API, with every request signed by Sift's owner key. */
 export function createPrivySigner(opts: PrivySignerOptions): WalletSigner {
   const base = opts.baseUrl ?? 'https://api.privy.io';
   const fetchFn = opts.fetchFn ?? fetch;
-  const key = createPrivateKey({
-    key: `-----BEGIN PRIVATE KEY-----\n${opts.authorizationKey.replace(/^wallet-auth:/, '')}\n-----END PRIVATE KEY-----`,
-    format: 'pem',
-  });
+  const key = parseAuthorizationKey(opts.authorizationKey);
 
   async function request<T>(
     method: 'GET' | 'POST' | 'PATCH',

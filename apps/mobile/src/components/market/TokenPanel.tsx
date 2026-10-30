@@ -61,7 +61,7 @@ export function TokenPanel({
   const metrics: Array<[string, string]> = [
     ['Mkt cap', stats?.marketCapSol ? formatCompact(stats.marketCapSol) : '–'],
     [`Vol ${windowLabel}`, stats ? formatCompact(stats.volumeSol) : '–'],
-    ['Buys/sells', stats ? `${stats.buys}/${stats.sells}` : '–'],
+    ['Trades', stats ? formatCompact(stats.buys + stats.sells) : '–'],
     ['Age', age === 'just now' ? 'New' : age],
   ];
 

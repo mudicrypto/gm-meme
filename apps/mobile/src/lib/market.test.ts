@@ -10,7 +10,9 @@ import {
   matchesSearch,
   nextSort,
   searchAddress,
+  pickHighlights,
   sortTokens,
+  type MarketToken,
 } from './market';
 
 const NOW = Date.parse('2026-10-29T12:00:00Z');
@@ -117,5 +119,33 @@ describe('filterChips', () => {
   });
   it('has no chips for the defaults', () => {
     expect(filterChips(DEFAULT_FILTERS)).toEqual([]);
+  });
+});
+
+describe('pickHighlights', () => {
+  const at = (h: number) => new Date(Date.UTC(2026, 9, 30, h)).toISOString();
+  const tok = (mint: string, riskLevel: 'green' | 'amber' | 'red', hour: number) =>
+    ({ mint, name: mint, riskLevel, launchedAt: at(hour), firstSeenAt: at(hour) }) as MarketToken;
+  const st = (mint: string, changePct: number, volumeSol: number, buys: number, sells: number) =>
+    [mint, { mint, changePct, volumeSol, buys, sells, priceSol: 1, sparkline: [] }] as const;
+
+  it('picks one token per highlight from the window stats', () => {
+    const tokens = [tok('a', 'green', 1), tok('b', 'amber', 5), tok('c', 'green', 3)];
+    const stats = new Map([st('a', 40, 10, 5, 5), st('b', -3, 90, 1, 1), st('c', 5, 20, 30, 20)]);
+    const picks = pickHighlights(tokens, stats as never);
+    expect(picks.map((p) => [p.key, p.token.mint])).toEqual([
+      ['gainer', 'a'],
+      ['volume', 'b'],
+      ['newest', 'b'],
+      ['trades', 'c'],
+    ]);
+  });
+
+  it('never highlights a red-flagged token, and skips a card with no candidate', () => {
+    const tokens = [tok('scam', 'red', 9), tok('x', 'green', 1)];
+    const stats = new Map([st('scam', 900, 500, 99, 99), st('x', -2, 0, 0, 0)]);
+    const picks = pickHighlights(tokens, stats as never);
+    expect(picks.some((p) => p.token.mint === 'scam')).toBe(false);
+    expect(picks.map((p) => p.key)).toEqual(['newest']);
   });
 });

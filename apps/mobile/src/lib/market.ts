@@ -210,3 +210,48 @@ export function formatChange(pct: number | undefined): string {
 export function isStale(updatedAt: number, now: number, maxAgeMs = 60_000): boolean {
   return updatedAt > 0 && now - updatedAt > maxAgeMs;
 }
+
+export type HighlightKey = 'gainer' | 'volume' | 'newest' | 'trades';
+export interface Highlight {
+  key: HighlightKey;
+  label: string;
+  token: MarketToken;
+}
+
+/**
+ * The cards above the list: the biggest gainer, the most traded by volume and by count,
+ * and the newest launch in the window. Facts about the window, never picks: red-flagged
+ * tokens are left out so the strip never puts a likely scam in front of anyone.
+ */
+export function pickHighlights(
+  tokens: readonly MarketToken[],
+  stats: ReadonlyMap<string, TokenStats>,
+): Highlight[] {
+  const pool = tokens.filter((t) => t.riskLevel !== 'red');
+  const best = (score: (t: MarketToken) => number | undefined) => {
+    let top: MarketToken | undefined;
+    let topScore = 0;
+    for (const t of pool) {
+      const s = score(t);
+      if (s !== undefined && Number.isFinite(s) && s > topScore) {
+        top = t;
+        topScore = s;
+      }
+    }
+    return top;
+  };
+  const picks: Array<[HighlightKey, string, MarketToken | undefined]> = [
+    ['gainer', 'Top gainer', best((t) => stats.get(t.mint)?.changePct)],
+    ['volume', 'Most traded', best((t) => stats.get(t.mint)?.volumeSol)],
+    ['newest', 'Newest', best((t) => Date.parse(t.launchedAt ?? t.firstSeenAt))],
+    [
+      'trades',
+      'Most trades',
+      best((t) => {
+        const s = stats.get(t.mint);
+        return s ? s.buys + s.sells : undefined;
+      }),
+    ],
+  ];
+  return picks.flatMap(([key, label, token]) => (token ? [{ key, label, token }] : []));
+}

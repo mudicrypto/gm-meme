@@ -1,5 +1,6 @@
 import type { RiskLevel } from '@sift/shared';
 import { SlidersHorizontal, X } from 'lucide-react-native';
+import { router } from 'expo-router';
 import { useEffect, useState } from 'react';
 import { Pressable, ScrollView, StyleSheet, View, useWindowDimensions } from 'react-native';
 import { transition } from '../../lib/motion';
@@ -9,6 +10,7 @@ import { ErrorState } from '../States';
 import { Text } from '../Text';
 import { EmptyFeed } from './EmptyFeed';
 import { FiltersBody } from './FiltersSheet';
+import { Highlights } from './Highlights';
 import { MarketTable } from './MarketTable';
 import { LoadingRows } from './MobileDiscover';
 import { Sidebar } from './Sidebar';
@@ -81,6 +83,12 @@ export function DesktopDiscover({
               <StatusLine state={state} inline />
             </View>
           </View>
+          <Highlights
+            row
+            tokens={rows}
+            stats={market.statsMap}
+            onOpen={(mint) => (showPanel ? state.select(mint) : router.push(`/token/${mint}`))}
+          />
           <View style={styles.controls}>
             <View style={styles.feeds}>
               <Tabs

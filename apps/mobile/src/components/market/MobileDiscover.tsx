@@ -1,4 +1,5 @@
 import { ChevronDown, Filter, Info } from 'lucide-react-native';
+import { router } from 'expo-router';
 import { useState } from 'react';
 import { Animated, FlatList, Pressable, RefreshControl, StyleSheet, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -11,6 +12,7 @@ import { Logo } from '../Logo';
 import { usePulse } from '../Motion';
 import { Text } from '../Text';
 import { EmptyFeed } from './EmptyFeed';
+import { Highlights } from './Highlights';
 import { FiltersSheet } from './FiltersSheet';
 import { DevnetPill, NetworkChip, NetworkNote } from './Network';
 import { SearchBar } from './SearchBar';
@@ -43,6 +45,11 @@ export function MobileDiscover({ state }: { state: DiscoverState }) {
         </Text>
       </View>
       <SearchBar value={state.query} onChange={state.setQuery} onSubmit={state.openAddress} />
+      <Highlights
+        tokens={rows}
+        stats={market.statsMap}
+        onOpen={(mint) => router.push(`/token/${mint}`)}
+      />
       {state.address ? (
         <Pressable
           onPress={state.openAddress}
@@ -103,7 +110,7 @@ export function MobileDiscover({ state }: { state: DiscoverState }) {
           accessibilityRole="button"
           accessibilityLabel="Sort by age"
         >
-          <Text style={styles.colText}>Token{state.sortMark('age')}</Text>
+          <Text style={styles.colText}>Token / Vol{state.sortMark('age')}</Text>
         </Pressable>
         <Pressable
           onPress={() => state.sortBy('price')}
@@ -123,7 +130,6 @@ export function MobileDiscover({ state }: { state: DiscoverState }) {
             {windowLabel} %{state.sortMark('change')}
           </Text>
         </Pressable>
-        <View style={styles.colSpark} />
       </View>
     </View>
   );
@@ -205,7 +211,7 @@ const styles = StyleSheet.create({
   topRight: { flexDirection: 'row', alignItems: 'center', gap: space.sm },
   brand: { fontSize: 16, fontWeight: '700', letterSpacing: 3 },
   eyebrow: { fontSize: 12, fontWeight: '600', letterSpacing: 2, color: colors.muted },
-  title: { fontSize: 40, fontWeight: '800', letterSpacing: -1.2, marginTop: 2 },
+  title: { fontSize: 34, fontWeight: '800', letterSpacing: -1, marginTop: 2 },
   footNote: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -251,10 +257,9 @@ const styles = StyleSheet.create({
   hidden: { fontSize: 12, color: colors.muted },
   link: { fontSize: 12, fontWeight: '600', color: colors.accent },
   columns: { flexDirection: 'row', alignItems: 'center', gap: 10, marginTop: 4 },
-  colSpark: { width: 52 },
   colToken: { flex: 1, minHeight: 32, justifyContent: 'center' },
-  colPrice: { width: 80, minHeight: 32, alignItems: 'flex-end', justifyContent: 'center' },
-  colChange: { width: 72, minHeight: 32, alignItems: 'flex-end', justifyContent: 'center' },
+  colPrice: { minHeight: 32, alignItems: 'flex-end', justifyContent: 'center' },
+  colChange: { width: 82, minHeight: 32, alignItems: 'flex-end', justifyContent: 'center' },
   colText: { fontSize: 13, color: colors.muted, fontWeight: '500' },
   skeleton: {
     flexDirection: 'row',

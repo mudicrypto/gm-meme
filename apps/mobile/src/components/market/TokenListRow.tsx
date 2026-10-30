@@ -9,9 +9,8 @@ import { Text } from '../Text';
 import { TokenAvatar } from '../TokenAvatar';
 import { Change } from './Change';
 import { RISK_TAGS, RiskTag } from './RiskTag';
-import { Sparkline } from './Sparkline';
 
-/** A phone list row: token and risk, price and volume, change and sparkline. */
+/** A phone list row, exchange style: token and volume, price and market cap, change badge. */
 export function TokenListRow({
   token,
   stats,
@@ -39,32 +38,35 @@ export function TokenListRow({
         uri={token.imageUrl}
         label={token.symbol ?? token.name}
         seed={token.mint}
-        size={44}
+        size={40}
       />
       <View style={styles.name}>
-        <Text style={styles.symbol} numberOfLines={1}>
-          {symbol}
-        </Text>
         <View style={styles.subRow}>
-          <Text style={styles.sub} numberOfLines={1}>
-            {note ?? token.name ?? (age === 'just now' ? 'New' : age)}
+          <Text style={styles.symbol} numberOfLines={1}>
+            {symbol}
           </Text>
           {/* The risk check stays visible: a shield whose shape says the level. */}
           <RiskTag level={token.riskLevel} size={12} iconOnly />
         </View>
+        <Text style={styles.sub} numberOfLines={1}>
+          {note ?? (stats ? `Vol ${formatCompact(stats.volumeSol)} SOL` : (token.name ?? age))}
+        </Text>
       </View>
-      <Text mono style={styles.price} numberOfLines={1}>
-        {stats?.priceSol ? formatSolPrice(stats.priceSol) : '–'}
-      </Text>
+      <View style={styles.priceCol}>
+        <Text mono style={styles.price} numberOfLines={1}>
+          {stats?.priceSol ? formatSolPrice(stats.priceSol) : '–'}
+        </Text>
+        <Text mono style={styles.sub} numberOfLines={1}>
+          {stats?.marketCapSol
+            ? `MC ${formatCompact(stats.marketCapSol)}`
+            : age === 'just now'
+              ? 'New'
+              : age}
+        </Text>
+      </View>
       <View style={styles.changeCol}>
-        <Change pct={stats?.changePct} size={13} badge />
+        <Change pct={stats?.changePct} size={14} badge />
       </View>
-      <Sparkline
-        points={stats?.sparkline ?? []}
-        changePct={stats?.changePct}
-        width={52}
-        height={26}
-      />
     </Pressable>
   );
 }
@@ -78,17 +80,18 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 10,
-    minHeight: 72,
-    paddingVertical: 12,
+    minHeight: 68,
+    paddingVertical: 10,
     paddingHorizontal: 16,
     borderBottomWidth: StyleSheet.hairlineWidth,
     borderBottomColor: colors.border,
   },
   active: { backgroundColor: colors.surface2 },
-  name: { flex: 1, minWidth: 0, gap: 3 },
+  name: { flex: 1, minWidth: 0, gap: 4 },
   symbol: { fontSize: 16, fontWeight: '700', color: colors.text },
   subRow: { flexDirection: 'row', alignItems: 'center', gap: 6, minWidth: 0 },
-  sub: { fontSize: 13, color: colors.muted, flexShrink: 1 },
-  price: { width: 80, textAlign: 'right', fontSize: 15, fontWeight: '500' },
-  changeCol: { width: 72, alignItems: 'flex-end' },
+  sub: { fontSize: 12, color: colors.muted, flexShrink: 1 },
+  priceCol: { alignItems: 'flex-end', gap: 4, maxWidth: 120 },
+  price: { fontSize: 15, fontWeight: '600' },
+  changeCol: { width: 82, alignItems: 'flex-end' },
 });

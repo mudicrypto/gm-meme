@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import {
+  formatSolPriceFull,
   formatAge,
   formatAgo,
   formatCompact,
@@ -80,5 +81,17 @@ describe('formatAgo', () => {
   it('adds "ago" except for just now', () => {
     expect(formatAgo('2026-10-20T09:59:30Z', now)).toBe('just now');
     expect(formatAgo('2026-10-20T09:55:00Z', now)).toBe('5m ago');
+  });
+});
+
+describe('formatSolPriceFull', () => {
+  it('writes tiny prices out in full', () => {
+    expect(formatSolPriceFull(1.23e-10)).toBe('0.000000000123');
+    expect(formatSolPriceFull(0.000165)).toBe('0.000165');
+    expect(formatSolPriceFull(0.0000362915)).toBe('0.0000362915');
+  });
+  it('keeps big prices readable', () => {
+    expect(formatSolPriceFull(12.5)).toBe('12.5');
+    expect(formatSolPriceFull(0)).toBe('0');
   });
 });

@@ -61,3 +61,13 @@ export function formatPct(pct: number): string {
 function trimZeros(text: string): string {
   return text.includes('.') ? text.replace(/\.?0+$/, '') : text;
 }
+
+/**
+ * A SOL price written out in full, without subscript zeros or rounding to 3 figures:
+ * for tooltips and copying. 1.23e-10 → "0.000000000123".
+ */
+export function formatSolPriceFull(price: number): string {
+  if (!Number.isFinite(price) || price <= 0) return '0';
+  const decimals = price >= 1 ? 6 : Math.min(20, Math.ceil(-Math.log10(price)) + 5);
+  return price.toFixed(decimals).replace(/\.?0+$/, '');
+}

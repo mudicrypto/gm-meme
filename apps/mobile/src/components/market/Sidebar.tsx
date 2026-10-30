@@ -1,9 +1,9 @@
 import { router } from 'expo-router';
 import { Bell, ListOrdered, MoreHorizontal, SlidersHorizontal, Trophy } from 'lucide-react-native';
-import { Pressable, StyleSheet, View } from 'react-native';
-import { colors, space } from '../../lib/theme';
+import { StyleSheet, View } from 'react-native';
 import { transition } from '../../lib/motion';
-import { Text } from '../Text';
+import { colors, space } from '../../lib/theme';
+import { HoverTip } from '../HoverTip';
 
 /** Secondary tools beside the table (the header holds the main navigation). */
 export function Sidebar({
@@ -11,12 +11,13 @@ export function Sidebar({
   screenerOn,
 }: {
   onScreener: () => void;
+  /** The filter drawer is open. */
   screenerOn: boolean;
 }) {
   const items = [
     {
       key: 'screener',
-      label: 'Screener',
+      label: 'Filters',
       icon: SlidersHorizontal,
       onPress: onScreener,
       active: screenerOn,
@@ -51,25 +52,28 @@ export function Sidebar({
     },
   ];
   return (
-    <View style={styles.rail} accessibilityRole="toolbar">
+    <View style={styles.rail} accessibilityRole="toolbar" accessibilityLabel="Tools">
       {items.map((item) => {
         const Icon = item.icon;
         return (
-          <Pressable
+          <HoverTip
             key={item.key}
+            tip={item.label}
+            side="right"
             onPress={item.onPress}
             accessibilityRole="button"
+            accessibilityLabel={item.label}
             accessibilityState={{ selected: item.active }}
-            style={({ hovered }: { pressed: boolean; hovered?: boolean }) => [
+            style={({ hovered, focused }) => [
               styles.item,
               item.active && styles.active,
-              hovered && !item.active && styles.hover,
+              (hovered || focused) && !item.active && styles.hover,
+              focused && styles.focus,
               transition,
             ]}
           >
             <Icon size={20} color={item.active ? colors.accent : colors.muted} strokeWidth={2} />
-            <Text style={[styles.label, item.active && { color: colors.text }]}>{item.label}</Text>
-          </Pressable>
+          </HoverTip>
         );
       })}
     </View>
@@ -78,22 +82,22 @@ export function Sidebar({
 
 const styles = StyleSheet.create({
   rail: {
-    width: 76,
+    width: 64,
     paddingVertical: space.md,
-    gap: 4,
+    gap: space.sm,
     alignItems: 'center',
-    borderRightWidth: 1,
+    borderRightWidth: StyleSheet.hairlineWidth,
     borderRightColor: colors.border,
+    zIndex: 20,
   },
   item: {
-    width: 64,
-    minHeight: 60,
-    borderRadius: 10,
+    width: 44,
+    height: 44,
+    borderRadius: 8,
     alignItems: 'center',
     justifyContent: 'center',
-    gap: 4,
   },
-  active: { backgroundColor: colors.surface },
+  active: { backgroundColor: colors.surface2 },
   hover: { backgroundColor: colors.surface },
-  label: { fontSize: 11, fontWeight: '500', color: colors.muted },
+  focus: { outlineColor: colors.accent, outlineWidth: 1, outlineStyle: 'solid' } as object,
 });

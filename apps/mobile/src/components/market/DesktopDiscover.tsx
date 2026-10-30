@@ -1,13 +1,13 @@
 import type { RiskLevel } from '@sift/shared';
-import { SlidersHorizontal } from 'lucide-react-native';
-import { useState } from 'react';
+import { SlidersHorizontal, X } from 'lucide-react-native';
+import { useEffect, useState } from 'react';
 import { Pressable, ScrollView, StyleSheet, View, useWindowDimensions } from 'react-native';
 import { transition } from '../../lib/motion';
-import { DEFAULT_FILTERS, LIST_WINDOWS, activeFilterCount } from '../../lib/market';
+import { DEFAULT_FILTERS, LIST_WINDOWS, activeFilterCount, filterChips } from '../../lib/market';
 import { colors, radius, space } from '../../lib/theme';
 import { Empty, ErrorState } from '../States';
 import { Text } from '../Text';
-import { FiltersBody, FiltersSheet } from './FiltersSheet';
+import { FiltersBody } from './FiltersSheet';
 import { MarketTable } from './MarketTable';
 import { LoadingRows } from './MobileDiscover';
 import { Sidebar } from './Sidebar';
@@ -18,14 +18,15 @@ import { TokenPanel } from './TokenPanel';
 import { type DiscoverState, FEEDS, emptyMessage } from './useDiscover';
 import { useNetwork } from '../../lib/network';
 
-const SIDEBAR = 76;
-const PANEL = 400;
-const SCREENER = 280;
+const SIDEBAR = 64;
+/** The token panel: 400 on wide screens, 360 on smaller desktops. */
+const panelWidth = (width: number) => (width >= 1440 ? 400 : 360);
+const DRAWER = 320;
 
 /**
  * Discover on tablets and desktops: header, tool rail, the discovery table and, on wide
  * screens, the selected token beside it. Smaller desktops drop the panel and rows open
- * the token page instead.
+ * the token page instead. Filters live in a drawer over the table: closing it keeps them.
  */
 export function DesktopDiscover({
   state,
@@ -36,13 +37,13 @@ export function DesktopDiscover({
 }) {
   const { width } = useWindowDimensions();
   const { isDevnet } = useNetwork();
-  const [screener, setScreener] = useState(false);
-  const [filtersOpen, setFiltersOpen] = useState(false);
+  const [drawerOpen, setDrawerOpen] = useState(false);
   const { market, rows } = state;
   const filterCount = activeFilterCount(state.filters);
+  const chips = filterChips(state.filters);
   const windowLabel = LIST_WINDOWS.find((w) => w.minutes === state.windowMinutes)?.label ?? '1h';
-  const tableWidth =
-    width - SIDEBAR - (showPanel ? PANEL : 0) - (screener ? SCREENER : 0) - space.xl * 2;
+  const panel = panelWidth(width);
+  const tableWidth = width - SIDEBAR - (showPanel ? panel : 0) - space.xl * 2;
   const selectedToken = rows.find((t) => t.mint === state.selected) ?? rows[0];
   const toggleLevel = (level: RiskLevel | 'unknown') =>
     state.setFilters({
@@ -52,39 +53,34 @@ export function DesktopDiscover({
         : [...state.filters.levels, level],
     });
 
+  // Esc closes the drawer (web).
+  useEffect(() => {
+    if (!drawerOpen || typeof window === 'undefined') return;
+    const onKey = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') setDrawerOpen(false);
+    };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [drawerOpen]);
+
   return (
     <View style={styles.screen}>
       <TerminalHeader query={state.query} onQuery={state.setQuery} />
       <View style={styles.body}>
-        <Sidebar onScreener={() => setScreener((v) => !v)} screenerOn={screener} />
-        {screener ? (
-          <ScrollView style={styles.screener} contentContainerStyle={styles.screenerContent}>
-            <View style={styles.screenerHead}>
-              <Text style={styles.screenerTitle}>Screener</Text>
-              <Pressable
-                onPress={() => state.setFilters(DEFAULT_FILTERS)}
-                accessibilityRole="button"
-                style={styles.reset}
-              >
-                <Text style={styles.link}>Reset</Text>
-              </Pressable>
-            </View>
-            <FiltersBody
-              filters={state.filters}
-              onChange={state.setFilters}
-              toggleLevel={toggleLevel}
-            />
-          </ScrollView>
-        ) : null}
+        <Sidebar onScreener={() => setDrawerOpen((v) => !v)} screenerOn={drawerOpen} />
         <ScrollView style={styles.main} contentContainerStyle={styles.mainContent}>
           <View style={styles.titleRow}>
-            <View style={styles.flex}>
+            <View>
               <Text style={styles.title} accessibilityRole="header">
                 Discover
               </Text>
-              <Text style={styles.subtitle}>Every token checked for scam patterns first.</Text>
+              <Text style={styles.subtitle} numberOfLines={1}>
+                Every token checked for scam patterns first.
+              </Text>
             </View>
-            <StatusLine state={state} inline />
+            <View style={styles.status}>
+              <StatusLine state={state} inline />
+            </View>
           </View>
           <View style={styles.controls}>
             <View style={styles.feeds}>
@@ -95,44 +91,75 @@ export function DesktopDiscover({
                 onChange={state.setFeed}
               />
             </View>
-            <View style={styles.windows}>
-              <Tabs
-                compact
-                label="Time window"
-                options={LIST_WINDOWS.map((w) => ({ value: w.minutes, label: w.label }))}
-                value={state.windowMinutes}
-                onChange={state.setWindowMinutes}
-              />
+            <View style={styles.right}>
+              <View style={styles.windows}>
+                <Tabs
+                  compact
+                  label="Time window"
+                  options={LIST_WINDOWS.map((w) => ({ value: w.minutes, label: w.label }))}
+                  value={state.windowMinutes}
+                  onChange={state.setWindowMinutes}
+                />
+              </View>
+              <Pressable
+                onPress={() => setDrawerOpen(true)}
+                accessibilityRole="button"
+                accessibilityLabel={`Filters${filterCount ? `, ${filterCount} on` : ''}`}
+                style={({ hovered }: { pressed: boolean; hovered?: boolean }) => [
+                  styles.filters,
+                  hovered && { backgroundColor: colors.surface2 },
+                  transition,
+                ]}
+              >
+                <SlidersHorizontal size={16} color={colors.text} strokeWidth={2} />
+                <Text style={styles.filtersText}>Filters</Text>
+                {filterCount > 0 ? (
+                  <View style={styles.badge}>
+                    <Text mono style={styles.badgeText}>
+                      {filterCount}
+                    </Text>
+                  </View>
+                ) : null}
+              </Pressable>
             </View>
-            <Pressable
-              onPress={() => (screener ? setScreener(false) : setFiltersOpen(true))}
-              accessibilityRole="button"
-              accessibilityLabel={`Filters${filterCount ? `, ${filterCount} on` : ''}`}
-              style={({ hovered }: { pressed: boolean; hovered?: boolean }) => [
-                styles.filters,
-                hovered && { backgroundColor: colors.surface2 },
-                transition,
-              ]}
-            >
-              <SlidersHorizontal size={16} color={colors.text} strokeWidth={2} />
-              <Text style={styles.filtersText}>Filters</Text>
-              {filterCount > 0 ? (
-                <View style={styles.badge}>
-                  <Text mono style={styles.badgeText}>
-                    {filterCount}
-                  </Text>
-                </View>
-              ) : null}
-            </Pressable>
           </View>
-          {state.hiddenRed > 0 ? (
-            <Text style={styles.hidden}>
-              Safety filter on: {state.hiddenRed} red {state.hiddenRed === 1 ? 'token' : 'tokens'}{' '}
-              hidden.{' '}
-              <Text style={styles.link} onPress={state.showRed} accessibilityRole="button">
-                Show
-              </Text>
-            </Text>
+          {chips.length > 0 || state.hiddenRed > 0 ? (
+            <View style={styles.chips}>
+              {chips.map((chip) => (
+                <Pressable
+                  key={chip.key}
+                  onPress={() => state.setFilters(chip.without)}
+                  accessibilityRole="button"
+                  accessibilityLabel={`Remove filter: ${chip.label}`}
+                  style={({ hovered }: { pressed: boolean; hovered?: boolean }) => [
+                    styles.chip,
+                    hovered && { backgroundColor: colors.surface2 },
+                    transition,
+                  ]}
+                >
+                  <Text style={styles.chipText}>{chip.label}</Text>
+                  <X size={14} color={colors.muted} strokeWidth={2} />
+                </Pressable>
+              ))}
+              {chips.length > 1 ? (
+                <Pressable
+                  onPress={() => state.setFilters(DEFAULT_FILTERS)}
+                  accessibilityRole="button"
+                  style={styles.clear}
+                >
+                  <Text style={styles.link}>Clear all</Text>
+                </Pressable>
+              ) : null}
+              {state.hiddenRed > 0 ? (
+                <Text style={styles.hidden}>
+                  {state.hiddenRed} red {state.hiddenRed === 1 ? 'token' : 'tokens'} hidden by the
+                  safety filter.{' '}
+                  <Text style={styles.link} onPress={state.showRed} accessibilityRole="button">
+                    Show
+                  </Text>
+                </Text>
+              ) : null}
+            </View>
           ) : null}
           {state.address ? (
             <Pressable
@@ -174,7 +201,7 @@ export function DesktopDiscover({
           </Text>
         </ScrollView>
         {showPanel ? (
-          <View style={styles.panel}>
+          <View style={[styles.panel, { width: panel }]}>
             {selectedToken ? (
               <TokenPanel
                 key={selectedToken.mint}
@@ -189,13 +216,56 @@ export function DesktopDiscover({
             )}
           </View>
         ) : null}
+
+        {drawerOpen ? (
+          <>
+            <Pressable
+              style={styles.backdrop}
+              onPress={() => setDrawerOpen(false)}
+              accessibilityLabel="Close filters"
+            />
+            <View style={styles.drawer} accessibilityRole="none" accessibilityLabel="Filters">
+              <View style={styles.drawerHead}>
+                <Text style={styles.drawerTitle}>Filters</Text>
+                <Pressable
+                  onPress={() => state.setFilters(DEFAULT_FILTERS)}
+                  accessibilityRole="button"
+                  style={styles.reset}
+                >
+                  <Text style={styles.link}>Reset</Text>
+                </Pressable>
+                <Pressable
+                  onPress={() => setDrawerOpen(false)}
+                  accessibilityRole="button"
+                  accessibilityLabel="Close filters"
+                  style={styles.close}
+                >
+                  <X size={18} color={colors.text} strokeWidth={2} />
+                </Pressable>
+              </View>
+              <ScrollView contentContainerStyle={styles.drawerBody}>
+                <FiltersBody
+                  filters={state.filters}
+                  onChange={state.setFilters}
+                  toggleLevel={toggleLevel}
+                />
+              </ScrollView>
+              <View style={styles.drawerFoot}>
+                <Text style={styles.count}>
+                  {rows.length} {rows.length === 1 ? 'token' : 'tokens'} match
+                </Text>
+                <Pressable
+                  onPress={() => setDrawerOpen(false)}
+                  accessibilityRole="button"
+                  style={styles.done}
+                >
+                  <Text style={styles.doneText}>Done</Text>
+                </Pressable>
+              </View>
+            </View>
+          </>
+        ) : null}
       </View>
-      <FiltersSheet
-        visible={filtersOpen}
-        onClose={() => setFiltersOpen(false)}
-        filters={state.filters}
-        onChange={state.setFilters}
-      />
     </View>
   );
 }
@@ -204,31 +274,35 @@ const styles = StyleSheet.create({
   screen: { flex: 1, backgroundColor: colors.bg },
   flex: { flex: 1, minWidth: 0 },
   body: { flex: 1, flexDirection: 'row' },
-  screener: {
-    width: SCREENER,
-    flexGrow: 0,
-    borderRightWidth: 1,
-    borderRightColor: colors.border,
-  },
-  screenerContent: { padding: space.lg, gap: space.md },
-  screenerHead: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
-  screenerTitle: { fontSize: 16, fontWeight: '700' },
-  reset: { minHeight: 44, justifyContent: 'center' },
+  reset: { minHeight: 36, justifyContent: 'center', paddingHorizontal: 8 },
   main: { flex: 1 },
   mainContent: { padding: space.xl, gap: space.lg },
-  titleRow: { flexDirection: 'row', alignItems: 'flex-end', gap: space.lg },
+  titleRow: {
+    flexDirection: 'row',
+    alignItems: 'flex-end',
+    justifyContent: 'space-between',
+    flexWrap: 'wrap',
+    gap: space.md,
+  },
+  status: { flexShrink: 1 },
   title: { fontSize: 24, fontWeight: '700', letterSpacing: -0.5 },
   subtitle: { fontSize: 14, color: colors.muted, marginTop: 2 },
-  controls: { flexDirection: 'row', alignItems: 'center', gap: space.md, flexWrap: 'wrap' },
-  feeds: { width: 380 },
-  windows: { width: 220 },
+  controls: {
+    flexDirection: 'row',
+    alignItems: 'flex-end',
+    justifyContent: 'space-between',
+    gap: space.md,
+    flexWrap: 'wrap',
+  },
+  feeds: { flexShrink: 1 },
+  right: { flexDirection: 'row', alignItems: 'center', gap: space.sm },
+  windows: { width: 208 },
   filters: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 6,
     minHeight: 44,
     paddingHorizontal: 14,
-    marginLeft: 'auto',
     borderRadius: radius.input,
     backgroundColor: colors.surface,
   },
@@ -244,6 +318,19 @@ const styles = StyleSheet.create({
   },
   badgeText: { fontSize: 11, fontWeight: '700', color: colors.onAccent },
   hidden: { fontSize: 13, color: colors.muted },
+  chips: { flexDirection: 'row', alignItems: 'center', flexWrap: 'wrap', gap: space.sm },
+  chip: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    height: 32,
+    paddingLeft: 12,
+    paddingRight: 8,
+    borderRadius: radius.chip,
+    backgroundColor: colors.surface,
+  },
+  chipText: { fontSize: 13, fontWeight: '500', color: colors.text2 },
+  clear: { height: 32, justifyContent: 'center', paddingHorizontal: 4 },
   link: { fontSize: 13, fontWeight: '600', color: colors.accent },
   openAddress: {
     alignSelf: 'flex-start',
@@ -261,9 +348,60 @@ const styles = StyleSheet.create({
   },
   footnote: { fontSize: 12, color: colors.faint, lineHeight: 18, maxWidth: 760 },
   panel: {
-    width: PANEL,
+    backgroundColor: colors.surface,
     borderLeftWidth: StyleSheet.hairlineWidth,
     borderLeftColor: colors.border,
   },
+  backdrop: {
+    position: 'absolute',
+    top: 0,
+    bottom: 0,
+    left: SIDEBAR,
+    right: 0,
+    backgroundColor: 'rgba(0,0,0,0.45)',
+    zIndex: 30,
+  },
+  drawer: {
+    position: 'absolute',
+    top: 0,
+    bottom: 0,
+    left: SIDEBAR,
+    width: DRAWER,
+    backgroundColor: colors.surface,
+    borderRightWidth: StyleSheet.hairlineWidth,
+    borderRightColor: colors.border,
+    zIndex: 31,
+  },
+  drawerHead: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: space.sm,
+    height: 56,
+    paddingLeft: space.lg,
+    paddingRight: space.sm,
+    borderBottomWidth: StyleSheet.hairlineWidth,
+    borderBottomColor: colors.border,
+  },
+  drawerTitle: { flex: 1, fontSize: 16, fontWeight: '600' },
+  close: { width: 40, height: 40, borderRadius: 8, alignItems: 'center', justifyContent: 'center' },
+  drawerBody: { padding: space.lg },
+  drawerFoot: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    padding: space.lg,
+    borderTopWidth: StyleSheet.hairlineWidth,
+    borderTopColor: colors.border,
+  },
+  count: { fontSize: 13, color: colors.muted },
+  done: {
+    height: 40,
+    paddingHorizontal: 18,
+    borderRadius: radius.input,
+    backgroundColor: colors.accent,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  doneText: { fontSize: 14, fontWeight: '600', color: colors.onAccent },
   panelEmpty: { flex: 1, alignItems: 'center', justifyContent: 'center', padding: space.xl },
 });

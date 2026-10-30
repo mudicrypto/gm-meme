@@ -20,7 +20,7 @@
     "android": {
       "package": "app.sift.mobile",
       "adaptiveIcon": {
-        "backgroundColor": "#63E6BE",
+        "backgroundColor": "#72E5C0",
         "foregroundImage": "./assets/android-icon-foreground.png",
         "backgroundImage": "./assets/android-icon-background.png",
         "monochromeImage": "./assets/android-icon-monochrome.png"
@@ -32,8 +32,8 @@
       "name": "Sift",
       "shortName": "Sift",
       "description": "Solana meme coins with a risk check on every token, the full cost before every trade, and your keys in your own wallet.",
-      "themeColor": "#0B0D10",
-      "backgroundColor": "#0B0D10"
+      "themeColor": "#0B0E12",
+      "backgroundColor": "#0B0E12"
     },
     "plugins": [
       "expo-router",
@@ -42,7 +42,7 @@
         "expo-notifications",
         {
           "icon": "./assets/android-icon-monochrome.png",
-          "color": "#63E6BE"
+          "color": "#72E5C0"
         }
       ],
       [
@@ -57,11 +57,11 @@
         {
           "image": "./assets/splash-icon.png",
           "imageWidth": 120,
-          "backgroundColor": "#0B0D10",
+          "backgroundColor": "#0B0E12",
           "resizeMode": "contain"
         }
       ]
     ],
-    "backgroundColor": "#0B0D10"
+    "backgroundColor": "#0B0E12"
   }
 }

@@ -16,10 +16,13 @@ const X_AXIS = 18;
 export function CandleChart({
   points,
   height = 220,
+  emptyHeight,
   windowMinutes,
 }: {
   points: readonly PricePoint[];
   height?: number;
+  /** Height of the "not enough data" placeholder (defaults to the chart's height). */
+  emptyHeight?: number;
   windowMinutes: number;
 }) {
   const [width, setWidth] = useState(0);
@@ -30,7 +33,7 @@ export function CandleChart({
   if (points.length < 2) {
     return (
       <View
-        style={[styles.empty, { height }]}
+        style={[styles.empty, { height: emptyHeight ?? height }]}
         onLayout={(e) => setWidth(e.nativeEvent.layout.width)}
       >
         <Text style={styles.emptyText}>
@@ -166,10 +169,9 @@ const styles = StyleSheet.create({
   empty: {
     alignItems: 'center',
     justifyContent: 'center',
-    borderRadius: 10,
-    borderWidth: 1,
-    borderStyle: 'dashed',
-    borderColor: colors.border,
+    paddingHorizontal: 16,
+    borderRadius: 8,
+    backgroundColor: colors.bg,
   },
-  emptyText: { fontSize: 13, color: colors.muted },
+  emptyText: { fontSize: 13, color: colors.muted, textAlign: 'center' },
 });

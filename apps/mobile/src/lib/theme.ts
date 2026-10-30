@@ -4,18 +4,18 @@ import type { RiskLevel } from '@sift/shared';
 // size and font the screens use comes from here; screens never hard-code them.
 
 export const colors = {
-  bg: '#0B0D10',
+  bg: '#0B0E12',
   /** Panels, cards, inputs, sheets. */
-  surface: '#12161C',
+  surface: '#12171D',
   /** Raised controls on a panel: selected segments, chips, hover. */
-  surface2: '#1A2028',
+  surface2: '#1B222B',
   /** Panel and table borders. */
-  border: '#242B35',
+  border: '#252B34',
   /** Button and input borders. */
-  borderStrong: '#2C3440',
+  borderStrong: '#2E3540',
   /** Hairlines between table rows. */
-  divider: '#1A1F27',
-  tabBar: '#0E1115',
+  divider: '#1B2129',
+  tabBar: '#0E1216',
   /** Off state of a switch track. */
   track: '#2C3440',
   text: '#F3F5F7',
@@ -24,17 +24,17 @@ export const colors = {
   /** Long-form body text (summaries, notes). */
   body: '#E1E5EB',
   /** Secondary text: labels, column headers. */
-  muted: '#A0AABA',
+  muted: '#98A2B3',
   /** Captions and disclaimers (still 4.5:1 on the background). */
   faint: '#8590A1',
-  accent: '#63E6BE',
+  accent: '#72E5C0',
   /** Shadows (never shown as a surface). */
   shadow: '#000000',
   /** Text and icons on an accent background. */
   onAccent: '#06130F',
   /** Links and accent labels. */
-  link: '#63E6BE',
-  up: '#63E6BE',
+  link: '#72E5C0',
+  up: '#72E5C0',
   caution: '#F5B544',
   down: '#FF786E',
 } as const;
@@ -57,7 +57,8 @@ export const fonts = {
 } as const;
 
 /** 8px grid; radii 8–12. */
-export const radius = { chip: 8, input: 10, card: 12, cardLarge: 12, hero: 12, sheet: 16 };
+/** 8px controls, 12px cards. */
+export const radius = { chip: 8, input: 8, card: 12, cardLarge: 12, hero: 12, sheet: 16 };
 export const space = {
   xs: 4,
   sm: 8,

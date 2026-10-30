@@ -1,16 +1,20 @@
 import type { TokenStats } from '@sift/shared';
+import * as Clipboard from 'expo-clipboard';
 import { router } from 'expo-router';
+import { useState } from 'react';
 import { Pressable, StyleSheet, View } from 'react-native';
 import {
   formatAge,
   formatCompact,
   formatSol,
   formatSolPrice,
+  formatSolPriceFull,
   shortAddress,
 } from '../../lib/format';
 import type { MarketToken, SortKey } from '../../lib/market';
 import { transition } from '../../lib/motion';
 import { colors, radius, tint } from '../../lib/theme';
+import { HoverTip } from '../HoverTip';
 import { Text } from '../Text';
 import { TokenAvatar } from '../TokenAvatar';
 import { Change } from './Change';
@@ -27,6 +31,36 @@ interface Column {
   sort?: SortKey;
   /** Hidden below this table width. */
   minWidth?: number;
+}
+
+// Explicit widths; the token column takes what's left (at least TOKEN_MIN). Optional
+// columns join in priority order while they fit: risk first, then trend, then buys/sells.
+const TOKEN_MIN = 160;
+const BASE: Column[] = [
+  { key: 'rank', label: '#', flex: 0, width: 36 },
+  { key: 'token', label: 'Token', flex: 1, sort: 'age' },
+  { key: 'price', label: 'Price (SOL)', flex: 0, width: 112, align: 'right', sort: 'price' },
+  { key: 'change', label: '%', flex: 0, width: 80, align: 'right', sort: 'change' },
+  { key: 'volume', label: 'Volume', flex: 0, width: 100, align: 'right', sort: 'volume' },
+  { key: 'txns', label: 'Buys / sells', flex: 0, width: 100, align: 'right' },
+  { key: 'mcap', label: 'Mkt cap', flex: 0, width: 112, align: 'right', sort: 'marketCap' },
+  { key: 'risk', label: 'Risk', flex: 0, width: 112 },
+  { key: 'trend', label: 'Trend', flex: 0, width: 112, align: 'center' },
+  { key: 'action', label: '', flex: 0, width: 88, align: 'right' },
+];
+const OPTIONAL = ['risk', 'trend', 'txns'];
+
+function pickColumns(width: number, windowLabel: string): Column[] {
+  const fixed = (keys: Set<string>) =>
+    BASE.filter((c) => keys.has(c.key)).reduce((sum, c) => sum + (c.width ?? 0), 0);
+  const keys = new Set(BASE.map((c) => c.key).filter((k) => !OPTIONAL.includes(k)));
+  for (const key of OPTIONAL) {
+    const next = new Set(keys).add(key);
+    if (fixed(next) + TOKEN_MIN <= width) keys.add(key);
+  }
+  return BASE.filter((c) => keys.has(c.key)).map((c) =>
+    c.key === 'change' ? { ...c, label: `${windowLabel} %` } : c,
+  );
 }
 
 /** The discovery table: dense, sortable, with a clear selected row. Desktop and tablet only. */
@@ -52,20 +86,7 @@ export function MarketTable({
   sortMark: (key: SortKey) => string;
   traders?: ReadonlyMap<string, number>;
 }) {
-  const columns: Column[] = (
-    [
-      { key: 'rank', label: '#', flex: 0.4 },
-      { key: 'token', label: 'Token', flex: 2.4, sort: 'age' },
-      { key: 'price', label: 'Price (SOL)', flex: 1.2, align: 'right', sort: 'price' },
-      { key: 'change', label: `${windowLabel} %`, flex: 0.9, align: 'right', sort: 'change' },
-      { key: 'volume', label: 'Volume', flex: 1.1, align: 'right', sort: 'volume' },
-      { key: 'txns', label: 'Buys / sells', flex: 1, align: 'right', minWidth: 1050 },
-      { key: 'mcap', label: 'Mkt cap', flex: 1.3, align: 'right', sort: 'marketCap' },
-      { key: 'risk', label: 'Risk', flex: 1, minWidth: 640 },
-      { key: 'trend', label: 'Trend', flex: 0, width: 128, align: 'center', minWidth: 900 },
-      { key: 'action', label: '', flex: 0, width: 92, align: 'right' },
-    ] satisfies Column[]
-  ).filter((c) => !c.minWidth || width >= c.minWidth);
+  const columns = pickColumns(width, windowLabel);
 
   return (
     <View style={styles.table} accessibilityRole="list">
@@ -159,9 +180,13 @@ export function MarketTable({
                     </View>
                   </View>
                 ) : column.key === 'price' ? (
-                  <Text mono style={styles.value} numberOfLines={1}>
-                    {s?.priceSol ? formatSolPrice(s.priceSol) : '–'}
-                  </Text>
+                  s?.priceSol ? (
+                    <PriceCell price={s.priceSol} />
+                  ) : (
+                    <Text mono style={styles.value}>
+                      –
+                    </Text>
+                  )
                 ) : column.key === 'change' ? (
                   <Change pct={s?.changePct} size={14} />
                 ) : column.key === 'volume' ? (
@@ -208,6 +233,28 @@ export function MarketTable({
   );
 }
 
+/** A price with its full precision on hover or focus; clicking copies it. */
+function PriceCell({ price }: { price: number }) {
+  const [copied, setCopied] = useState(false);
+  const full = formatSolPriceFull(price);
+  return (
+    <HoverTip
+      tip={copied ? 'Copied' : `${full} SOL · click to copy`}
+      onPress={() => {
+        void Clipboard.setStringAsync(full).then(() => setCopied(true));
+        setTimeout(() => setCopied(false), 1500);
+      }}
+      accessibilityRole="button"
+      accessibilityLabel={`Price ${full} SOL. Copy`}
+      style={({ focused }) => [styles.priceTap, focused && styles.priceFocus]}
+    >
+      <Text mono style={styles.value} numberOfLines={1}>
+        {formatSolPrice(price)}
+      </Text>
+    </HoverTip>
+  );
+}
+
 function cellSize(column: Column) {
   return column.width ? { width: column.width } : { flex: column.flex };
 }
@@ -218,11 +265,13 @@ function alignStyle(align?: 'right' | 'center') {
 
 const styles = StyleSheet.create({
   flex: { flex: 1, minWidth: 0 },
+  // No overflow clipping: price tooltips rise above the first row.
   table: {
     borderRadius: radius.card,
     backgroundColor: colors.surface,
-    overflow: 'hidden',
   },
+  priceTap: { paddingVertical: 4, borderRadius: 4 },
+  priceFocus: { outlineColor: colors.accent, outlineWidth: 1, outlineStyle: 'solid' } as object,
   head: {
     flexDirection: 'row',
     alignItems: 'center',

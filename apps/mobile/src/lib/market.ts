@@ -52,6 +52,48 @@ export function activeFilterCount(filters: MarketFilters): number {
   );
 }
 
+const LEVEL_NAMES: Record<RiskLevel | 'unknown', string> = {
+  green: 'No red flags',
+  amber: 'Caution',
+  red: 'Risky',
+  unknown: 'Not checked',
+};
+
+function ageLabel(minutes: number): string {
+  return minutes < 60 ? `${minutes}m` : `${minutes / 60}h`;
+}
+
+/**
+ * The active filters as removable chips: each has a label and the filters without it.
+ * Turning the safety filter off is shown too, since red tokens then appear.
+ */
+export function filterChips(
+  filters: MarketFilters,
+): Array<{ key: string; label: string; without: MarketFilters }> {
+  const chips: Array<{ key: string; label: string; without: MarketFilters }> = [];
+  if (!filters.hideRed)
+    chips.push({ key: 'red', label: 'Showing red tokens', without: { ...filters, hideRed: true } });
+  for (const level of filters.levels)
+    chips.push({
+      key: `level-${level}`,
+      label: `Risk: ${LEVEL_NAMES[level]}`,
+      without: { ...filters, levels: filters.levels.filter((l) => l !== level) },
+    });
+  if (filters.minVolumeSol > 0)
+    chips.push({
+      key: 'volume',
+      label: `Volume ≥ ${filters.minVolumeSol} SOL`,
+      without: { ...filters, minVolumeSol: 0 },
+    });
+  if (filters.maxAgeMinutes > 0)
+    chips.push({
+      key: 'age',
+      label: `Age < ${ageLabel(filters.maxAgeMinutes)}`,
+      without: { ...filters, maxAgeMinutes: 0 },
+    });
+  return chips;
+}
+
 export type SortKey = 'default' | 'price' | 'change' | 'volume' | 'marketCap' | 'age';
 
 export interface SortState {

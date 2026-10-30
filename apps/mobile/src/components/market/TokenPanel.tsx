@@ -9,7 +9,7 @@ import { formatCompact, shortAddress } from '../../lib/format';
 import { CHART_WINDOWS, type MarketToken } from '../../lib/market';
 import { useTokenStats } from '../../lib/market-hooks';
 import { useSiftWallet } from '../../lib/social-hooks';
-import { colors, radius, space, tint } from '../../lib/theme';
+import { colors, radius, space } from '../../lib/theme';
 import { useWallet } from '../../lib/wallet';
 import { Button } from '../Button';
 import { Text, TextInput } from '../Text';
@@ -19,6 +19,7 @@ import { Change } from './Change';
 import { Tabs } from './Tabs';
 import { SolPrice } from './SolPrice';
 import { Metrics, RiskSignals } from './TokenPanels';
+import { transition } from '../../lib/motion';
 import { useNetwork } from '../../lib/network';
 
 const BUY_PRESETS = ['0.1', '0.5', '1', '5'];
@@ -107,167 +108,161 @@ export function TokenPanel({
   };
 
   return (
-    <ScrollView style={styles.panel} contentContainerStyle={styles.content}>
-      <View style={styles.identity}>
-        <TokenAvatar
-          uri={token.imageUrl}
-          label={token.symbol ?? token.name}
-          seed={mint}
-          size={40}
-        />
-        <View style={styles.flex}>
-          <Text style={styles.symbol} numberOfLines={1}>
-            {symbol} <Text style={styles.pair}>/ SOL</Text>
-          </Text>
-          <Text style={styles.name} numberOfLines={1}>
-            {token.name ?? shortAddress(mint)}
-          </Text>
-        </View>
-        <Pressable
-          onPress={() => router.push(`/token/${mint}`)}
-          accessibilityRole="link"
-          accessibilityLabel={`Open ${symbol} details`}
-          style={({ hovered }: { pressed: boolean; hovered?: boolean }) => [
-            styles.open,
-            hovered && { borderColor: colors.accent },
-          ]}
-        >
-          <Text style={styles.openText}>Details</Text>
-          <ExternalLink size={14} color={colors.muted} strokeWidth={2} />
-        </Pressable>
-      </View>
-
-      <View style={styles.priceBlock}>
-        <SolPrice price={price} size={28} />
-        <Change pct={stats?.changePct} size={14} arrow />
-      </View>
-
-      <Tabs
-        compact
-        label="Chart window"
-        options={CHART_WINDOWS.map((w) => ({ value: w.minutes, label: w.label }))}
-        value={windowMinutes}
-        onChange={setWindowMinutes}
-      />
-      {chart.isError ? (
-        <Text style={styles.note}>Couldn’t load the chart. It retries on its own.</Text>
-      ) : (
-        <CandleChart points={chart.data?.points ?? []} height={200} windowMinutes={windowMinutes} />
-      )}
-
-      <Metrics stats={stats} token={token} windowLabel={windowLabel} />
-      <RiskSignals
-        risk={risk.data}
-        unavailable={risk.isError}
-        onRetry={() => void risk.refetch()}
-      />
-
-      <View style={styles.form}>
-        <View style={styles.sides} accessibilityRole="tablist">
-          {(['buy', 'sell'] as const).map((s) => {
-            const active = side === s;
-            return (
-              <Pressable
-                key={s}
-                onPress={() => setSide(s)}
-                accessibilityRole="tab"
-                accessibilityState={{ selected: active }}
-                style={[
-                  styles.side,
-                  active &&
-                    (s === 'buy'
-                      ? { backgroundColor: colors.accent }
-                      : { backgroundColor: tint(colors.down, 0.18) }),
-                ]}
-              >
-                <Text
-                  style={[
-                    styles.sideText,
-                    active && { color: s === 'buy' ? colors.onAccent : colors.down },
-                  ]}
-                >
-                  {s === 'buy' ? 'Buy' : 'Sell'}
-                </Text>
-              </Pressable>
-            );
-          })}
-        </View>
-
-        {side === 'buy' ? (
-          <>
-            <View style={styles.inputRow}>
-              <TextInput
-                value={amount}
-                onChangeText={(v) => setAmount(v.replace(',', '.').replace(/[^0-9.]/g, ''))}
-                keyboardType="decimal-pad"
-                accessibilityLabel="Amount in SOL"
-                style={styles.input}
-                placeholder="0.0"
-                placeholderTextColor={colors.faint}
-              />
-              <Text style={styles.unit}>SOL</Text>
-            </View>
-            <View style={styles.presets}>
-              {BUY_PRESETS.map((p) => (
-                <Preset key={p} label={p} selected={amount === p} onPress={() => setAmount(p)} />
-              ))}
-            </View>
-          </>
-        ) : (
-          <View style={styles.presets}>
-            {SELL_PRESETS.map((p) => (
-              <Preset
-                key={p}
-                label={`${p}%`}
-                selected={sellPercent === p}
-                onPress={() => setSellPercent(p)}
-              />
-            ))}
+    <View style={styles.panel}>
+      <ScrollView style={styles.flex} contentContainerStyle={styles.content}>
+        <View style={styles.identity}>
+          <TokenAvatar
+            uri={token.imageUrl}
+            label={token.symbol ?? token.name}
+            seed={mint}
+            size={40}
+          />
+          <View style={styles.flex}>
+            <Text style={styles.symbol} numberOfLines={1}>
+              {symbol} <Text style={styles.pair}>/ SOL</Text>
+            </Text>
+            <Text style={styles.name} numberOfLines={1}>
+              {token.name ?? shortAddress(mint)}
+            </Text>
           </View>
+          <Pressable
+            onPress={() => router.push(`/token/${mint}`)}
+            accessibilityRole="link"
+            accessibilityLabel={`Open ${symbol} details`}
+            style={({ hovered }: { pressed: boolean; hovered?: boolean }) => [
+              styles.open,
+              hovered && { borderColor: colors.accent },
+            ]}
+          >
+            <Text style={styles.openText}>Details</Text>
+            <ExternalLink size={14} color={colors.muted} strokeWidth={2} />
+          </Pressable>
+        </View>
+
+        <View style={styles.priceBlock}>
+          <SolPrice price={price} size={28} />
+          <Change pct={stats?.changePct} size={14} arrow />
+        </View>
+
+        <Tabs
+          compact
+          label="Chart window"
+          options={CHART_WINDOWS.map((w) => ({ value: w.minutes, label: w.label }))}
+          value={windowMinutes}
+          onChange={setWindowMinutes}
+        />
+        {chart.isError ? (
+          <Text style={styles.note}>Couldn’t load the chart. It retries on its own.</Text>
+        ) : (
+          <CandleChart
+            points={chart.data?.points ?? []}
+            height={176}
+            emptyHeight={140}
+            windowMinutes={windowMinutes}
+          />
         )}
 
-        <View style={styles.lines}>
-          <Line
-            label="Balance"
-            value={
-              payer === null
-                ? 'No wallet connected'
-                : side === 'buy'
-                  ? solBalance !== undefined
-                    ? `${formatCompact(solBalance)} SOL`
-                    : '…'
-                  : holding
-                    ? `${formatCompact(Number(holding.amountRaw) / 10 ** holding.decimals)} ${symbol}`
-                    : `0 ${symbol}`
-            }
+        <Metrics stats={stats} token={token} windowLabel={windowLabel} flat />
+        <RiskSignals
+          risk={risk.data}
+          unavailable={risk.isError}
+          onRetry={() => void risk.refetch()}
+          flat
+        />
+
+        <View style={styles.form}>
+          <Text style={styles.heading} accessibilityRole="header">
+            Trade
+          </Text>
+          <Tabs
+            compact
+            label="Buy or sell"
+            options={[
+              { value: 'buy', label: 'Buy' },
+              { value: 'sell', label: 'Sell' },
+            ]}
+            value={side}
+            onChange={setSide}
           />
-          {side === 'buy' ? <Line label="You receive (est.)" value={estimate ?? '–'} /> : null}
-          <View style={styles.line}>
-            <Text style={styles.lineLabel}>Slippage</Text>
-            <View style={styles.slips}>
-              {SLIPPAGES.map((s) => (
-                <Pressable
-                  key={s.value}
-                  onPress={() => setSlippage(s.value)}
-                  accessibilityRole="button"
-                  accessibilityState={{ selected: slippage === s.value }}
-                  accessibilityLabel={`Slippage ${s.label}`}
-                  style={[styles.slip, slippage === s.value && styles.slipOn]}
-                >
-                  <Text
-                    mono
-                    style={[styles.slipText, slippage === s.value && { color: colors.text }]}
-                  >
-                    {s.label}
-                  </Text>
-                </Pressable>
+
+          {side === 'buy' ? (
+            <>
+              <View style={styles.inputRow}>
+                <TextInput
+                  value={amount}
+                  onChangeText={(v) => setAmount(v.replace(',', '.').replace(/[^0-9.]/g, ''))}
+                  keyboardType="decimal-pad"
+                  accessibilityLabel="Amount in SOL"
+                  style={styles.input}
+                  placeholder="0.0"
+                  placeholderTextColor={colors.faint}
+                />
+                <Text style={styles.unit}>SOL</Text>
+              </View>
+              <View style={styles.presets}>
+                {BUY_PRESETS.map((p) => (
+                  <Preset key={p} label={p} selected={amount === p} onPress={() => setAmount(p)} />
+                ))}
+              </View>
+            </>
+          ) : (
+            <View style={styles.presets}>
+              {SELL_PRESETS.map((p) => (
+                <Preset
+                  key={p}
+                  label={`${p}%`}
+                  selected={sellPercent === p}
+                  onPress={() => setSellPercent(p)}
+                />
               ))}
             </View>
-          </View>
-          <Line label="Sift fee" value={`${PLATFORM_FEE_RATE * 100}%`} />
-          <Line label="Network fee" value="~0.000005 SOL + priority" />
-        </View>
+          )}
 
+          <View style={styles.lines}>
+            <Line
+              label="Balance"
+              value={
+                payer === null
+                  ? 'No wallet connected'
+                  : side === 'buy'
+                    ? solBalance !== undefined
+                      ? `${formatCompact(solBalance)} SOL`
+                      : '…'
+                    : holding
+                      ? `${formatCompact(Number(holding.amountRaw) / 10 ** holding.decimals)} ${symbol}`
+                      : `0 ${symbol}`
+              }
+            />
+            {side === 'buy' ? <Line label="You receive (est.)" value={estimate ?? '–'} /> : null}
+            <View style={styles.line}>
+              <Text style={styles.lineLabel}>Slippage</Text>
+              <View style={styles.slips}>
+                {SLIPPAGES.map((s) => (
+                  <Pressable
+                    key={s.value}
+                    onPress={() => setSlippage(s.value)}
+                    accessibilityRole="button"
+                    accessibilityState={{ selected: slippage === s.value }}
+                    accessibilityLabel={`Slippage ${s.label}`}
+                    style={[styles.slip, slippage === s.value && styles.slipOn]}
+                  >
+                    <Text
+                      mono
+                      style={[styles.slipText, slippage === s.value && { color: colors.text }]}
+                    >
+                      {s.label}
+                    </Text>
+                  </Pressable>
+                ))}
+              </View>
+            </View>
+            <Line label="Sift fee" value={`${PLATFORM_FEE_RATE * 100}%`} />
+            <Line label="Network fee" value="~0.000005 SOL + priority" />
+          </View>
+        </View>
+      </ScrollView>
+      {/* Pinned so the trade action stays in reach on any desktop height. */}
+      <View style={styles.footer}>
         {tooMuch ? (
           <Text style={[styles.note, { color: colors.caution }]}>
             More than your balance of {formatCompact(solBalance ?? 0)} SOL (keep about{' '}
@@ -276,11 +271,7 @@ export function TokenPanel({
         ) : null}
 
         {payer === null ? (
-          <Button
-            label="Connect a wallet to trade"
-            onPress={() => router.navigate('/portfolio')}
-            variant="secondary"
-          />
+          <Button label="Connect a wallet to trade" onPress={() => router.navigate('/portfolio')} />
         ) : (
           <Button
             label={side === 'buy' ? `Review buy` : `Review sell ${sellPercent}%`}
@@ -294,7 +285,7 @@ export function TokenPanel({
           {isDevnet ? ' Devnet, test SOL only.' : ''}
         </Text>
       </View>
-    </ScrollView>
+    </View>
   );
 }
 
@@ -312,10 +303,12 @@ function Preset({
       onPress={onPress}
       accessibilityRole="button"
       accessibilityState={{ selected }}
+      hitSlop={4}
       style={({ hovered }: { pressed: boolean; hovered?: boolean }) => [
         styles.preset,
-        hovered && { borderColor: colors.borderStrong },
+        hovered && { backgroundColor: colors.surface2 },
         selected && styles.presetOn,
+        transition,
       ]}
     >
       <Text mono style={[styles.presetText, selected && { color: colors.text }]}>
@@ -340,7 +333,16 @@ const styles = StyleSheet.create({
   flex: { flex: 1, minWidth: 0 },
   panel: { flex: 1 },
   // Room below the form so the last control scrolls clear of the window edge.
-  content: { padding: space.lg, paddingBottom: space.xl * 2, gap: space.lg },
+  content: { padding: space.lg, paddingBottom: space.xl, gap: space.md },
+  footer: {
+    gap: space.sm,
+    paddingHorizontal: space.lg,
+    paddingTop: space.md,
+    paddingBottom: space.lg,
+    borderTopWidth: StyleSheet.hairlineWidth,
+    borderTopColor: colors.border,
+    backgroundColor: colors.surface,
+  },
   identity: { flexDirection: 'row', alignItems: 'center', gap: space.md },
   symbol: { fontSize: 18, fontWeight: '600' },
   pair: { fontSize: 14, fontWeight: '500', color: colors.muted },
@@ -352,48 +354,35 @@ const styles = StyleSheet.create({
     minHeight: 36,
     paddingHorizontal: 12,
     borderRadius: radius.chip,
-    backgroundColor: colors.surface,
+    backgroundColor: colors.surface2,
   },
   openText: { fontSize: 13, fontWeight: '600' },
   priceBlock: { gap: 4 },
   note: { fontSize: 12, color: colors.muted, lineHeight: 17 },
+  // The trade controls, set off from the token details by one divider.
   form: {
     gap: space.md,
-    padding: space.lg,
-    borderRadius: radius.card,
-    backgroundColor: colors.surface,
+    paddingTop: space.lg,
+    borderTopWidth: StyleSheet.hairlineWidth,
+    borderTopColor: colors.border,
   },
-  sides: {
-    flexDirection: 'row',
-    padding: 4,
-    gap: 4,
-    borderRadius: radius.input,
-    backgroundColor: colors.bg,
-  },
-  side: {
-    flex: 1,
-    minHeight: 40,
-    borderRadius: radius.chip,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  sideText: { fontSize: 14, fontWeight: '600', color: colors.muted },
+  heading: { fontSize: 15, fontWeight: '600' },
   inputRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    minHeight: 52,
+    minHeight: 56,
     paddingHorizontal: 14,
     borderRadius: radius.input,
     borderWidth: 1,
-    borderColor: colors.divider,
+    borderColor: colors.border,
     backgroundColor: colors.bg,
   },
-  input: { flex: 1, fontSize: 20, fontWeight: '600', color: colors.text, minWidth: 0 },
+  input: { flex: 1, fontSize: 24, fontWeight: '600', color: colors.text, minWidth: 0 },
   unit: { fontSize: 14, fontWeight: '600', color: colors.muted },
   presets: { flexDirection: 'row', gap: space.sm },
   preset: {
     flex: 1,
-    minHeight: 44,
+    minHeight: 36,
     borderRadius: radius.chip,
     borderWidth: 1,
     borderColor: 'transparent',

@@ -2,6 +2,7 @@ import type { TokenStats, TokenSummary } from '@sift/shared';
 import { describe, expect, it } from 'vitest';
 import {
   DEFAULT_FILTERS,
+  filterChips,
   activeFilterCount,
   applyFilters,
   formatChange,
@@ -93,5 +94,28 @@ describe('formatChange and isStale', () => {
     expect(isStale(NOW - 61_000, NOW)).toBe(true);
     expect(isStale(NOW - 5_000, NOW)).toBe(false);
     expect(isStale(0, NOW)).toBe(false);
+  });
+});
+
+describe('filterChips', () => {
+  it('lists each active filter with the filters it leaves when removed', () => {
+    const filters = {
+      hideRed: false,
+      levels: ['amber' as const],
+      minVolumeSol: 1,
+      maxAgeMinutes: 360,
+    };
+    const chips = filterChips(filters);
+    expect(chips.map((c) => c.label)).toEqual([
+      'Showing red tokens',
+      'Risk: Caution',
+      'Volume ≥ 1 SOL',
+      'Age < 6h',
+    ]);
+    expect(chips[1]!.without.levels).toEqual([]);
+    expect(chips[2]!.without).toEqual({ ...filters, minVolumeSol: 0 });
+  });
+  it('has no chips for the defaults', () => {
+    expect(filterChips(DEFAULT_FILTERS)).toEqual([]);
   });
 });

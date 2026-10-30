@@ -15,7 +15,7 @@ import { Pressable, StyleSheet, View } from 'react-native';
 import { formatAgo, formatAge, formatCompact, formatSol, formatSolPrice } from '../../lib/format';
 import type { MarketToken } from '../../lib/market';
 import { transition } from '../../lib/motion';
-import { RISK_COLORS, RISK_LABELS, colors, radius, tint } from '../../lib/theme';
+import { RISK_COLORS, RISK_LABELS, colors, radius, space, tint } from '../../lib/theme';
 import { Text } from '../Text';
 
 export const CHECK_NAMES: Record<string, string> = {
@@ -33,10 +33,13 @@ export function Metrics({
   stats,
   token,
   windowLabel,
+  flat = false,
 }: {
   stats: TokenStats | undefined;
   token: MarketToken | undefined;
   windowLabel: string;
+  /** Inside a panel: no card, divider lines only. */
+  flat?: boolean;
 }) {
   const cells: Array<[string, string]> = [
     ['Market cap', stats?.marketCapSol ? `${formatCompact(stats.marketCapSol)} SOL` : '–'],
@@ -45,9 +48,18 @@ export function Metrics({
     ['Age', token ? ageText(formatAge(token.launchedAt ?? token.firstSeenAt)) : '–'],
   ];
   return (
-    <View style={styles.metrics}>
+    <View style={[styles.metrics, flat && styles.metricsFlat]}>
       {cells.map(([label, value], i) => (
-        <View key={label} style={[styles.metric, i % 2 === 1 && styles.metricRight]}>
+        <View
+          key={label}
+          style={[
+            styles.metric,
+            flat && styles.metricFlat,
+            i % 2 === 1 && styles.metricRight,
+            flat && i >= 2 && styles.metricLower,
+            flat && i % 2 === 1 && { paddingLeft: 12 },
+          ]}
+        >
           <Text style={styles.metricLabel}>{label}</Text>
           <Text mono style={styles.metricValue} numberOfLines={1}>
             {value}
@@ -73,17 +85,20 @@ export function RiskSignals({
   defaultOpen = false,
   unavailable = false,
   onRetry,
+  flat = false,
 }: {
   risk: RiskScore | undefined;
   defaultOpen?: boolean;
   /** The checks couldn't be loaded. */
   unavailable?: boolean;
   onRetry?: () => void;
+  /** Inside a panel: no card, one row between dividers. */
+  flat?: boolean;
 }) {
   const [open, setOpen] = useState(defaultOpen);
   if (unavailable || !risk) {
     return (
-      <View style={[styles.riskBox, styles.risk]}>
+      <View style={[styles.riskBox, flat && styles.riskFlat, styles.risk]}>
         <ShieldQuestionMark size={20} color={colors.muted} strokeWidth={2} />
         <View style={styles.flex}>
           <Text style={styles.riskTitle}>Risk checks</Text>
@@ -111,7 +126,7 @@ export function RiskSignals({
       ? '0 flags detected'
       : `${flags.length} ${flags.length === 1 ? 'flag' : 'flags'}`;
   return (
-    <View style={styles.riskBox}>
+    <View style={[styles.riskBox, flat && styles.riskFlat]}>
       <Pressable
         onPress={() => setOpen((v) => !v)}
         accessibilityRole="button"
@@ -239,10 +254,26 @@ const styles = StyleSheet.create({
     backgroundColor: colors.surface,
     paddingVertical: 6,
   },
+  metricsFlat: {
+    backgroundColor: 'transparent',
+    borderRadius: 0,
+    paddingVertical: 0,
+    borderTopWidth: StyleSheet.hairlineWidth,
+    borderBottomWidth: StyleSheet.hairlineWidth,
+    borderColor: colors.border,
+  },
   metric: { width: '50%', paddingHorizontal: 16, paddingVertical: 8, gap: 2 },
+  metricFlat: { paddingHorizontal: 0, paddingVertical: 12, paddingRight: 12 },
+  metricLower: { borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: colors.border },
   metricRight: { borderLeftWidth: StyleSheet.hairlineWidth, borderLeftColor: colors.border },
   metricLabel: { fontSize: 12, color: colors.muted },
   metricValue: { fontSize: 17, fontWeight: '600' },
+  riskFlat: {
+    backgroundColor: 'transparent',
+    borderRadius: 0,
+    marginHorizontal: -space.lg,
+    paddingHorizontal: 0,
+  },
   riskBox: {
     borderRadius: radius.card,
     backgroundColor: colors.surface,

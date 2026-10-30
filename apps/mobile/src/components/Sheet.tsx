@@ -3,8 +3,8 @@ import { X } from 'lucide-react-native';
 import { Animated, Modal, Pressable, StyleSheet, View, useWindowDimensions } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { DURATION, EASE_OUT, NATIVE, useReduceMotion } from '../lib/motion';
-import { breakpoints, colors, radius } from '../lib/theme';
-import { Text } from './Text';
+import { breakpoints, colors, dark, radius } from '../lib/theme';
+import { Ink, Text } from './Text';
 
 /**
  * Bottom sheet on phones: slides up over a fading dim (tap it to close), grab handle.
@@ -14,13 +14,17 @@ export function Sheet({
   visible,
   onClose,
   title,
+  tone = 'light',
   children,
 }: {
   visible: boolean;
   onClose: () => void;
   title?: string;
+  /** `dark` for trade content (the dark trade surface). */
+  tone?: 'light' | 'dark';
   children: ReactNode;
 }) {
+  const dk = tone === 'dark';
   const insets = useSafeAreaInsets();
   const wide = useWindowDimensions().width >= breakpoints.tablet;
   const reduce = useReduceMotion();
@@ -50,6 +54,7 @@ export function Sheet({
           <Animated.View
             style={[
               styles.dialog,
+              dk && styles.darkBox,
               {
                 opacity: progress,
                 transform: [
@@ -62,7 +67,7 @@ export function Sheet({
             accessibilityViewIsModal
           >
             <View style={styles.dialogHead}>
-              <Text style={styles.dialogTitle}>{title ?? ''}</Text>
+              <Text style={[styles.dialogTitle, dk && { color: dark.text }]}>{title ?? ''}</Text>
               <Pressable
                 onPress={onClose}
                 accessibilityRole="button"
@@ -75,13 +80,14 @@ export function Sheet({
                 <X size={18} color={colors.muted} strokeWidth={2} />
               </Pressable>
             </View>
-            {children}
+            <Ink color={dk ? dark.text : colors.text}>{children}</Ink>
           </Animated.View>
         </View>
       ) : (
         <Animated.View
           style={[
             styles.sheet,
+            dk && styles.darkBox,
             {
               paddingBottom: 20 + insets.bottom,
               transform: [
@@ -92,9 +98,9 @@ export function Sheet({
             },
           ]}
         >
-          <View style={styles.handle} />
-          {title ? <Text style={styles.title}>{title}</Text> : null}
-          {children}
+          <View style={[styles.handle, dk && { backgroundColor: dark.border }]} />
+          {title ? <Text style={[styles.title, dk && { color: dark.text }]}>{title}</Text> : null}
+          <Ink color={dk ? dark.text : colors.text}>{children}</Ink>
         </Animated.View>
       )}
     </Modal>
@@ -111,6 +117,7 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgba(4,5,8,0.6)',
   },
   fill: { flex: 1 },
+  darkBox: { backgroundColor: dark.bg, borderColor: dark.border },
   sheet: {
     position: 'absolute',
     left: 0,

@@ -10,7 +10,7 @@ import {
 } from '@sift/shared';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { Stack, router, useLocalSearchParams } from 'expo-router';
-import { type ReactNode, useEffect, useState } from 'react';
+import { type ReactNode, useEffect, useRef, useState } from 'react';
 import {
   AlertTriangle,
   ArrowDown,
@@ -127,6 +127,8 @@ export default function TradeScreen() {
     side?: string;
     amount?: string;
     slippage?: string;
+    review?: string;
+    percent?: string;
   }>();
   const mint = params.mint ?? '';
   const [side, setSide] = useState<TradeSide>(params.side === 'sell' ? 'sell' : 'buy');
@@ -134,7 +136,9 @@ export default function TradeScreen() {
   const [solInput, setSolInput] = useState(
     params.amount && /^\d{1,6}(\.\d{1,9})?$/.test(params.amount) ? params.amount : '0.1',
   );
-  const [sellPercent, setSellPercent] = useState(50);
+  const [sellPercent, setSellPercent] = useState(
+    [25, 50, 75, 100].find((p) => String(p) === params.percent) ?? 50,
+  );
   const [slippage, setSlippage] = useState<(typeof SLIPPAGES)[number]['value']>(
     SLIPPAGES.find((option) => option.value === params.slippage)?.value ?? '500',
   );
@@ -181,6 +185,16 @@ export default function TradeScreen() {
   });
   const holding = holdings.data?.holdings.find((h) => h.mint === mint);
 
+  // From the trade sheet or desktop panel ("review=1"): go straight to the quote once the
+  // wallet, risk check and holdings are in. A red token still stops at its warning.
+  const autoReview = useRef(params.review === '1');
+  const autoReady =
+    wallet.status !== 'loading' &&
+    !risk.isLoading &&
+    !sift.isLoading &&
+    payer !== null &&
+    (side === 'buy' || !holdings.isLoading);
+
   // Countdown on the quote; poll the network once sent.
   useEffect(() => {
     if (stage.name !== 'review' && stage.name !== 'pending') return;
@@ -224,8 +238,6 @@ export default function TradeScreen() {
     };
   }, [stage, queryClient]);
 
-  if (!isSolanaAddress(mint)) return <ErrorState message="That isn't a valid token address." />;
-  if (wallet.status === 'loading') return <ActivityIndicator style={{ marginTop: 40 }} />;
 
   const highRisk = risk.data?.level === 'red';
   const request = (): TradeQuoteRequest | null => {
@@ -262,6 +274,20 @@ export default function TradeScreen() {
       setStage({ name: 'failed', message: (err as Error).message });
     }
   };
+  useEffect(() => {
+    if (!autoReview.current || !autoReady) return;
+    // Next tick, outside the render that made it ready.
+    const timer = setTimeout(() => {
+      autoReview.current = false;
+      if (!(highRisk && !understood)) void review();
+    }, 0);
+    return () => clearTimeout(timer);
+    // Runs once, when everything the quote needs has loaded.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [autoReady]);
+
+  if (!isSolanaAddress(mint)) return <ErrorState message="That isn't a valid token address." />;
+  if (wallet.status === 'loading') return <ActivityIndicator style={{ marginTop: 40 }} />;
 
   // "Protect this trade": a stop loss at -30% and a take profit at 2x, from the buy price.
   const placeProtection = async (quote: TradeQuote) => {

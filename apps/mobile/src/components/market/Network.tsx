@@ -1,3 +1,4 @@
+import { useId } from 'react';
 import { ChevronDown } from 'lucide-react-native';
 import { Pressable, StyleSheet, View } from 'react-native';
 import Svg, { Defs, LinearGradient, Path, Stop } from 'react-native-svg';
@@ -50,10 +51,13 @@ export function DevnetPill({ soft = false }: { soft?: boolean }) {
 
 /** Solana's mark: three slanted bars in its purple-to-green gradient. */
 export function SolanaMark({ size = 14 }: { size?: number }) {
+  // A unique gradient id: on web, a shared id resolves to the first mark in the page,
+  // which may sit on a hidden screen and then paints nothing.
+  const id = `sol${useId().replace(/[^a-zA-Z0-9]/g, '')}`;
   return (
     <Svg width={size} height={size} viewBox="0 0 20 20" accessibilityElementsHidden>
       <Defs>
-        <LinearGradient id="sol" x1="0" y1="0" x2="1" y2="1">
+        <LinearGradient id={id} x1="0" y1="0" x2="1" y2="1">
           <Stop offset="0" stopColor="#9945FF" />
           <Stop offset="1" stopColor="#14F195" />
         </LinearGradient>
@@ -62,7 +66,7 @@ export function SolanaMark({ size = 14 }: { size?: number }) {
         <Path
           key={y}
           d={i === 1 ? `M4 ${y} H19 L16 ${y + 3.4} H1 Z` : `M1 ${y} H16 L19 ${y + 3.4} H4 Z`}
-          fill="url(#sol)"
+          fill={`url(#${id})`}
         />
       ))}
     </Svg>

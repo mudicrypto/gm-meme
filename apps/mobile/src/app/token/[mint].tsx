@@ -1,6 +1,6 @@
 import { isSolanaAddress } from '@sift/shared';
 import { useQuery } from '@tanstack/react-query';
-import { Link, router, useLocalSearchParams } from 'expo-router';
+import { router, useLocalSearchParams } from 'expo-router';
 import {
   CandlestickChart,
   ChartLine,
@@ -95,7 +95,10 @@ export default function TokenScreen() {
   const symbol = (info?.symbol ?? shortAddress(mint)).slice(0, 12);
   const name = (info?.name ?? info?.symbol ?? shortAddress(mint)).slice(0, 32);
   const price = stats.data?.priceSol;
-  const form = useTradeForm(mint, symbol, price, { name, imageUrl: info?.imageUrl });
+  const [tradeOpen, setTradeOpen] = useState(false);
+  const form = useTradeForm(mint, symbol, price, { name, imageUrl: info?.imageUrl }, () =>
+    setTradeOpen(false),
+  );
   const footerHeight = 76 + insets.bottom;
 
   const header = (
@@ -298,26 +301,34 @@ export default function TokenScreen() {
             { paddingBottom: insets.bottom + space.md, paddingHorizontal: gutter },
           ]}
         >
-          <Link href={`/trade/${mint}?side=buy`} asChild>
+          {(['buy', 'sell'] as const).map((side) => (
             <Pressable
-              style={StyleSheet.flatten([styles.action, styles.buy])}
+              key={side}
+              onPress={() => {
+                form.setSide(side);
+                setTradeOpen(true);
+              }}
+              style={({ pressed }) => [
+                styles.action,
+                side === 'buy' ? styles.buy : styles.sell,
+                pressed && { opacity: 0.85 },
+              ]}
               accessibilityRole="button"
-              accessibilityLabel={`Buy ${symbol}`}
+              accessibilityLabel={`${side === 'buy' ? 'Buy' : 'Sell'} ${symbol}`}
             >
-              <Text style={styles.buyText}>Buy</Text>
+              <Text style={side === 'buy' ? styles.buyText : styles.sellText}>
+                {side === 'buy' ? 'Buy' : 'Sell'}
+              </Text>
             </Pressable>
-          </Link>
-          <Link href={`/trade/${mint}?side=sell`} asChild>
-            <Pressable
-              style={StyleSheet.flatten([styles.action, styles.sell])}
-              accessibilityRole="button"
-              accessibilityLabel={`Sell ${symbol}`}
-            >
-              <Text style={styles.sellText}>Sell</Text>
-            </Pressable>
-          </Link>
+          ))}
         </View>
       )}
+
+      {/* Buy/Sell slide up over the coin page; Review opens the checked quote. */}
+      <Sheet visible={tradeOpen} onClose={() => setTradeOpen(false)} tone="dark">
+        <TradeFields form={form} />
+        <TradeAction form={form} />
+      </Sheet>
 
       <Sheet visible={moreOpen} onClose={() => setMoreOpen(false)} title={name}>
         <MoreRow

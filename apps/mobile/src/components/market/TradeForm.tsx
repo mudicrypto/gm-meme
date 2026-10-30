@@ -38,6 +38,8 @@ export function useTradeForm(
   symbol: string,
   price: number | undefined,
   token?: { name?: string; imageUrl?: string },
+  /** Called just before "Review" opens the trade screen (e.g. to close a sheet). */
+  onReview?: () => void,
 ) {
   const [side, setSide] = useState<'buy' | 'sell'>('buy');
   const [amount, setAmount] = useState('0.1');
@@ -77,8 +79,10 @@ export function useTradeForm(
     const query =
       side === 'buy'
         ? `side=buy&amount=${encodeURIComponent(amount)}&slippage=${slippage}`
-        : `side=sell&slippage=${slippage}`;
-    router.push(`/trade/${mint}?${query}`);
+        : `side=sell&percent=${sellPercent}&slippage=${slippage}`;
+    onReview?.();
+    // Straight to the quote: the trade screen still checks it and asks before signing.
+    router.push(`/trade/${mint}?${query}&review=1`);
   };
   return {
     mint,

@@ -1,7 +1,7 @@
 import { StyleSheet, View } from 'react-native';
 import { formatSolPrice } from '../../lib/format';
-import { colors } from '../../lib/theme';
-import { Text } from '../Text';
+import { colors, dark } from '../../lib/theme';
+import { Text, useInk } from '../Text';
 
 /** A price in SOL with the number emphasised and the unit smaller. */
 export function SolPrice({
@@ -14,8 +14,9 @@ export function SolPrice({
   /** Shown when there's no price. */
   empty?: string;
 }) {
+  const muted = { color: useInk() === dark.text ? dark.muted : colors.muted };
   if (price === undefined || !Number.isFinite(price))
-    return <Text style={[styles.empty, { fontSize: Math.round(size * 0.6) }]}>{empty}</Text>;
+    return <Text style={[styles.empty, muted, { fontSize: Math.round(size * 0.6) }]}>{empty}</Text>;
   return (
     <View style={styles.row} accessibilityLabel={`${formatSolPrice(price)} SOL`}>
       <Text
@@ -26,7 +27,9 @@ export function SolPrice({
       >
         {formatSolPrice(price)}
       </Text>
-      <Text style={[styles.unit, { fontSize: Math.max(12, Math.round(size * 0.45)) }]}>SOL</Text>
+      <Text style={[styles.unit, muted, { fontSize: Math.max(12, Math.round(size * 0.45)) }]}>
+        SOL
+      </Text>
     </View>
   );
 }

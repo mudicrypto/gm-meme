@@ -11,11 +11,14 @@ import {
   ShieldX,
 } from 'lucide-react-native';
 import { useState } from 'react';
+import { useQuery } from '@tanstack/react-query';
 import { Pressable, StyleSheet, View } from 'react-native';
+import { api } from '../../lib/api';
+import { useTokenStats } from '../../lib/market-hooks';
 import { formatAgo, formatAge, formatCompact, formatSol, formatSolPrice } from '../../lib/format';
 import type { MarketToken } from '../../lib/market';
 import { transition } from '../../lib/motion';
-import { RISK_COLORS, RISK_LABELS, colors, radius, space, tint } from '../../lib/theme';
+import { RISK_COLORS, RISK_LABELS, colors, dark, radius, space, tint } from '../../lib/theme';
 import { Text } from '../Text';
 
 export const CHECK_NAMES: Record<string, string> = {
@@ -27,6 +30,44 @@ export const CHECK_NAMES: Record<string, string> = {
   dev_history: 'Creator history',
   sell_test: 'Selling',
 };
+
+/**
+ * The token page's four tiles: 24h high and low (from the day's candles), 24h volume and
+ * market cap. Real numbers only: "–" while Sift has none.
+ */
+export function StatTiles({ mint, enabled }: { mint: string; enabled: boolean }) {
+  const day = useQuery({
+    queryKey: ['chart', mint, 1440],
+    queryFn: () => api.chart(mint, 1440),
+    enabled,
+    refetchInterval: 30_000,
+  });
+  const stats = useTokenStats(mint, 1440, enabled);
+  const points = day.data?.points ?? [];
+  const high = points.length ? Math.max(...points.map((p) => p.high)) : undefined;
+  const low = points.length ? Math.min(...points.map((p) => p.low)) : undefined;
+  const cells: Array<[string, string]> = [
+    ['24h high', high !== undefined ? `${formatSolPrice(high)} SOL` : '–'],
+    ['24h low', low !== undefined ? `${formatSolPrice(low)} SOL` : '–'],
+    ['Volume (24h)', stats.data ? formatSol(stats.data.volumeSol) : '–'],
+    [
+      'Market cap',
+      stats.data?.marketCapSol ? `${formatCompact(stats.data.marketCapSol)} SOL` : '–',
+    ],
+  ];
+  return (
+    <View style={styles.tiles}>
+      {cells.map(([label, value]) => (
+        <View key={label} style={styles.tile}>
+          <Text style={styles.tileLabel}>{label}</Text>
+          <Text mono style={styles.tileValue} numberOfLines={1}>
+            {value}
+          </Text>
+        </View>
+      ))}
+    </View>
+  );
+}
 
 /** Two-by-two key numbers. Only real data: "–" where Sift has none. */
 export function Metrics({
@@ -86,6 +127,7 @@ export function RiskSignals({
   unavailable = false,
   onRetry,
   flat = false,
+  tone = 'light',
 }: {
   risk: RiskScore | undefined;
   defaultOpen?: boolean;
@@ -94,15 +136,20 @@ export function RiskSignals({
   onRetry?: () => void;
   /** Inside a panel: no card, one row between dividers. */
   flat?: boolean;
+  /** `dark` for the dark trade panel. */
+  tone?: 'light' | 'dark';
 }) {
   const [open, setOpen] = useState(defaultOpen);
+  const dk = tone === 'dark';
+  const pal = dk ? DARK_PAL : LIGHT_PAL;
+  const boxStyle = [styles.riskBox, flat && styles.riskFlat, dk && darkStyles.box];
   if (unavailable || !risk) {
     return (
-      <View style={[styles.riskBox, flat && styles.riskFlat, styles.risk]}>
-        <ShieldQuestionMark size={20} color={colors.muted} strokeWidth={2} />
+      <View style={[...boxStyle, styles.risk]}>
+        <ShieldQuestionMark size={20} color={pal.muted} strokeWidth={2} />
         <View style={styles.flex}>
           <Text style={styles.riskTitle}>Risk checks</Text>
-          <Text style={styles.riskSub}>
+          <Text style={[styles.riskSub, { color: pal.muted }]}>
             {unavailable
               ? 'Couldn’t load the checks. Nothing is known yet.'
               : 'Checking this token…'}
@@ -110,14 +157,14 @@ export function RiskSignals({
         </View>
         {unavailable && onRetry ? (
           <Pressable onPress={onRetry} accessibilityRole="button" style={styles.retry}>
-            <Text style={styles.retryText}>Retry</Text>
+            <Text style={[styles.retryText, { color: pal.link }]}>Retry</Text>
           </Pressable>
         ) : null}
       </View>
     );
   }
   const flags = risk.reasons.filter((r) => r.level !== 'green');
-  const tone = RISK_COLORS[risk.level];
+  const levelTone = pal.risk[risk.level];
   const Icon = risk.level === 'green' ? ShieldCheck : risk.level === 'red' ? ShieldX : ShieldAlert;
   const total = Object.keys(CHECK_NAMES).length;
   const ran = risk.reasons.length;
@@ -126,7 +173,7 @@ export function RiskSignals({
       ? '0 flags detected'
       : `${flags.length} ${flags.length === 1 ? 'flag' : 'flags'}`;
   return (
-    <View style={[styles.riskBox, flat && styles.riskFlat]}>
+    <View style={boxStyle}>
       <Pressable
         onPress={() => setOpen((v) => !v)}
         accessibilityRole="button"
@@ -134,15 +181,15 @@ export function RiskSignals({
         accessibilityLabel={`Risk checks: ${RISK_LABELS[risk.level]}, ${flagText}, ${ran} of ${total} checks`}
         style={({ pressed, hovered }: { pressed: boolean; hovered?: boolean }) => [
           styles.risk,
-          (pressed || hovered) && { backgroundColor: colors.surface2 },
+          (pressed || hovered) && { backgroundColor: pal.hover },
           transition,
         ]}
       >
-        <Icon size={20} color={tone.fg} strokeWidth={2} />
+        <Icon size={20} color={levelTone.fg} strokeWidth={2} />
         <View style={styles.flex}>
           <Text style={styles.riskTitle}>Risk checks</Text>
-          <Text style={styles.riskSub} numberOfLines={2}>
-            <Text style={[styles.level, { color: tone.fg }]}>{RISK_LABELS[risk.level]}</Text>
+          <Text style={[styles.riskSub, { color: pal.muted }]} numberOfLines={2}>
+            <Text style={[styles.level, { color: levelTone.fg }]}>{RISK_LABELS[risk.level]}</Text>
             {' · '}
             {ran < total
               ? `${ran} of ${total} checks returned`
@@ -151,37 +198,37 @@ export function RiskSignals({
                 : `${total} automated checks`}
           </Text>
         </View>
-        <Text style={[styles.flagText, { color: flags.length ? tone.fg : colors.text2 }]}>
+        <Text style={[styles.flagText, { color: flags.length ? levelTone.fg : pal.text2 }]}>
           {flagText}
         </Text>
         {open ? (
-          <ChevronDown size={18} color={colors.muted} strokeWidth={2} />
+          <ChevronDown size={18} color={pal.muted} strokeWidth={2} />
         ) : (
-          <ChevronRight size={18} color={colors.muted} strokeWidth={2} />
+          <ChevronRight size={18} color={pal.muted} strokeWidth={2} />
         )}
       </Pressable>
       {open ? (
-        <View style={styles.checks}>
+        <View style={[styles.checks, { borderTopColor: pal.border }]}>
           {risk.reasons.map((reason) => (
             <View key={reason.check} style={styles.check}>
-              <View style={[styles.mark, { backgroundColor: RISK_COLORS[reason.level].bg }]}>
-                <Text style={[styles.markText, { color: RISK_COLORS[reason.level].fg }]}>
+              <View style={[styles.mark, { backgroundColor: pal.risk[reason.level].bg }]}>
+                <Text style={[styles.markText, { color: pal.risk[reason.level].fg }]}>
                   {reason.level === 'green' ? '✓' : reason.level === 'amber' ? '!' : '×'}
                 </Text>
               </View>
               <View style={styles.flex}>
                 <Text style={styles.checkName}>
                   {CHECK_NAMES[reason.check] ?? reason.check}
-                  <Text style={[styles.checkLevel, { color: RISK_COLORS[reason.level].fg }]}>
+                  <Text style={[styles.checkLevel, { color: pal.risk[reason.level].fg }]}>
                     {'  '}
                     {RISK_LABELS[reason.level]}
                   </Text>
                 </Text>
-                <Text style={styles.checkText}>{reason.message}</Text>
+                <Text style={[styles.checkText, { color: pal.text2 }]}>{reason.message}</Text>
               </View>
             </View>
           ))}
-          <Text style={styles.disclaimer}>{risk.disclaimer}</Text>
+          <Text style={[styles.disclaimer, { color: pal.faint }]}>{risk.disclaimer}</Text>
         </View>
       ) : null}
     </View>
@@ -219,23 +266,16 @@ export function ActivityList({
               )}
             </View>
             <View style={styles.flex}>
-              <Text style={styles.tradeSide}>
-                {buy ? 'Buy' : sell ? 'Sell' : 'Trade'}
-                <Text style={styles.tradeTime}>
-                  {'  '}
-                  {formatAgo(trade.at)}
-                </Text>
-              </Text>
-              <Text mono style={styles.tradeSub}>
-                at {formatSolPrice(trade.priceSol)} SOL
-              </Text>
+              <Text style={styles.tradeSide}>{buy ? 'Buy' : sell ? 'Sell' : 'Trade'}</Text>
+              <Text style={styles.tradeTime}>{formatAgo(trade.at)}</Text>
             </View>
             <View style={styles.tradeRight}>
-              <Text mono style={styles.tradeAmount}>
+              <Text mono style={[styles.tradeAmount, { color }]}>
+                {buy ? '+' : sell ? '−' : ''}
                 {formatCompact(trade.tokenAmount)} {symbol}
               </Text>
               <Text mono style={styles.tradeSub}>
-                {formatSol(trade.volumeSol)}
+                {formatSol(trade.volumeSol)} · at {formatSolPrice(trade.priceSol)}
               </Text>
             </View>
           </View>
@@ -245,7 +285,58 @@ export function ActivityList({
   );
 }
 
+interface Palette {
+  muted: string;
+  faint: string;
+  text2: string;
+  hover: string;
+  border: string;
+  link: string;
+  risk: typeof RISK_COLORS;
+}
+const LIGHT_PAL: Palette = {
+  muted: colors.muted,
+  faint: colors.faint,
+  text2: colors.text2,
+  hover: colors.surface2,
+  border: colors.border,
+  link: colors.accent,
+  risk: RISK_COLORS,
+};
+const DARK_PAL: Palette = {
+  muted: dark.muted,
+  faint: dark.faint,
+  text2: dark.text,
+  hover: dark.surface2,
+  border: dark.border,
+  link: dark.lime,
+  risk: {
+    green: { fg: dark.up, bg: tint(dark.up, 0.16) },
+    amber: { fg: dark.caution, bg: tint(dark.caution, 0.16) },
+    red: { fg: dark.down, bg: tint(dark.down, 0.16) },
+    unknown: { fg: dark.muted, bg: dark.surface2 },
+  },
+};
+
+const darkStyles = StyleSheet.create({
+  box: { backgroundColor: dark.surface, borderWidth: 1, borderColor: dark.border },
+});
+
 const styles = StyleSheet.create({
+  tiles: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
+  tile: {
+    flexBasis: '48%',
+    flexGrow: 1,
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    gap: 2,
+    borderRadius: radius.card,
+    borderWidth: 1,
+    borderColor: colors.border,
+    backgroundColor: colors.surface,
+  },
+  tileLabel: { fontSize: 14, color: colors.muted },
+  tileValue: { fontSize: 18, fontWeight: '700' },
   flex: { flex: 1 },
   metrics: {
     flexDirection: 'row',
@@ -325,8 +416,8 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
-  tradeSide: { fontSize: 15, fontWeight: '600' },
-  tradeTime: { fontSize: 13, color: colors.muted, fontWeight: '400' },
+  tradeSide: { fontSize: 16, fontWeight: '600' },
+  tradeTime: { fontSize: 14, color: colors.muted, marginTop: 2 },
   tradeSub: { fontSize: 13, color: colors.muted, marginTop: 2 },
   tradeRight: { alignItems: 'flex-end' },
   tradeAmount: { fontSize: 15, fontWeight: '600' },

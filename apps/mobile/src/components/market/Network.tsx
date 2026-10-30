@@ -1,11 +1,12 @@
 import { ChevronDown } from 'lucide-react-native';
 import { Pressable, StyleSheet, View } from 'react-native';
+import Svg, { Defs, LinearGradient, Path, Stop } from 'react-native-svg';
 import { transition } from '../../lib/motion';
 import { colors, radius, tint } from '../../lib/theme';
 import { Text } from '../Text';
 import { useNetwork } from '../../lib/network';
 
-/** The network selector: Solana, with a DEVNET tag while Sift runs on the test network. */
+/** The network selector: the Solana mark, "Solana" and a chevron. DEVNET is its own pill. */
 export function NetworkChip({ onPress }: { onPress: () => void }) {
   const { isDevnet } = useNetwork();
   return (
@@ -13,44 +14,58 @@ export function NetworkChip({ onPress }: { onPress: () => void }) {
       onPress={onPress}
       accessibilityRole="button"
       accessibilityLabel={isDevnet ? 'Network: Solana devnet' : 'Network: Solana'}
-      // 36 tall to keep the header compact; the slop makes the target 44.
-      hitSlop={4}
+      // 40 tall to keep the header compact; the slop makes the target 44.
+      hitSlop={2}
       style={({ pressed, hovered }: { pressed: boolean; hovered?: boolean }) => [
         styles.chip,
         (pressed || hovered) && { backgroundColor: colors.surface2 },
         transition,
       ]}
     >
-      <SolanaMark size={12} />
+      <SolanaMark size={16} />
       <Text style={styles.text}>Solana</Text>
-      {isDevnet ? (
-        <View style={styles.devnet}>
-          <Text style={styles.devnetText}>DEVNET</Text>
-        </View>
-      ) : null}
-      <ChevronDown size={13} color={colors.muted} strokeWidth={2} />
+      <ChevronDown size={16} color={colors.text} strokeWidth={2} />
     </Pressable>
   );
 }
 
-/** Three slanted bars, Solana's mark, drawn plainly (no logo artwork). */
-export function SolanaMark({ size = 14 }: { size?: number }) {
+/**
+ * The network badge: DEVNET while Sift runs on test SOL. `soft` is the green phone pill,
+ * otherwise amber, as on the desktop header.
+ */
+export function DevnetPill({ soft = false }: { soft?: boolean }) {
+  const { isDevnet } = useNetwork();
+  if (!isDevnet) return null;
   return (
     <View
-      style={{ width: size, height: size, justifyContent: 'space-between', paddingVertical: 1 }}
+      style={[styles.pill, soft ? styles.pillSoft : styles.pillAmber]}
+      accessibilityLabel="Devnet: test network, test SOL only"
     >
-      {[0, 1, 2].map((i) => (
-        <View
-          key={i}
-          style={{
-            height: Math.max(2, size / 6),
-            borderRadius: 1,
-            backgroundColor: colors.accent,
-            transform: [{ skewX: '-20deg' }],
-          }}
+      <Text style={[styles.pillText, { color: soft ? colors.accent : '#5B3A00' }]}>
+        {soft ? 'Devnet' : 'DEVNET'}
+      </Text>
+    </View>
+  );
+}
+
+/** Solana's mark: three slanted bars in its purple-to-green gradient. */
+export function SolanaMark({ size = 14 }: { size?: number }) {
+  return (
+    <Svg width={size} height={size} viewBox="0 0 20 20" accessibilityElementsHidden>
+      <Defs>
+        <LinearGradient id="sol" x1="0" y1="0" x2="1" y2="1">
+          <Stop offset="0" stopColor="#9945FF" />
+          <Stop offset="1" stopColor="#14F195" />
+        </LinearGradient>
+      </Defs>
+      {[2, 8.5, 15].map((y, i) => (
+        <Path
+          key={y}
+          d={i === 1 ? `M4 ${y} H19 L16 ${y + 3.4} H1 Z` : `M1 ${y} H16 L19 ${y + 3.4} H4 Z`}
+          fill="url(#sol)"
         />
       ))}
-    </View>
+    </Svg>
   );
 }
 
@@ -91,20 +106,19 @@ const styles = StyleSheet.create({
   chip: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 6,
-    height: 36,
-    paddingHorizontal: 10,
-    borderRadius: radius.chip,
+    gap: 8,
+    height: 40,
+    paddingHorizontal: 12,
+    borderRadius: radius.input + 2,
+    borderWidth: 1,
+    borderColor: colors.border,
     backgroundColor: colors.surface,
   },
-  text: { fontSize: 13, fontWeight: '600' },
-  devnet: {
-    paddingHorizontal: 5,
-    paddingVertical: 2,
-    borderRadius: 4,
-    backgroundColor: tint(colors.caution, 0.12),
-  },
-  devnetText: { fontSize: 10, fontWeight: '700', letterSpacing: 0.6, color: colors.caution },
+  text: { fontSize: 14, fontWeight: '600' },
+  pill: { height: 32, paddingHorizontal: 12, borderRadius: 8, justifyContent: 'center' },
+  pillSoft: { backgroundColor: tint(colors.accent, 0.1) },
+  pillAmber: { backgroundColor: '#F7D58A' },
+  pillText: { fontSize: 13, fontWeight: '700', letterSpacing: 0.4 },
   note: { gap: 12 },
   option: {
     flexDirection: 'row',

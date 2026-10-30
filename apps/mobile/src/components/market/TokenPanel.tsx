@@ -1,21 +1,24 @@
 import type { TokenStats } from '@sift/shared';
 import { useQuery } from '@tanstack/react-query';
 import { router } from 'expo-router';
-import { ExternalLink } from 'lucide-react-native';
+import { ExternalLink, Settings } from 'lucide-react-native';
 import { useState } from 'react';
-import { Pressable, ScrollView, StyleSheet, View } from 'react-native';
+import { ScrollView, StyleSheet, View } from 'react-native';
 import { api } from '../../lib/api';
-import { shortAddress } from '../../lib/format';
+import { formatAge, formatCompact, shortAddress } from '../../lib/format';
 import { CHART_WINDOWS, type MarketToken } from '../../lib/market';
 import { useTokenStats } from '../../lib/market-hooks';
-import { colors, radius, space } from '../../lib/theme';
-import { Text } from '../Text';
+import { dark, radius, space } from '../../lib/theme';
+import { IconButton } from '../Button';
+import { Ink, Text } from '../Text';
 import { TokenAvatar } from '../TokenAvatar';
+import { WatchStar } from '../WatchStar';
 import { CandleChart } from './CandleChart';
 import { Change } from './Change';
 import { Tabs } from './Tabs';
 import { SolPrice } from './SolPrice';
-import { Metrics, RiskSignals } from './TokenPanels';
+import { RiskTag } from './RiskTag';
+import { RiskSignals } from './TokenPanels';
 import { TradeAction, TradeFields, useTradeForm } from './TradeForm';
 
 /**
@@ -52,164 +55,157 @@ export function TokenPanel({
   const windowLabel = CHART_WINDOWS.find((w) => w.minutes === windowMinutes)?.label ?? '1h';
   const symbol = (token.symbol ?? token.name ?? shortAddress(mint)).slice(0, 12);
   const price = stats?.priceSol ?? dayStats.data?.priceSol;
-  const form = useTradeForm(mint, symbol, price);
+  const form = useTradeForm(mint, symbol, price, token);
+
+  const age = formatAge(token.launchedAt ?? token.firstSeenAt);
+  const metrics: Array<[string, string]> = [
+    ['Mkt cap', stats?.marketCapSol ? formatCompact(stats.marketCapSol) : '–'],
+    [`Vol ${windowLabel}`, stats ? formatCompact(stats.volumeSol) : '–'],
+    ['Buys/sells', stats ? `${stats.buys}/${stats.sells}` : '–'],
+    ['Age', age === 'just now' ? 'New' : age],
+  ];
 
   return (
-    <View style={styles.panel}>
-      <ScrollView style={styles.flex} contentContainerStyle={styles.content}>
-        <View style={styles.identity}>
-          <TokenAvatar
-            uri={token.imageUrl}
-            label={token.symbol ?? token.name}
-            seed={mint}
-            size={40}
-          />
-          <View style={styles.flex}>
-            <Text style={styles.symbol} numberOfLines={1}>
-              {symbol} <Text style={styles.pair}>/ SOL</Text>
-            </Text>
-            <Text style={styles.name} numberOfLines={1}>
-              {token.name ?? shortAddress(mint)}
-            </Text>
+    <Ink color={dark.text}>
+      <View style={styles.panel}>
+        <ScrollView style={styles.flex} contentContainerStyle={styles.content}>
+          <View style={styles.eyebrowRow}>
+            <Text style={styles.eyebrow}>TOKEN OVERVIEW</Text>
+            <WatchStar mint={mint} size={18} color={dark.muted} />
+            <IconButton
+              label={`Open ${symbol} details`}
+              onPress={() => router.push(`/token/${mint}`)}
+            >
+              <ExternalLink size={18} color={dark.muted} strokeWidth={2} />
+            </IconButton>
           </View>
-          <Pressable
-            onPress={() => router.push(`/token/${mint}`)}
-            accessibilityRole="link"
-            accessibilityLabel={`Open ${symbol} details`}
-            style={({ hovered }: { pressed: boolean; hovered?: boolean }) => [
-              styles.open,
-              hovered && { borderColor: colors.accent },
-            ]}
-          >
-            <Text style={styles.openText}>Details</Text>
-            <ExternalLink size={14} color={colors.muted} strokeWidth={2} />
-          </Pressable>
-        </View>
 
-        <View style={styles.priceBlock}>
-          <SolPrice price={price} size={28} />
-          <Change pct={stats?.changePct} size={14} arrow />
-        </View>
+          <View style={styles.identity}>
+            <TokenAvatar
+              uri={token.imageUrl}
+              label={token.symbol ?? token.name}
+              seed={mint}
+              size={44}
+            />
+            <View style={styles.flex}>
+              <Text style={styles.symbol} numberOfLines={1}>
+                {symbol} <Text style={styles.pair}>/ SOL</Text>
+              </Text>
+              <Text style={styles.name} numberOfLines={1}>
+                {token.name ?? shortAddress(mint)}
+              </Text>
+            </View>
+            <RiskTag level={token.riskLevel} />
+          </View>
 
-        <Tabs
-          compact
-          label="Chart window"
-          options={CHART_WINDOWS.map((w) => ({ value: w.minutes, label: w.label }))}
-          value={windowMinutes}
-          onChange={setWindowMinutes}
-        />
-        {chart.isError ? (
-          <Text style={styles.note}>Couldn’t load the chart. It retries on its own.</Text>
-        ) : (
-          <CandleChart
-            points={chart.data?.points ?? []}
-            height={176}
-            emptyHeight={140}
-            windowMinutes={windowMinutes}
+          <View style={styles.priceBlock}>
+            <SolPrice price={price} size={30} />
+            <Change pct={stats?.changePct} size={15} arrow />
+          </View>
+
+          <Tabs
+            label="Chart window"
+            options={CHART_WINDOWS.map((w) => ({ value: w.minutes, label: w.label }))}
+            value={windowMinutes}
+            onChange={setWindowMinutes}
           />
-        )}
+          {chart.isError ? (
+            <Text style={styles.note}>Couldn’t load the chart. It retries on its own.</Text>
+          ) : (
+            <CandleChart
+              points={chart.data?.points ?? []}
+              height={180}
+              emptyHeight={140}
+              windowMinutes={windowMinutes}
+              tone="dark"
+            />
+          )}
 
-        <Metrics stats={stats} token={token} windowLabel={windowLabel} flat />
-        <RiskSignals
-          risk={risk.data}
-          unavailable={risk.isError}
-          onRetry={() => void risk.refetch()}
-          flat
-        />
+          <View style={styles.metrics}>
+            {metrics.map(([label, value]) => (
+              <View key={label} style={styles.metric}>
+                <Text style={styles.metricLabel} numberOfLines={1}>
+                  {label}
+                </Text>
+                <Text mono style={styles.metricValue} numberOfLines={1}>
+                  {value}
+                </Text>
+              </View>
+            ))}
+          </View>
+          <RiskSignals
+            risk={risk.data}
+            unavailable={risk.isError}
+            onRetry={() => void risk.refetch()}
+            tone="dark"
+          />
 
-        <View style={styles.form}>
-          <Text style={styles.heading} accessibilityRole="header">
-            Trade
-          </Text>
-          <TradeFields form={form} />
+          <View style={styles.form}>
+            <View style={styles.eyebrowRow}>
+              <Text style={styles.eyebrow} accessibilityRole="header">
+                TRADE
+              </Text>
+              <IconButton
+                label="Full trade screen and settings"
+                onPress={() => router.push(`/trade/${mint}?side=${form.side}`)}
+              >
+                <Settings size={18} color={dark.muted} strokeWidth={2} />
+              </IconButton>
+            </View>
+            <TradeFields form={form} />
+          </View>
+        </ScrollView>
+        {/* Pinned so the trade action stays in reach on any desktop height. */}
+        <View style={styles.footer}>
+          <TradeAction form={form} />
         </View>
-      </ScrollView>
-      {/* Pinned so the trade action stays in reach on any desktop height. */}
-      <View style={styles.footer}>
-        <TradeAction form={form} />
       </View>
-    </View>
+    </Ink>
   );
 }
 
 const styles = StyleSheet.create({
   flex: { flex: 1, minWidth: 0 },
-  panel: { flex: 1 },
+  panel: { flex: 1, backgroundColor: dark.bg },
   // Room below the form so the last control scrolls clear of the window edge.
   content: { padding: space.lg, paddingBottom: space.xl, gap: space.md },
   footer: {
-    gap: space.sm,
     paddingHorizontal: space.lg,
     paddingTop: space.md,
     paddingBottom: space.lg,
-    borderTopWidth: StyleSheet.hairlineWidth,
-    borderTopColor: colors.border,
-    backgroundColor: colors.surface,
+    borderTopWidth: 1,
+    borderTopColor: dark.border,
+    backgroundColor: dark.bg,
+  },
+  eyebrowRow: { flexDirection: 'row', alignItems: 'center', gap: 2, marginVertical: -8 },
+  eyebrow: {
+    flex: 1,
+    fontSize: 12,
+    fontWeight: '600',
+    letterSpacing: 2,
+    color: dark.muted,
   },
   identity: { flexDirection: 'row', alignItems: 'center', gap: space.md },
-  symbol: { fontSize: 18, fontWeight: '600' },
-  pair: { fontSize: 14, fontWeight: '500', color: colors.muted },
-  name: { fontSize: 13, color: colors.muted, marginTop: 2 },
-  open: {
+  symbol: { fontSize: 20, fontWeight: '700' },
+  pair: { fontSize: 16, fontWeight: '400', color: dark.muted },
+  name: { fontSize: 13, color: dark.muted, marginTop: 2 },
+  priceBlock: { flexDirection: 'row', alignItems: 'baseline', gap: 10, flexWrap: 'wrap' },
+  note: { fontSize: 12, color: dark.muted, lineHeight: 17 },
+  metrics: {
     flexDirection: 'row',
-    alignItems: 'center',
-    gap: 6,
-    minHeight: 36,
-    paddingHorizontal: 12,
-    borderRadius: radius.chip,
-    backgroundColor: colors.surface2,
+    borderRadius: radius.card,
+    borderWidth: 1,
+    borderColor: dark.border,
+    backgroundColor: dark.surface,
   },
-  openText: { fontSize: 13, fontWeight: '600' },
-  priceBlock: { gap: 4 },
-  note: { fontSize: 12, color: colors.muted, lineHeight: 17 },
+  metric: { flex: 1, minWidth: 0, paddingVertical: 10, paddingHorizontal: 10, gap: 3 },
+  metricLabel: { fontSize: 11, color: dark.muted },
+  metricValue: { fontSize: 14, fontWeight: '600' },
   // The trade controls, set off from the token details by one divider.
   form: {
     gap: space.md,
     paddingTop: space.lg,
-    borderTopWidth: StyleSheet.hairlineWidth,
-    borderTopColor: colors.border,
+    borderTopWidth: 1,
+    borderTopColor: dark.border,
   },
-  heading: { fontSize: 15, fontWeight: '600' },
-  inputRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    minHeight: 56,
-    paddingHorizontal: 14,
-    borderRadius: radius.input,
-    borderWidth: 1,
-    borderColor: colors.border,
-    backgroundColor: colors.bg,
-  },
-  input: { flex: 1, fontSize: 24, fontWeight: '600', color: colors.text, minWidth: 0 },
-  unit: { fontSize: 14, fontWeight: '600', color: colors.muted },
-  presets: { flexDirection: 'row', gap: space.sm },
-  preset: {
-    flex: 1,
-    minHeight: 36,
-    borderRadius: radius.chip,
-    borderWidth: 1,
-    borderColor: 'transparent',
-    backgroundColor: colors.bg,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  presetOn: { borderColor: colors.borderStrong, backgroundColor: colors.surface2 },
-  presetText: { fontSize: 14, fontWeight: '600', color: colors.text2 },
-  lines: { gap: 10 },
-  line: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 12 },
-  lineLabel: { fontSize: 13, color: colors.muted },
-  lineValue: { fontSize: 13, fontWeight: '500', flexShrink: 1 },
-  slips: { flexDirection: 'row', gap: 4 },
-  slip: {
-    minHeight: 32,
-    minWidth: 44,
-    paddingHorizontal: 8,
-    borderRadius: 6,
-    borderWidth: 1,
-    borderColor: colors.border,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  slipOn: { borderColor: colors.accent },
-  slipText: { fontSize: 12, fontWeight: '600', color: colors.muted },
 });

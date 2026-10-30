@@ -1,12 +1,10 @@
-import { router } from 'expo-router';
-import { ChevronDown, SlidersHorizontal, Wallet } from 'lucide-react-native';
+import { ChevronDown, Filter, Info } from 'lucide-react-native';
 import { useState } from 'react';
 import { Animated, FlatList, Pressable, RefreshControl, StyleSheet, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { LIST_WINDOWS, activeFilterCount } from '../../lib/market';
 import { transition } from '../../lib/motion';
 import { colors, radius, space } from '../../lib/theme';
-import { IconButton } from '../Button';
 import { Sheet } from '../Sheet';
 import { ErrorState } from '../States';
 import { Logo } from '../Logo';
@@ -14,9 +12,8 @@ import { usePulse } from '../Motion';
 import { Text } from '../Text';
 import { EmptyFeed } from './EmptyFeed';
 import { FiltersSheet } from './FiltersSheet';
-import { NetworkChip, NetworkNote } from './Network';
+import { DevnetPill, NetworkChip, NetworkNote } from './Network';
 import { SearchBar } from './SearchBar';
-import { StatusLine } from './StatusLine';
 import { Tabs } from './Tabs';
 import { TokenListRow } from './TokenListRow';
 import { type DiscoverState, FEEDS } from './useDiscover';
@@ -36,14 +33,14 @@ export function MobileDiscover({ state }: { state: DiscoverState }) {
         <Logo size={26} />
         <View style={styles.topRight}>
           <NetworkChip onPress={() => setNetworkOpen(true)} />
-          <IconButton label="Wallet" onPress={() => router.push('/wallet')}>
-            <Wallet size={20} color={colors.text} strokeWidth={2} />
-          </IconButton>
+          <DevnetPill soft />
         </View>
       </View>
       <View>
-        <Text style={styles.title}>Discover</Text>
-        <Text style={styles.subtitle}>Every token checked for scam patterns first.</Text>
+        <Text style={styles.eyebrow}>MARKETS</Text>
+        <Text style={styles.title} accessibilityRole="header">
+          Discover
+        </Text>
       </View>
       <SearchBar value={state.query} onChange={state.setQuery} onSubmit={state.openAddress} />
       {state.address ? (
@@ -78,7 +75,7 @@ export function MobileDiscover({ state }: { state: DiscoverState }) {
             transition,
           ]}
         >
-          <SlidersHorizontal size={16} color={colors.text} strokeWidth={2} />
+          <Filter size={16} color={colors.text} strokeWidth={2} />
           <Text style={styles.filtersText}>Filters</Text>
           {filterCount > 0 ? (
             <View style={styles.badge}>
@@ -87,6 +84,7 @@ export function MobileDiscover({ state }: { state: DiscoverState }) {
               </Text>
             </View>
           ) : null}
+          <ChevronDown size={14} color={colors.text} strokeWidth={2} />
         </Pressable>
       </View>
       {state.hiddenRed > 0 ? (
@@ -113,7 +111,7 @@ export function MobileDiscover({ state }: { state: DiscoverState }) {
           accessibilityRole="button"
           accessibilityLabel="Sort by price"
         >
-          <Text style={styles.colText}>Price · SOL{state.sortMark('price')}</Text>
+          <Text style={styles.colText}>Price (SOL){state.sortMark('price')}</Text>
         </Pressable>
         <Pressable
           onPress={() => state.sortBy('change')}
@@ -122,13 +120,10 @@ export function MobileDiscover({ state }: { state: DiscoverState }) {
           accessibilityLabel={`Sort by ${windowLabel} change`}
         >
           <Text style={styles.colText}>
-            {windowLabel}
-            {state.sortMark('change') || ' '}
+            {windowLabel} %{state.sortMark('change')}
           </Text>
-          {state.sortMark('change') ? null : (
-            <ChevronDown size={12} color={colors.muted} strokeWidth={2} />
-          )}
         </Pressable>
+        <View style={styles.colSpark} />
       </View>
     </View>
   );
@@ -152,7 +147,12 @@ export function MobileDiscover({ state }: { state: DiscoverState }) {
             />
           )}
           ListHeaderComponent={header}
-          ListFooterComponent={<StatusLine state={state} />}
+          ListFooterComponent={
+            <View style={styles.footNote}>
+              <Info size={14} color={colors.faint} strokeWidth={2} />
+              <Text style={styles.footText}>Devnet data · Not financial advice.</Text>
+            </View>
+          }
           contentContainerStyle={{ paddingTop: insets.top + space.md, paddingBottom: space.xl * 2 }}
           ListEmptyComponent={market.list.isPending ? <LoadingRows /> : <EmptyFeed state={state} />}
           refreshControl={
@@ -204,7 +204,16 @@ const styles = StyleSheet.create({
   top: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
   topRight: { flexDirection: 'row', alignItems: 'center', gap: space.sm },
   brand: { fontSize: 16, fontWeight: '700', letterSpacing: 3 },
-  title: { fontSize: 26, fontWeight: '700', letterSpacing: -0.6 },
+  eyebrow: { fontSize: 12, fontWeight: '600', letterSpacing: 2, color: colors.muted },
+  title: { fontSize: 40, fontWeight: '800', letterSpacing: -1.2, marginTop: 2 },
+  footNote: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    paddingHorizontal: space.screen,
+    paddingVertical: space.md,
+  },
+  footText: { fontSize: 12, color: colors.faint },
   subtitle: { fontSize: 14, color: colors.muted, marginTop: 2 },
   openAddress: {
     minHeight: 44,
@@ -221,9 +230,11 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 6,
-    minHeight: 44,
+    minHeight: 46,
     paddingHorizontal: 14,
-    borderRadius: radius.input,
+    borderRadius: radius.card,
+    borderWidth: 1,
+    borderColor: colors.border,
     backgroundColor: colors.surface,
   },
   filtersText: { fontSize: 14, fontWeight: '600' },
@@ -239,18 +250,12 @@ const styles = StyleSheet.create({
   badgeText: { fontSize: 11, fontWeight: '700', color: colors.onAccent },
   hidden: { fontSize: 12, color: colors.muted },
   link: { fontSize: 12, fontWeight: '600', color: colors.accent },
-  columns: { flexDirection: 'row', alignItems: 'center', gap: 12, marginTop: 2 },
+  columns: { flexDirection: 'row', alignItems: 'center', gap: 10, marginTop: 4 },
+  colSpark: { width: 64 },
   colToken: { flex: 1, minHeight: 32, justifyContent: 'center' },
-  colPrice: { width: 92, minHeight: 32, alignItems: 'flex-end', justifyContent: 'center' },
-  colChange: {
-    width: 68,
-    minHeight: 32,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'flex-end',
-    gap: 2,
-  },
-  colText: { fontSize: 12, color: colors.faint, fontWeight: '500' },
+  colPrice: { width: 84, minHeight: 32, alignItems: 'flex-end', justifyContent: 'center' },
+  colChange: { width: 64, minHeight: 32, alignItems: 'flex-end', justifyContent: 'center' },
+  colText: { fontSize: 13, color: colors.muted, fontWeight: '500' },
   skeleton: {
     flexDirection: 'row',
     alignItems: 'center',

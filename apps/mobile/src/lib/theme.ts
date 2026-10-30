@@ -4,39 +4,64 @@ import type { RiskLevel } from '@sift/shared';
 // size and font the screens use comes from here; screens never hard-code them.
 
 export const colors = {
-  bg: '#0B0E12',
+  /** Warm off-white page. */
+  bg: '#F6F7F2',
   /** Panels, cards, inputs, sheets. */
-  surface: '#12171D',
-  /** Raised controls on a panel: selected segments, chips, hover. */
-  surface2: '#1B222B',
+  surface: '#FFFFFF',
+  /** Quiet fills: segmented tracks, hover, selected chips. */
+  surface2: '#EFF1EB',
   /** Panel and table borders. */
-  border: '#252B34',
+  border: '#E3E6DE',
   /** Button and input borders. */
-  borderStrong: '#2E3540',
+  borderStrong: '#D2D7CC',
   /** Hairlines between table rows. */
-  divider: '#1B2129',
-  tabBar: '#0E1216',
+  divider: '#ECEEE8',
+  tabBar: '#FFFFFF',
   /** Off state of a switch track. */
-  track: '#2C3440',
-  text: '#F3F5F7',
+  track: '#D2D7CC',
+  text: '#0F1712',
   /** Body text on panels. */
-  text2: '#C9D0DB',
+  text2: '#2B3730',
   /** Long-form body text (summaries, notes). */
-  body: '#E1E5EB',
+  body: '#25302A',
   /** Secondary text: labels, column headers. */
-  muted: '#98A2B3',
-  /** Captions and disclaimers (still 4.5:1 on the background). */
-  faint: '#8590A1',
-  accent: '#72E5C0',
+  muted: '#5C675F',
+  /** Captions and disclaimers (4.5:1 on the page). */
+  faint: '#6B756E',
+  /** Sift green: primary actions, active tabs, links. */
+  accent: '#0B7A4F',
   /** Shadows (never shown as a surface). */
   shadow: '#000000',
   /** Text and icons on an accent background. */
-  onAccent: '#06130F',
+  onAccent: '#FFFFFF',
   /** Links and accent labels. */
-  link: '#72E5C0',
-  up: '#72E5C0',
+  link: '#0B7A4F',
+  up: '#108A4E',
+  caution: '#A86200',
+  down: '#D13A3A',
+  /** The bright call to action on dark trade surfaces. */
+  lime: '#D5F25B',
+  onLime: '#0F1712',
+} as const;
+
+/**
+ * The dark trade surfaces (the phone Trade screen, the desktop token panel): near-black
+ * green with a lime call to action.
+ */
+export const dark = {
+  bg: '#0F1915',
+  surface: '#16231D',
+  surface2: '#1E2C26',
+  border: '#28372F',
+  text: '#F2F5F3',
+  muted: '#9AA79F',
+  faint: '#83908A',
+  up: '#3DD68C',
+  down: '#FF6B6B',
   caution: '#F5B544',
-  down: '#FF786E',
+  accent: '#3DD68C',
+  lime: '#D5F25B',
+  onLime: '#0F1712',
 } as const;
 
 /** A colour at `alpha` opacity: tinted badge backgrounds (~0.12) and borders (~0.3). */

@@ -1,7 +1,7 @@
 import { Pressable, StyleSheet, View } from 'react-native';
 import { haptic, transition } from '../../lib/motion';
-import { colors, radius, tint } from '../../lib/theme';
-import { Text } from '../Text';
+import { colors, dark, radius, tint } from '../../lib/theme';
+import { Text, useInk } from '../Text';
 
 /**
  * Tabs in two treatments. `underline` (the default) is text tabs with a thin mint
@@ -21,9 +21,18 @@ export function Tabs<T extends string | number>({
   compact?: boolean;
   label: string;
 }) {
+  // On the dark trade surfaces: lime indicator, light text.
+  const onDark = useInk() === dark.text;
+  const accent = onDark ? dark.lime : colors.accent;
+  const text = onDark ? dark.text : colors.text;
+  const muted = onDark ? dark.muted : colors.muted;
   return (
     <View
-      style={compact ? styles.segments : styles.underlineRow}
+      style={[
+        compact ? styles.segments : styles.underlineRow,
+        onDark &&
+          (compact ? { backgroundColor: dark.surface } : { borderBottomColor: dark.border }),
+      ]}
       accessibilityRole="tablist"
       accessibilityLabel={label}
     >
@@ -52,7 +61,8 @@ export function Tabs<T extends string | number>({
               compact ? styles.segment : styles.tab,
               compact && selected && styles.segmentSelected,
               compact && !selected && (pressed || hovered) && styles.segmentHover,
-              !compact && { borderBottomColor: selected ? colors.accent : 'transparent' },
+              !compact && { borderBottomColor: selected ? accent : 'transparent' },
+              compact && selected && onDark && { backgroundColor: dark.surface2 },
               focused && styles.focus,
               transition,
             ]}
@@ -63,7 +73,10 @@ export function Tabs<T extends string | number>({
                 mono={compact}
                 style={[
                   compact ? styles.segmentLabel : styles.tabLabel,
-                  { color: selected ? colors.text : hovered ? colors.text2 : colors.muted },
+                  {
+                    color: selected ? (compact || onDark ? text : accent) : hovered ? text : muted,
+                  },
+                  !compact && selected && { fontWeight: '700' },
                   transition,
                 ]}
               >
@@ -90,13 +103,13 @@ const styles = StyleSheet.create({
     borderBottomWidth: 2,
     marginBottom: -StyleSheet.hairlineWidth,
   },
-  tabLabel: { fontSize: 15, fontWeight: '600' },
+  tabLabel: { fontSize: 16, fontWeight: '500' },
   segments: {
     flexDirection: 'row',
     padding: 3,
     gap: 2,
-    borderRadius: radius.input,
-    backgroundColor: colors.surface,
+    borderRadius: radius.card,
+    backgroundColor: colors.surface2,
   },
   segment: {
     flex: 1,
@@ -106,8 +119,14 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
-  segmentSelected: { backgroundColor: colors.surface2 },
+  segmentSelected: {
+    backgroundColor: colors.surface,
+    shadowColor: colors.shadow,
+    shadowOpacity: 0.08,
+    shadowRadius: 3,
+    shadowOffset: { width: 0, height: 1 },
+  },
   segmentHover: { backgroundColor: tint(colors.text, 0.04) },
-  segmentLabel: { fontSize: 13, fontWeight: '600' },
+  segmentLabel: { fontSize: 14, fontWeight: '600' },
   focus: { outlineColor: colors.muted, outlineWidth: 1, outlineStyle: 'solid' } as object,
 });

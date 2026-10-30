@@ -13,13 +13,15 @@ import { Stack, router, useLocalSearchParams } from 'expo-router';
 import { type ReactNode, useEffect, useState } from 'react';
 import {
   AlertTriangle,
+  ArrowDown,
   Check,
+  ChevronDown,
   ChevronLeft,
   ChevronRight,
+  Info,
   Settings,
   ShieldCheck,
   ShieldX,
-  Wallet as WalletIcon,
 } from 'lucide-react-native';
 import {
   ActivityIndicator,
@@ -38,7 +40,6 @@ import { NATIVE, haptic, transition, useReduceMotion } from '../../lib/motion';
 import { Button, IconButton } from '../../components/Button';
 import { Card } from '../../components/Card';
 import { Confetti } from '../../components/Confetti';
-import { EmptyState } from '../../components/EmptyState';
 import { SolanaMark } from '../../components/market/Network';
 import { useTokenInfo } from '../../components/market/useTokenInfo';
 import { Segmented } from '../../components/Segmented';
@@ -46,14 +47,16 @@ import { ErrorState } from '../../components/States';
 import { Sheet } from '../../components/Sheet';
 import { SlideToConfirm } from '../../components/SlideToConfirm';
 import { Switch } from '../../components/Switch';
-import { Text, TextInput } from '../../components/Text';
+import { Ink, Text, TextInput } from '../../components/Text';
+import { Logo } from '../../components/Logo';
+import { TokenAvatar } from '../../components/TokenAvatar';
 import { parseSolToLamports, percentOfRaw, rawToTokens } from '../../lib/amounts';
 import { FEE_WALLET, api, siftApi } from '../../lib/api';
 import { costLines, secondsLeft } from '../../lib/costs';
 import { formatCompact, shortAddress } from '../../lib/format';
 import { useTokenStats } from '../../lib/market-hooks';
 import { useMode } from '../../lib/mode';
-import { breakpoints, RISK_COLORS, colors, radius, space, tint } from '../../lib/theme';
+import { breakpoints, RISK_COLORS, colors, radius, space, tint, dark } from '../../lib/theme';
 import { createRpcReader, onChainProblems } from '../../lib/chain-check';
 import { mwaErrorMessage } from '../../lib/mwa-results';
 import { checkQuote } from '../../lib/trade-check';
@@ -223,25 +226,6 @@ export default function TradeScreen() {
 
   if (!isSolanaAddress(mint)) return <ErrorState message="That isn't a valid token address." />;
   if (wallet.status === 'loading') return <ActivityIndicator style={{ marginTop: 40 }} />;
-  if (!wallet.address) {
-    return (
-      <View style={styles.root}>
-        <EmptyState
-          icon={WalletIcon}
-          title={Platform.OS === 'web' ? 'Connect a wallet to trade' : 'Set up a wallet to trade'}
-          body="Your keys stay with you. Sift shows the full cost before anything is signed."
-          action={{
-            label: Platform.OS === 'web' ? 'Connect wallet' : 'Set up wallet',
-            onPress: () => router.navigate('/portfolio'),
-          }}
-          secondary={{
-            label: 'Back',
-            onPress: () => (router.canGoBack() ? router.back() : router.replace('/')),
-          }}
-        />
-      </View>
-    );
-  }
 
   const highRisk = risk.data?.level === 'red';
   const request = (): TradeQuoteRequest | null => {
@@ -346,106 +330,99 @@ export default function TradeScreen() {
       ? null
       : side === 'buy'
         ? Number(solInput) > 0
-          ? `≈ ${formatCompact((Number(solInput) * feeShare) / lastPrice)} ${symbol}`
+          ? `≈ ${formatCompact((Number(solInput) * feeShare) / lastPrice)}`
           : null
         : holding
-          ? `≈ ${formatCompact(rawToTokens(holding.amountRaw, holding.decimals) * (sellPercent / 100) * lastPrice * feeShare)} SOL`
+          ? `≈ ${formatCompact(rawToTokens(holding.amountRaw, holding.decimals) * (sellPercent / 100) * lastPrice * feeShare)}`
           : null;
   const footerHeight = 112 + insets.bottom;
 
   return (
     <KeyboardAvoidingView
-      style={styles.root}
+      style={[styles.root, editing && styles.rootDark]}
       behavior={Platform.OS === 'ios' ? 'padding' : undefined}
     >
-      <Stack.Screen options={{ headerShown: wideScreen }} />
-      <View
-        style={[styles.header, { paddingTop: insets.top + space.sm, paddingHorizontal: gutter }]}
-      >
-        <IconButton
-          label="Back"
-          onPress={() => (router.canGoBack() ? router.back() : router.replace(`/token/${mint}`))}
+      <Ink color={editing ? dark.text : colors.text}>
+        <Stack.Screen options={{ headerShown: wideScreen }} />
+        <View
+          style={[styles.header, { paddingTop: insets.top + space.sm, paddingHorizontal: gutter }]}
         >
-          <ChevronLeft size={20} color={colors.text} strokeWidth={2} />
-        </IconButton>
-        <View style={styles.headerCenter}>
-          <Text style={styles.headerTitle} numberOfLines={1}>
-            {stage.name === 'review' ? `Review ${title.toLowerCase()}` : `Trade ${symbol}`}
-          </Text>
-          <View style={styles.networkPill}>
-            <View
-              style={[
-                styles.networkDot,
-                {
-                  backgroundColor: isDevnet
-                    ? colors.caution
-                    : isMainnet
-                      ? colors.accent
-                      : colors.muted,
-                },
-              ]}
-            />
-            <Text style={styles.networkText}>
-              {isDevnet ? 'Devnet · Test SOL' : isMainnet ? 'Solana · Real SOL' : 'Solana'}
-            </Text>
+          <IconButton
+            label="Back"
+            onPress={() => (router.canGoBack() ? router.back() : router.replace(`/token/${mint}`))}
+          >
+            <ChevronLeft size={26} color={editing ? dark.text : colors.text} strokeWidth={2} />
+          </IconButton>
+          <View style={styles.headerCenter}>
+            {editing && !wideScreen ? (
+              <Logo size={24} color={dark.text} />
+            ) : (
+              <Text style={styles.headerTitle} numberOfLines={1}>
+                {stage.name === 'review' ? `Review ${title.toLowerCase()}` : `Trade ${symbol}`}
+              </Text>
+            )}
           </View>
-        </View>
-        <IconButton label="Trade settings" onPress={() => setSettingsOpen(true)}>
-          <Settings size={20} color={colors.text} strokeWidth={2} />
-        </IconButton>
-      </View>
-
-      <ScrollView
-        contentContainerStyle={[
-          styles.screen,
-          { paddingHorizontal: gutter },
-          editing && { paddingBottom: footerHeight + space.lg },
-        ]}
-        keyboardShouldPersistTaps="handled"
-      >
-        {editing ? (
-          <>
-            <SideToggle side={side} onChange={setSide} />
-
-            <View style={styles.field}>
-              <Text style={styles.fieldLabel}>Pay with</Text>
-              <Pressable
-                onPress={
-                  siftUsable && wallet.address
-                    ? () => setPayWith(fromSift ? 'phone' : 'sift')
-                    : undefined
-                }
-                accessibilityRole="button"
-                accessibilityLabel={`Paying from ${fromSift ? 'Sift wallet' : PAYING_FROM[wallet.kind ?? 'embedded']}${siftUsable ? ', tap to switch' : ''}`}
-                style={({ pressed }) => [styles.panelRow, pressed && siftUsable && styles.pressed]}
-              >
-                <SolanaMark size={18} />
-                <Text style={styles.payWith}>SOL</Text>
-                <Text style={styles.payFrom} numberOfLines={1}>
-                  {fromSift ? 'Sift wallet' : PAYING_FROM[wallet.kind ?? 'embedded']}
-                </Text>
-                {siftUsable && wallet.address ? (
-                  <ChevronRight size={16} color={colors.muted} strokeWidth={2} />
-                ) : null}
-                <View style={styles.flex} />
-                <Text mono style={styles.balance}>
-                  {solBalance !== undefined
-                    ? `Balance: ${formatCompact(solBalance)} SOL`
-                    : 'Loading…'}
-                </Text>
-              </Pressable>
+          {isDevnet ? (
+            <View style={[styles.devPill, editing && styles.devPillDark]}>
+              <Text style={[styles.devPillText, editing && { color: dark.up }]}>Devnet</Text>
             </View>
+          ) : null}
+          <IconButton label="Trade settings" onPress={() => setSettingsOpen(true)}>
+            <Settings size={24} color={editing ? dark.text : colors.text} strokeWidth={2} />
+          </IconButton>
+        </View>
 
-            {side === 'buy' ? (
-              <View style={styles.field}>
-                <View style={styles.fieldHead}>
-                  <Text style={styles.fieldLabel}>You pay</Text>
-                  <Text style={styles.fieldHint}>
-                    {isDevnet ? 'Test SOL, no real value' : isMainnet ? 'Trades are final' : ''}
-                  </Text>
-                </View>
-                <View style={styles.amountPanel}>
-                  <View style={styles.amountRow}>
+        <ScrollView
+          contentContainerStyle={[
+            styles.screen,
+            { paddingHorizontal: gutter },
+            editing && { paddingBottom: footerHeight + space.lg },
+          ]}
+          keyboardShouldPersistTaps="handled"
+        >
+          {editing ? (
+            <>
+              <View style={styles.tHead}>
+                <Text style={styles.tTitle} accessibilityRole="header">
+                  Trade {symbol}
+                </Text>
+                <Text style={styles.tSub}>Swap between SOL and {symbol} on Solana</Text>
+              </View>
+
+              <View style={styles.tTabs} accessibilityRole="tablist">
+                {(['buy', 'sell'] as const).map((value) => {
+                  const active = side === value;
+                  return (
+                    <Pressable
+                      key={value}
+                      onPress={() => setSide(value)}
+                      accessibilityRole="tab"
+                      accessibilityState={{ selected: active }}
+                      style={[styles.tTab, active && styles.tTabOn]}
+                    >
+                      <Text style={[styles.tTabText, active && { color: dark.lime }]}>
+                        {value === 'buy' ? 'Buy' : 'Sell'}
+                      </Text>
+                    </Pressable>
+                  );
+                })}
+              </View>
+
+              <Text style={styles.dLabel}>From</Text>
+              <View style={styles.swapCard}>
+                {side === 'buy' ? (
+                  <TokenChip sol />
+                ) : (
+                  <TokenChip
+                    symbol={symbol}
+                    name={tokenInfo?.name}
+                    mint={mint}
+                    uri={tokenInfo?.imageUrl}
+                  />
+                )}
+                <View style={styles.swapDivider} />
+                <View style={styles.swapAmount}>
+                  {side === 'buy' ? (
                     <TextInput
                       mono
                       value={solInput}
@@ -454,304 +431,300 @@ export default function TradeScreen() {
                       }
                       keyboardType="decimal-pad"
                       placeholder="0.00"
+                      placeholderTextColor={dark.faint}
                       accessibilityLabel="Amount to spend in SOL"
-                      style={styles.amountInput}
+                      style={styles.swapInput}
                     />
-                    <Text style={styles.amountUnit}>SOL</Text>
-                  </View>
-                  <View style={styles.amountFoot}>
-                    <Text mono style={styles.available}>
-                      Available {formatCompact(solBalance ?? 0)} SOL
-                    </Text>
-                    <View style={styles.flex} />
-                    <Pressable
-                      onPress={() => setSol(maxSpend / 2)}
-                      hitSlop={10}
-                      accessibilityRole="button"
-                    >
-                      <Text style={styles.quick}>50%</Text>
-                    </Pressable>
-                    <Pressable
-                      onPress={() => setSol(maxSpend)}
-                      hitSlop={10}
-                      accessibilityRole="button"
-                    >
-                      <Text style={styles.quick}>Max</Text>
-                    </Pressable>
-                  </View>
-                </View>
-                <View style={styles.presets}>
-                  {BUY_PRESETS.map((p) => (
-                    <PresetButton
-                      key={p}
-                      label={p}
-                      selected={solInput === p}
-                      onPress={() => setSolInput(p)}
-                    />
-                  ))}
-                  <PresetButton
-                    label="Max"
-                    selected={maxSpend > 0 && Number(solInput) === Number(maxSpend.toFixed(4))}
-                    onPress={() => setSol(maxSpend)}
-                  />
-                </View>
-              </View>
-            ) : holding ? (
-              <View style={styles.field}>
-                <View style={styles.fieldHead}>
-                  <Text style={styles.fieldLabel}>You sell</Text>
-                  <Text mono style={styles.fieldHint}>
-                    Available {formatCompact(rawToTokens(holding.amountRaw, holding.decimals))}{' '}
-                    {symbol}
-                  </Text>
-                </View>
-                <View style={styles.amountPanel}>
-                  <View style={styles.amountRow}>
-                    <Text mono style={styles.amountInput}>
+                  ) : (
+                    <Text mono style={styles.swapValue}>
                       {sellPercent}%
                     </Text>
-                    <Text style={styles.amountUnit}>of {symbol}</Text>
-                  </View>
+                  )}
+                  <Text style={styles.swapSub}>{side === 'buy' ? 'SOL' : `of your ${symbol}`}</Text>
                 </View>
-                <View style={styles.presets}>
-                  {SELL_PRESETS.map((p) => (
+              </View>
+
+              <Pressable
+                onPress={
+                  siftUsable && wallet.address
+                    ? () => setPayWith(fromSift ? 'phone' : 'sift')
+                    : undefined
+                }
+                accessibilityRole={siftUsable ? 'button' : undefined}
+                accessibilityLabel={`Balance, paying from ${fromSift ? 'Sift wallet' : PAYING_FROM[wallet.kind ?? 'embedded']}${siftUsable ? ', tap to switch' : ''}`}
+                style={styles.balanceRow}
+              >
+                <Text style={styles.dMuted}>Balance</Text>
+                <Text style={styles.dMuted}>—</Text>
+                <Text mono style={styles.dMuted} numberOfLines={1}>
+                  {!wallet.address
+                    ? 'Not connected'
+                    : side === 'buy'
+                      ? solBalance !== undefined
+                        ? `${formatCompact(solBalance)} SOL · ${fromSift ? 'Sift wallet' : PAYING_FROM[wallet.kind ?? 'embedded']}`
+                        : 'Loading…'
+                      : holding
+                        ? `${formatCompact(rawToTokens(holding.amountRaw, holding.decimals))} ${symbol}`
+                        : holdings.isPending
+                          ? 'Loading…'
+                          : `No ${symbol} in this wallet`}
+                </Text>
+                {siftUsable && wallet.address ? (
+                  <ChevronDown size={14} color={dark.muted} strokeWidth={2} />
+                ) : null}
+              </Pressable>
+
+              <View style={styles.presets}>
+                {side === 'buy' ? (
+                  <>
+                    {BUY_PRESETS.map((p) => (
+                      <PresetButton
+                        key={p}
+                        label={p}
+                        selected={solInput === p}
+                        onPress={() => setSolInput(p)}
+                      />
+                    ))}
+                    <PresetButton
+                      label="Max"
+                      selected={maxSpend > 0 && Number(solInput) === Number(maxSpend.toFixed(4))}
+                      onPress={() => setSol(maxSpend)}
+                    />
+                  </>
+                ) : (
+                  SELL_PRESETS.map((p) => (
                     <PresetButton
                       key={p}
-                      label={p === 100 ? 'All' : `${p}%`}
+                      label={p === 100 ? 'Max' : `${p}%`}
                       selected={sellPercent === p}
                       onPress={() => setSellPercent(p)}
                     />
-                  ))}
-                </View>
+                  ))
+                )}
               </View>
-            ) : (
-              <View style={styles.panel}>
-                <Text style={styles.muted}>
-                  {holdings.isPending
-                    ? 'Loading your balance…'
-                    : `This wallet doesn’t hold ${symbol}.`}
-                </Text>
-              </View>
-            )}
 
-            {/* What you get and what it costs, together so the fees are easy to check. */}
-            <View style={styles.summary}>
-              <View style={styles.summaryTop}>
-                <View style={styles.fieldHead}>
-                  <Text style={styles.fieldLabel}>
-                    Estimated {side === 'buy' ? 'receive' : 'proceeds'}
-                  </Text>
-                  <Text style={styles.fieldHint}>At the last price</Text>
+              <View style={styles.arrowRow}>
+                <View style={styles.arrowLine} />
+                <View style={styles.arrowCircle}>
+                  <ArrowDown size={20} color={dark.text} strokeWidth={2} />
                 </View>
-                <Text mono style={styles.estimate} numberOfLines={1} adjustsFontSizeToFit>
-                  {estimate ?? '–'}
-                </Text>
-                <Text style={styles.caption}>
-                  The review shows the exact amount, fees and minimum before you confirm.
-                </Text>
+                <View style={styles.arrowLine} />
               </View>
-              <View style={styles.summaryRows}>
-                <DetailRow
+
+              <Text style={styles.dLabel}>To (estimated)</Text>
+              <View style={styles.swapCard}>
+                {side === 'buy' ? (
+                  <TokenChip
+                    symbol={symbol}
+                    name={tokenInfo?.name}
+                    mint={mint}
+                    uri={tokenInfo?.imageUrl}
+                  />
+                ) : (
+                  <TokenChip sol />
+                )}
+                <View style={styles.swapDivider} />
+                <View style={styles.swapAmount}>
+                  <Text mono style={styles.swapValue} numberOfLines={1} adjustsFontSizeToFit>
+                    {estimate ?? '–'}
+                  </Text>
+                  <Text style={styles.swapSub}>{side === 'buy' ? symbol : 'SOL'}</Text>
+                </View>
+              </View>
+              <View style={styles.infoLine}>
+                <Info size={16} color={dark.muted} strokeWidth={2} />
+                <Text style={styles.dMuted}>At the last price · exact quote in review</Text>
+              </View>
+
+              <View style={styles.dRows}>
+                <DarkRow
                   label="Slippage"
                   value={`${Number(slippage) / 100}%`}
                   onPress={() => setSettingsOpen(true)}
                 />
-                <DetailRow label="Sift fee" value={`${PLATFORM_FEE_RATE * 100}%`} />
-                <DetailRow label="Network fee" value="~0.000005 SOL + priority" />
-                <DetailRow label="Price impact" value="Shown in review" last />
+                <DarkRow label="Sift fee" value={`${PLATFORM_FEE_RATE * 100}%`} />
+                <DarkRow label="Network fee" value="~0.000005 SOL + priority" />
+                <DarkRow label="Price impact" value="Shown in review" />
               </View>
-            </View>
 
-            {flags.length > 0 ? (
-              <View style={[styles.flagsBox, highRisk ? styles.flagsRed : null]}>
-                <View style={styles.flagsHead}>
-                  <AlertTriangle
-                    size={18}
-                    color={highRisk ? colors.down : colors.caution}
-                    strokeWidth={2}
-                  />
-                  <Text style={styles.flagsTitle}>
-                    {flags.length} risk {flags.length === 1 ? 'flag' : 'flags'}
-                    {highRisk ? ' · rated Risky' : ''}
-                  </Text>
-                </View>
-                <Text style={styles.flagsBody}>
-                  {flags
-                    .slice(0, 2)
-                    .map((f) => f.message)
-                    .join(' ')}
-                </Text>
-                <Pressable
-                  onPress={() => router.push(`/token/${mint}`)}
-                  accessibilityRole="link"
-                  hitSlop={8}
-                >
-                  <Text style={styles.quick}>Review token details</Text>
-                </Pressable>
-                {highRisk ? (
-                  <View style={styles.rowBetween}>
-                    <Text style={[styles.flagsBody, styles.flex]}>
-                      I understand I could lose everything I put in.
-                    </Text>
-                    <Switch
-                      value={understood}
-                      onValueChange={setUnderstood}
-                      label="I understand the risk"
+              {flags.length > 0 ? (
+                <View style={[styles.flagsBox, highRisk ? styles.flagsRed : null]}>
+                  <View style={styles.flagsHead}>
+                    <AlertTriangle
+                      size={18}
+                      color={highRisk ? colors.down : colors.caution}
+                      strokeWidth={2}
                     />
+                    <Text style={styles.flagsTitle}>
+                      {flags.length} risk {flags.length === 1 ? 'flag' : 'flags'}
+                      {highRisk ? ' · rated Risky' : ''}
+                    </Text>
                   </View>
-                ) : null}
-              </View>
-            ) : null}
+                  <Text style={styles.flagsBody}>
+                    {flags
+                      .slice(0, 2)
+                      .map((f) => f.message)
+                      .join(' ')}
+                  </Text>
+                  <Pressable
+                    onPress={() => router.push(`/token/${mint}`)}
+                    accessibilityRole="link"
+                    hitSlop={8}
+                  >
+                    <Text style={styles.darkLink}>Review token details</Text>
+                  </Pressable>
+                  {highRisk ? (
+                    <View style={styles.rowBetween}>
+                      <Text style={[styles.flagsBody, styles.flex]}>
+                        I understand I could lose everything I put in.
+                      </Text>
+                      <Switch
+                        value={understood}
+                        onValueChange={setUnderstood}
+                        label="I understand the risk"
+                      />
+                    </View>
+                  ) : null}
+                </View>
+              ) : null}
 
-            {fromSift && side === 'buy' ? (
-              <ProtectCard
-                on={protect}
-                onChange={setProtect}
-                simple={mode === 'simple'}
-                onCustomize={() => router.push(`/order/${mint}?kind=stop_loss`)}
-              />
-            ) : null}
-          </>
-        ) : null}
+              {fromSift && side === 'buy' ? (
+                <ProtectCard
+                  on={protect}
+                  onChange={setProtect}
+                  simple={mode === 'simple'}
+                  onCustomize={() => router.push(`/order/${mint}?kind=stop_loss`)}
+                />
+              ) : null}
+            </>
+          ) : null}
 
-        {stage.name === 'review' ? (
-          <Review
-            payingFrom={
-              <PayingFrom
-                kind={fromSift ? 'sift' : wallet.kind}
-                address={payer!}
-                solBalance={solBalance}
-              />
-            }
-            quote={stage.quote}
-            problems={stage.problems}
-            onConfirm={() => confirm(stage.quote)}
-            onBack={() => setStage({ name: 'edit' })}
-            onRefresh={review}
-          />
-        ) : null}
-
-        {stage.name === 'sending' || stage.name === 'pending' ? (
-          <Card>
-            <ActivityIndicator color={colors.accent} />
-            <Text style={styles.center}>
-              {stage.name === 'pending'
-                ? 'Waiting for the network to confirm…'
-                : fromSift
-                  ? 'Signing from your Sift wallet…'
-                  : wallet.kind === 'phantom'
-                    ? 'Approve the trade in Phantom…'
-                    : wallet.kind === 'walletApp'
-                      ? 'Approve the trade in your wallet app…'
-                      : wallet.kind === 'browser'
-                        ? `Approve the trade in ${wallet.browserWalletName ?? 'your wallet'}…`
-                        : 'Signing on this phone and sending…'}
-            </Text>
-            {stage.name === 'sending' && wallet.kind === 'phantom' ? (
-              <Pressable onPress={cancelPhantomRequest}>
-                <Text style={[styles.center, styles.muted]}>Cancel</Text>
-              </Pressable>
-            ) : null}
-          </Card>
-        ) : null}
-
-        {stage.name === 'done' ? (
-          <Card>
-            <SuccessCheck />
-            <Text style={styles.doneTitle}>{stage.quote.side === 'buy' ? 'Bought' : 'Sold'}</Text>
-            <Text style={styles.center}>
-              Confirmed on Solana.{' '}
-              {stage.quote.side === 'buy'
-                ? 'The tokens are in your wallet.'
-                : 'The SOL is in your wallet.'}
-            </Text>
-            {protectNote ? <Text style={styles.protectNote}>{protectNote}</Text> : null}
-            <Pressable onPress={() => Linking.openURL(solscanUrl('tx', stage.signature, cluster))}>
-              <Text style={[styles.center, styles.link]}>View on Solscan</Text>
-            </Pressable>
-            <Button
-              label="Trade again"
-              variant="secondary"
-              onPress={() => setStage({ name: 'edit' })}
+          {stage.name === 'review' ? (
+            <Review
+              payingFrom={
+                <PayingFrom
+                  kind={fromSift ? 'sift' : wallet.kind}
+                  address={payer!}
+                  solBalance={solBalance}
+                />
+              }
+              quote={stage.quote}
+              problems={stage.problems}
+              onConfirm={() => confirm(stage.quote)}
+              onBack={() => setStage({ name: 'edit' })}
+              onRefresh={review}
             />
-          </Card>
-        ) : null}
+          ) : null}
 
-        {stage.name === 'failed' ? (
-          <Card title="Trade not completed">
-            <Text style={styles.bodyText}>{stage.message}</Text>
-            <Button label="Back" variant="secondary" onPress={() => setStage({ name: 'edit' })} />
-          </Card>
-        ) : null}
+          {stage.name === 'sending' || stage.name === 'pending' ? (
+            <Card>
+              <ActivityIndicator color={colors.accent} />
+              <Text style={styles.center}>
+                {stage.name === 'pending'
+                  ? 'Waiting for the network to confirm…'
+                  : fromSift
+                    ? 'Signing from your Sift wallet…'
+                    : wallet.kind === 'phantom'
+                      ? 'Approve the trade in Phantom…'
+                      : wallet.kind === 'walletApp'
+                        ? 'Approve the trade in your wallet app…'
+                        : wallet.kind === 'browser'
+                          ? `Approve the trade in ${wallet.browserWalletName ?? 'your wallet'}…`
+                          : 'Signing on this phone and sending…'}
+              </Text>
+              {stage.name === 'sending' && wallet.kind === 'phantom' ? (
+                <Pressable onPress={cancelPhantomRequest}>
+                  <Text style={[styles.center, styles.muted]}>Cancel</Text>
+                </Pressable>
+              ) : null}
+            </Card>
+          ) : null}
 
-        <Text style={styles.note}>
-          {isDevnet
-            ? 'Trades run on Solana devnet with test SOL. Not financial advice.'
-            : isMainnet
-              ? 'Trades run on Solana with real SOL and are final. Not financial advice.'
-              : 'Not financial advice.'}
-        </Text>
-      </ScrollView>
+          {stage.name === 'done' ? (
+            <Card>
+              <SuccessCheck />
+              <Text style={styles.doneTitle}>{stage.quote.side === 'buy' ? 'Bought' : 'Sold'}</Text>
+              <Text style={styles.center}>
+                Confirmed on Solana.{' '}
+                {stage.quote.side === 'buy'
+                  ? 'The tokens are in your wallet.'
+                  : 'The SOL is in your wallet.'}
+              </Text>
+              {protectNote ? <Text style={styles.protectNote}>{protectNote}</Text> : null}
+              <Pressable
+                onPress={() => Linking.openURL(solscanUrl('tx', stage.signature, cluster))}
+              >
+                <Text style={[styles.center, styles.link]}>View on Solscan</Text>
+              </Pressable>
+              <Button
+                label="Trade again"
+                variant="secondary"
+                onPress={() => setStage({ name: 'edit' })}
+              />
+            </Card>
+          ) : null}
 
-      {editing ? (
-        <View
-          style={[
-            styles.footer,
-            { paddingBottom: insets.bottom + space.md, paddingHorizontal: gutter },
-          ]}
-        >
-          <Button
-            confirm
-            label={stage.name === 'quoting' ? 'Getting price…' : `Review ${title.toLowerCase()}`}
-            onPress={review}
-            disabled={stage.name === 'quoting' || !request() || (highRisk && !understood)}
-          />
-          <Text style={styles.footNote}>You confirm before anything is signed.</Text>
-        </View>
-      ) : null}
+          {stage.name === 'failed' ? (
+            <Card title="Trade not completed">
+              <Text style={styles.bodyText}>{stage.message}</Text>
+              <Button label="Back" variant="secondary" onPress={() => setStage({ name: 'edit' })} />
+            </Card>
+          ) : null}
 
-      <Sheet visible={settingsOpen} onClose={() => setSettingsOpen(false)} title="Trade settings">
-        <Text style={styles.fieldLabel}>Max slippage</Text>
-        <Segmented value={slippage} onChange={setSlippage} options={SLIPPAGES} />
-        <Text style={styles.caption}>
-          If the price moves more than this before your trade lands, it cancels and you pay only
-          network fees. Wider slippage fills more often but can cost more.
-        </Text>
-        <Button small label="Done" onPress={() => setSettingsOpen(false)} />
-      </Sheet>
-      {stage.name === 'done' ? <Confetti /> : null}
-    </KeyboardAvoidingView>
-  );
-}
+          <Text style={styles.note}>
+            {isDevnet
+              ? 'Trades run on Solana devnet with test SOL. Not financial advice.'
+              : isMainnet
+                ? 'Trades run on Solana with real SOL and are final. Not financial advice.'
+                : 'Not financial advice.'}
+          </Text>
+        </ScrollView>
 
-function SideToggle({ side, onChange }: { side: TradeSide; onChange: (side: TradeSide) => void }) {
-  return (
-    <View style={styles.sides} accessibilityRole="tablist" accessibilityLabel="Buy or sell">
-      {(['buy', 'sell'] as const).map((value) => {
-        const selected = side === value;
-        return (
-          <Pressable
-            key={value}
-            onPress={() => {
-              if (!selected) haptic.select();
-              onChange(value);
-            }}
-            accessibilityRole="tab"
-            accessibilityState={{ selected }}
-            style={[styles.side, selected && (value === 'buy' ? styles.sideBuy : styles.sideSell)]}
+        {editing ? (
+          <View
+            style={[
+              styles.footer,
+              styles.footerDark,
+              { paddingBottom: insets.bottom + space.md, paddingHorizontal: gutter },
+            ]}
           >
-            <Text
-              style={[
-                styles.sideText,
-                selected && { color: value === 'buy' ? colors.onAccent : colors.text },
-              ]}
-            >
-              {value === 'buy' ? 'Buy' : 'Sell'}
+            {wallet.address ? (
+              <Button
+                confirm
+                variant="lime"
+                label={
+                  stage.name === 'quoting' ? 'Getting price…' : `Review ${title.toLowerCase()}`
+                }
+                onPress={review}
+                disabled={stage.name === 'quoting' || !request() || (highRisk && !understood)}
+              />
+            ) : (
+              <Button
+                variant="lime"
+                label="Connect wallet"
+                onPress={() => router.navigate('/portfolio')}
+              />
+            )}
+            <Text style={styles.footNote}>
+              {wallet.address
+                ? 'You confirm before anything is signed.'
+                : 'Connect to review a live quote.'}
             </Text>
-          </Pressable>
-        );
-      })}
-    </View>
+          </View>
+        ) : null}
+
+        <Sheet visible={settingsOpen} onClose={() => setSettingsOpen(false)} title="Trade settings">
+          <Text style={styles.fieldLabel}>Max slippage</Text>
+          <Segmented value={slippage} onChange={setSlippage} options={SLIPPAGES} />
+          <Text style={styles.caption}>
+            If the price moves more than this before your trade lands, it cancels and you pay only
+            network fees. Wider slippage fills more often but can cost more.
+          </Text>
+          <Button small label="Done" onPress={() => setSettingsOpen(false)} />
+        </Sheet>
+        {stage.name === 'done' ? <Confetti /> : null}
+      </Ink>
+    </KeyboardAvoidingView>
   );
 }
 
@@ -774,54 +747,16 @@ function PresetButton({
       accessibilityState={{ selected }}
       style={({ pressed, hovered }: { pressed: boolean; hovered?: boolean }) => [
         styles.preset,
-        hovered && !selected && { backgroundColor: colors.surface2 },
+        hovered && !selected && { backgroundColor: dark.surface2 },
         selected && styles.presetOn,
         pressed && styles.pressed,
         transition,
       ]}
     >
-      <Text mono style={[styles.presetText, selected && { color: colors.text }]}>
+      <Text mono style={[styles.presetText, selected && { color: dark.lime }]}>
         {label}
       </Text>
     </Pressable>
-  );
-}
-
-function DetailRow({
-  label,
-  value,
-  onPress,
-  last = false,
-}: {
-  label: string;
-  value: string;
-  onPress?: () => void;
-  last?: boolean;
-}) {
-  const body = (
-    <>
-      <Text style={styles.detailLabel}>{label}</Text>
-      <View style={styles.flex} />
-      <Text mono style={styles.detailValue}>
-        {value}
-      </Text>
-      {onPress ? <ChevronRight size={16} color={colors.muted} strokeWidth={2} /> : null}
-    </>
-  );
-  return onPress ? (
-    <Pressable
-      onPress={onPress}
-      accessibilityRole="button"
-      style={({ pressed }) => [
-        styles.detail,
-        !last && styles.detailDivider,
-        pressed && styles.pressed,
-      ]}
-    >
-      {body}
-    </Pressable>
-  ) : (
-    <View style={[styles.detail, !last && styles.detailDivider]}>{body}</View>
   );
 }
 
@@ -925,6 +860,71 @@ function Review({
   );
 }
 
+/** A token in the swap cards: logo, symbol, name. */
+function TokenChip({
+  sol = false,
+  symbol,
+  name,
+  mint,
+  uri,
+}: {
+  sol?: boolean;
+  symbol?: string;
+  name?: string;
+  mint?: string;
+  uri?: string;
+}) {
+  return (
+    <View style={styles.chip}>
+      {sol ? (
+        <View style={styles.solLogo}>
+          <SolanaMark size={22} />
+        </View>
+      ) : (
+        <TokenAvatar uri={uri} label={symbol} seed={mint} size={44} />
+      )}
+      <View style={styles.flex}>
+        <Text style={styles.chipSymbol} numberOfLines={1}>
+          {sol ? 'SOL' : symbol}
+        </Text>
+        <Text style={styles.chipName} numberOfLines={1}>
+          {sol ? 'Solana' : (name ?? symbol)}
+        </Text>
+      </View>
+    </View>
+  );
+}
+
+/** A label with an info mark and its value, on the dark trade surface. */
+function DarkRow({
+  label,
+  value,
+  onPress,
+}: {
+  label: string;
+  value: string;
+  onPress?: () => void;
+}) {
+  const body = (
+    <>
+      <Text style={styles.dRowLabel}>{label}</Text>
+      <Info size={15} color={dark.muted} strokeWidth={2} />
+      <View style={styles.flex} />
+      <Text mono style={styles.dRowValue}>
+        {value}
+      </Text>
+      {onPress ? <ChevronRight size={16} color={dark.muted} strokeWidth={2} /> : null}
+    </>
+  );
+  return onPress ? (
+    <Pressable onPress={onPress} accessibilityRole="button" style={styles.dRow}>
+      {body}
+    </Pressable>
+  ) : (
+    <View style={styles.dRow}>{body}</View>
+  );
+}
+
 function PayingFrom({
   kind,
   address,
@@ -972,7 +972,7 @@ function ProtectCard({
   return (
     <View style={[styles.protect, on ? styles.protectOn : null]}>
       <View style={[styles.protectIcon, on ? styles.protectIconOn : null]}>
-        <ShieldCheck size={20} color={on ? colors.up : colors.muted} strokeWidth={2} />
+        <ShieldCheck size={20} color={on ? dark.up : dark.muted} strokeWidth={2} />
       </View>
       <View style={styles.flex}>
         <Text style={styles.protectTitle}>Protect this trade</Text>
@@ -982,7 +982,7 @@ function ProtectCard({
             : 'Stop loss −30% (all) · take profit +100% (half)'}
         </Text>
         <Pressable onPress={onCustomize} accessibilityRole="link" hitSlop={8}>
-          <Text style={styles.switchLink}>Customize</Text>
+          <Text style={styles.darkLink}>Customize</Text>
         </Pressable>
       </View>
       <Switch value={on} onValueChange={onChange} label="Protect this trade" />
@@ -992,6 +992,87 @@ function ProtectCard({
 
 const styles = StyleSheet.create({
   root: { flex: 1, backgroundColor: colors.bg },
+  rootDark: { backgroundColor: dark.bg },
+  devPill: {
+    height: 32,
+    paddingHorizontal: 12,
+    borderRadius: 8,
+    justifyContent: 'center',
+    backgroundColor: tint(colors.accent, 0.1),
+  },
+  devPillDark: { backgroundColor: tint(dark.up, 0.16) },
+  devPillText: { fontSize: 14, fontWeight: '600', color: colors.accent },
+  tHead: { gap: 4, marginTop: space.sm },
+  tTitle: { fontSize: 38, fontWeight: '800', letterSpacing: -1 },
+  tSub: { fontSize: 17, color: dark.muted },
+  tTabs: { flexDirection: 'row', marginTop: space.sm },
+  tTab: {
+    flex: 1,
+    minHeight: 48,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderBottomWidth: 3,
+    borderBottomColor: dark.border,
+  },
+  tTabOn: { borderBottomColor: dark.lime },
+  tTabText: { fontSize: 19, fontWeight: '600', color: dark.text },
+  dLabel: { fontSize: 17, color: dark.text, marginTop: space.sm },
+  swapCard: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    minHeight: 88,
+    paddingHorizontal: space.lg,
+    borderRadius: radius.card,
+    borderWidth: 1,
+    borderColor: dark.border,
+    backgroundColor: dark.surface,
+  },
+  swapDivider: { width: 1, alignSelf: 'stretch', marginVertical: 16, backgroundColor: dark.border },
+  swapAmount: { flex: 1, alignItems: 'flex-end', paddingLeft: space.md, gap: 2 },
+  swapInput: {
+    alignSelf: 'stretch',
+    textAlign: 'right',
+    fontSize: 32,
+    fontWeight: '700',
+    padding: 0,
+    color: dark.text,
+  },
+  swapValue: { fontSize: 32, fontWeight: '700' },
+  swapSub: { fontSize: 15, color: dark.muted },
+  chip: { flexDirection: 'row', alignItems: 'center', gap: 12, width: 150 },
+  solLogo: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    backgroundColor: '#000000',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  chipSymbol: { fontSize: 18, fontWeight: '700' },
+  chipName: { fontSize: 15, color: dark.muted },
+  balanceRow: { flexDirection: 'row', alignItems: 'center', gap: 8, minHeight: 28 },
+  dMuted: { fontSize: 15, color: dark.muted, flexShrink: 1 },
+  arrowRow: { flexDirection: 'row', alignItems: 'center', gap: space.md, marginTop: space.sm },
+  arrowLine: { flex: 1, height: 1, backgroundColor: dark.border },
+  arrowCircle: {
+    width: 48,
+    height: 48,
+    borderRadius: 24,
+    borderWidth: 1,
+    borderColor: dark.border,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  infoLine: { flexDirection: 'row', alignItems: 'center', gap: 8 },
+  dRows: {
+    marginTop: space.sm,
+    paddingTop: space.sm,
+    borderTopWidth: 1,
+    borderTopColor: dark.border,
+  },
+  dRow: { flexDirection: 'row', alignItems: 'center', gap: 8, minHeight: 44 },
+  dRowLabel: { fontSize: 17 },
+  dRowValue: { fontSize: 16, color: dark.muted },
   screen: { padding: space.screen, gap: space.md, paddingBottom: 40 },
   header: {
     flexDirection: 'row',
@@ -1078,16 +1159,16 @@ const styles = StyleSheet.create({
   estimate: { fontSize: 24, fontWeight: '700', letterSpacing: -0.4 },
   preset: {
     flex: 1,
-    minHeight: 44,
-    borderRadius: radius.input,
+    minHeight: 50,
+    borderRadius: radius.input + 2,
     borderWidth: 1,
-    borderColor: 'transparent',
-    backgroundColor: colors.surface,
+    borderColor: dark.border,
+    backgroundColor: dark.bg,
     alignItems: 'center',
     justifyContent: 'center',
   },
-  presetOn: { backgroundColor: colors.surface2, borderColor: colors.borderStrong },
-  presetText: { fontSize: 15, fontWeight: '600', color: colors.text2 },
+  presetOn: { backgroundColor: dark.surface2, borderColor: dark.lime },
+  presetText: { fontSize: 17, fontWeight: '500', color: dark.text },
   detail: { flexDirection: 'row', alignItems: 'center', gap: 6, minHeight: 44 },
   detailDivider: { borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: colors.border },
   detailLabel: { fontSize: 14, color: colors.muted },
@@ -1097,13 +1178,13 @@ const styles = StyleSheet.create({
     gap: 6,
     borderRadius: radius.card,
     borderWidth: 1,
-    borderColor: tint(colors.caution, 0.55),
-    backgroundColor: tint(colors.caution, 0.06),
+    borderColor: tint(dark.caution, 0.6),
+    backgroundColor: tint(dark.caution, 0.08),
   },
-  flagsRed: { borderColor: tint(colors.down, 0.55), backgroundColor: tint(colors.down, 0.06) },
+  flagsRed: { borderColor: tint(dark.down, 0.6), backgroundColor: tint(dark.down, 0.08) },
   flagsHead: { flexDirection: 'row', alignItems: 'center', gap: 10 },
   flagsTitle: { fontSize: 15, fontWeight: '600' },
-  flagsBody: { fontSize: 13, lineHeight: 19, color: colors.text2 },
+  flagsBody: { fontSize: 13, lineHeight: 19, color: dark.muted },
   footer: {
     position: 'absolute',
     left: 0,
@@ -1116,6 +1197,7 @@ const styles = StyleSheet.create({
     borderTopWidth: StyleSheet.hairlineWidth,
     borderTopColor: colors.border,
   },
+  footerDark: { backgroundColor: dark.bg, borderTopColor: dark.border },
   footNote: { fontSize: 12, textAlign: 'center', color: colors.muted },
   flex: { flex: 1 },
   headerBadge: { marginRight: 12 },
@@ -1165,6 +1247,7 @@ const styles = StyleSheet.create({
   payingFrom: { fontSize: 13, color: colors.muted, textAlign: 'center' },
   payingStrong: { fontSize: 13, fontWeight: '700', color: colors.body },
   switchLink: { fontSize: 13, fontWeight: '700', color: colors.link },
+  darkLink: { fontSize: 14, fontWeight: '600', color: dark.lime },
   protect: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -1172,21 +1255,21 @@ const styles = StyleSheet.create({
     padding: 14,
     borderRadius: 16,
     borderWidth: 1,
-    borderColor: colors.borderStrong,
-    backgroundColor: colors.surface,
+    borderColor: dark.border,
+    backgroundColor: dark.surface,
   },
-  protectOn: { backgroundColor: tint(colors.up, 0.08), borderColor: tint(colors.up, 0.3) },
+  protectOn: { backgroundColor: tint(dark.up, 0.08), borderColor: tint(dark.up, 0.35) },
   protectIcon: {
     width: 40,
     height: 40,
     borderRadius: 12,
-    backgroundColor: colors.surface2,
+    backgroundColor: dark.surface2,
     alignItems: 'center',
     justifyContent: 'center',
   },
-  protectIconOn: { backgroundColor: tint(colors.up, 0.14) },
+  protectIconOn: { backgroundColor: tint(dark.up, 0.16) },
   protectTitle: { fontSize: 15, fontWeight: '800' },
-  protectBody: { fontSize: 12, lineHeight: 17, color: colors.text2, marginTop: 2, marginBottom: 4 },
+  protectBody: { fontSize: 12, lineHeight: 17, color: dark.muted, marginTop: 2, marginBottom: 4 },
   protectNote: { fontSize: 13, lineHeight: 19, color: colors.up, textAlign: 'center' },
   linkButton: {
     height: 54,

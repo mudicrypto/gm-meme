@@ -1,13 +1,7 @@
 import type { TokenStats } from '@sift/shared';
 import { router } from 'expo-router';
 import { Pressable, StyleSheet, View } from 'react-native';
-import {
-  formatAge,
-  formatCompact,
-  formatSol,
-  formatSolPrice,
-  shortAddress,
-} from '../../lib/format';
+import { formatAge, formatCompact, formatSolPrice, shortAddress } from '../../lib/format';
 import type { MarketToken } from '../../lib/market';
 import { transition } from '../../lib/motion';
 import { colors } from '../../lib/theme';
@@ -45,37 +39,32 @@ export function TokenListRow({
         uri={token.imageUrl}
         label={token.symbol ?? token.name}
         seed={token.mint}
-        size={40}
+        size={44}
       />
       <View style={styles.name}>
         <Text style={styles.symbol} numberOfLines={1}>
           {symbol}
         </Text>
         <View style={styles.subRow}>
-          <RiskTag level={token.riskLevel} />
           <Text style={styles.sub} numberOfLines={1}>
-            {'· '}
-            {note ?? (age === 'just now' ? 'new' : age)}
+            {note ?? token.name ?? (age === 'just now' ? 'New' : age)}
           </Text>
+          {/* The risk check stays visible: a shield whose shape says the level. */}
+          <RiskTag level={token.riskLevel} size={12} iconOnly />
         </View>
       </View>
-      <View style={styles.priceCol}>
-        <Text mono style={styles.price} numberOfLines={1}>
-          {stats?.priceSol ? formatSolPrice(stats.priceSol) : '–'}
-        </Text>
-        <Text mono style={styles.vol} numberOfLines={1}>
-          {stats ? `${formatSol(stats.volumeSol)} vol` : ' '}
-        </Text>
-      </View>
+      <Text mono style={styles.price} numberOfLines={1}>
+        {stats?.priceSol ? formatSolPrice(stats.priceSol) : '–'}
+      </Text>
       <View style={styles.changeCol}>
-        <Change pct={stats?.changePct} size={13} />
-        <Sparkline
-          points={stats?.sparkline ?? []}
-          changePct={stats?.changePct}
-          width={64}
-          height={22}
-        />
+        <Change pct={stats?.changePct} size={14} />
       </View>
+      <Sparkline
+        points={stats?.sparkline ?? []}
+        changePct={stats?.changePct}
+        width={64}
+        height={26}
+      />
     </Pressable>
   );
 }
@@ -88,20 +77,18 @@ const styles = StyleSheet.create({
   row: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 12,
-    minHeight: 68,
+    gap: 10,
+    minHeight: 72,
     paddingVertical: 12,
     paddingHorizontal: 16,
     borderBottomWidth: StyleSheet.hairlineWidth,
     borderBottomColor: colors.border,
   },
-  active: { backgroundColor: colors.surface },
-  name: { flex: 1, minWidth: 0, gap: 4 },
-  symbol: { fontSize: 15, fontWeight: '500', color: colors.text },
-  subRow: { flexDirection: 'row', alignItems: 'center', minWidth: 0 },
-  sub: { fontSize: 12, color: colors.faint, flexShrink: 1, marginLeft: 4 },
-  priceCol: { width: 92, alignItems: 'flex-end', gap: 4 },
-  price: { fontSize: 15, fontWeight: '600' },
-  vol: { fontSize: 12, color: colors.faint },
-  changeCol: { width: 68, alignItems: 'flex-end', gap: 4 },
+  active: { backgroundColor: colors.surface2 },
+  name: { flex: 1, minWidth: 0, gap: 3 },
+  symbol: { fontSize: 16, fontWeight: '700', color: colors.text },
+  subRow: { flexDirection: 'row', alignItems: 'center', gap: 6, minWidth: 0 },
+  sub: { fontSize: 13, color: colors.muted, flexShrink: 1 },
+  price: { width: 84, textAlign: 'right', fontSize: 15, fontWeight: '500' },
+  changeCol: { width: 64, alignItems: 'flex-end' },
 });

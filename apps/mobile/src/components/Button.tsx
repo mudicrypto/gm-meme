@@ -16,7 +16,7 @@ export function Button({
 }: {
   label: string;
   onPress: () => void;
-  variant?: 'primary' | 'secondary';
+  variant?: 'primary' | 'secondary' | 'lime';
   disabled?: boolean;
   small?: boolean;
   /** One firm haptic: for the button that commits (buy, sell, place order). */
@@ -35,18 +35,25 @@ export function Button({
       style={[
         styles.button,
         small && styles.small,
-        primary ? styles.primary : styles.secondary,
+        variant === 'lime' ? styles.lime : primary ? styles.primary : styles.secondary,
         { opacity: disabled ? 0.5 : 1 },
       ]}
     >
-      <Text style={[styles.label, { color: primary ? colors.onAccent : colors.text }]}>
+      <Text
+        style={[
+          styles.label,
+          {
+            color: variant === 'lime' ? colors.onLime : primary ? colors.onAccent : colors.text,
+          },
+        ]}
+      >
         {label}
       </Text>
     </PressableScale>
   );
 }
 
-/** A 44×44 square icon button (header actions). */
+/** A bare 44×44 icon button (header actions): no box, as in the design. */
 export function IconButton({
   label,
   onPress,
@@ -127,13 +134,13 @@ const styles = StyleSheet.create({
   },
   small: { height: 44, borderRadius: radius.input },
   primary: { backgroundColor: colors.accent },
+  lime: { backgroundColor: colors.lime },
   secondary: { backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.borderStrong },
   label: { fontSize: 16, fontWeight: '600' },
   icon: {
     width: 44,
     height: 44,
-    borderRadius: radius.input,
-    backgroundColor: colors.surface,
+    borderRadius: 22,
     alignItems: 'center',
     justifyContent: 'center',
   },

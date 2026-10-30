@@ -1,14 +1,12 @@
 import { isSolanaAddress } from '@sift/shared';
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import * as Clipboard from 'expo-clipboard';
+import { useQuery } from '@tanstack/react-query';
 import { Link, router, useLocalSearchParams } from 'expo-router';
 import {
-  Check,
+  CandlestickChart,
+  ChartLine,
   ChevronLeft,
-  Copy,
   ExternalLink,
   MoreHorizontal,
-  Star,
   Timer,
 } from 'lucide-react-native';
 import { type ReactNode, useState } from 'react';
@@ -26,7 +24,9 @@ import { FlashText } from '../../components/FlashText';
 import { CandleChart } from '../../components/market/CandleChart';
 import { Change } from '../../components/market/Change';
 import { Tabs } from '../../components/market/Tabs';
-import { ActivityList, Metrics, RiskSignals } from '../../components/market/TokenPanels';
+import { ActivityList, RiskSignals, StatTiles } from '../../components/market/TokenPanels';
+import { Logo } from '../../components/Logo';
+import { PriceChart } from '../../components/PriceChart';
 import { TradeAction, TradeFields, useTradeForm } from '../../components/market/TradeForm';
 import { useTokenInfo } from '../../components/market/useTokenInfo';
 import { Sheet } from '../../components/Sheet';
@@ -34,14 +34,12 @@ import { ErrorState } from '../../components/States';
 import { Text } from '../../components/Text';
 import { TokenAvatar } from '../../components/TokenAvatar';
 import { TokenWatch } from '../../components/TokenWatch';
-import { api, socialApi } from '../../lib/api';
+import { WatchStar } from '../../components/WatchStar';
+import { api } from '../../lib/api';
 import { formatSolPrice, shortAddress } from '../../lib/format';
 import { CHART_WINDOWS } from '../../lib/market';
 import { useTokenStats } from '../../lib/market-hooks';
-import { haptic } from '../../lib/motion';
-import { useSession } from '../../lib/session';
-import { useWatchlist } from '../../lib/social-hooks';
-import { colors, radius, space } from '../../lib/theme';
+import { breakpoints, colors, dark, radius, space } from '../../lib/theme';
 import { solscanUrl, useNetwork } from '../../lib/network';
 
 type Section = 'activity' | 'holders' | 'info';
@@ -66,6 +64,7 @@ export default function TokenScreen() {
   const [windowMinutes, setWindowMinutes] = useState(60);
   const [section, setSection] = useState<Section>('activity');
   const [moreOpen, setMoreOpen] = useState(false);
+  const [lineChart, setLineChart] = useState(false);
   const { cluster } = useNetwork();
   const info = useTokenInfo(mint);
 
@@ -95,9 +94,8 @@ export default function TokenScreen() {
 
   const symbol = (info?.symbol ?? shortAddress(mint)).slice(0, 12);
   const name = (info?.name ?? info?.symbol ?? shortAddress(mint)).slice(0, 32);
-  const windowLabel = CHART_WINDOWS.find((w) => w.minutes === windowMinutes)?.label ?? '1h';
   const price = stats.data?.priceSol;
-  const form = useTradeForm(mint, symbol, price);
+  const form = useTradeForm(mint, symbol, price, { name, imageUrl: info?.imageUrl });
   const footerHeight = 76 + insets.bottom;
 
   const header = (
@@ -106,15 +104,15 @@ export default function TokenScreen() {
         label="Back"
         onPress={() => (router.canGoBack() ? router.back() : router.replace('/'))}
       >
-        <ChevronLeft size={20} color={colors.text} strokeWidth={2} />
+        <ChevronLeft size={26} color={colors.text} strokeWidth={2} />
       </IconButton>
-      <Text style={styles.pair} numberOfLines={1}>
-        {symbol}
-        <Text style={styles.pairQuote}> / SOL</Text>
-      </Text>
+      {/* Wide screens already show the logo in the app header. */}
+      <View style={styles.headerLogo}>
+        {width < breakpoints.tablet ? <Logo size={24} /> : null}
+      </View>
       <WatchStar mint={mint} />
       <IconButton label="More" onPress={() => setMoreOpen(true)}>
-        <MoreHorizontal size={20} color={colors.text} strokeWidth={2} />
+        <MoreHorizontal size={24} color={colors.text} strokeWidth={2} />
       </IconButton>
     </View>
   );
@@ -146,19 +144,22 @@ export default function TokenScreen() {
               uri={info?.imageUrl}
               label={info?.symbol ?? info?.name}
               seed={mint}
-              size={52}
+              size={exchange ? 56 : 68}
             />
             <View style={styles.flex}>
+              <Text style={styles.pairTitle} numberOfLines={1}>
+                {symbol}
+                <Text style={styles.pairQuote}> / SOL</Text>
+              </Text>
               <Text style={styles.name} numberOfLines={1}>
                 {name}
               </Text>
-              <CopyAddress address={mint} />
             </View>
           </View>
 
-          <View style={styles.priceBlock}>
+          <View style={styles.priceRow} accessibilityLabel={`Change ${pastWindow(windowMinutes)}`}>
             {price ? (
-              <View style={styles.priceRow}>
+              <View style={styles.priceValue}>
                 <FlashText value={price} style={styles.price}>
                   {formatSolPrice(price)}
                 </FlashText>
@@ -169,31 +170,49 @@ export default function TokenScreen() {
                 {stats.isPending ? 'Loading price…' : 'No trades yet'}
               </Text>
             )}
-            <View style={styles.changeRow}>
-              <Change pct={stats.data?.changePct} size={16} arrow />
-              <Text style={styles.windowText}>{pastWindow(windowMinutes)}</Text>
-            </View>
+            <Change pct={stats.data?.changePct} size={24} />
           </View>
 
-          <Tabs
-            compact
-            label="Chart window"
-            options={CHART_WINDOWS.map((w) => ({ value: w.minutes, label: w.label }))}
-            value={windowMinutes}
-            onChange={setWindowMinutes}
-          />
+          <View style={styles.chartControls}>
+            <View style={styles.flex}>
+              <Tabs
+                compact
+                label="Chart window"
+                options={CHART_WINDOWS.map((w) => ({ value: w.minutes, label: w.label }))}
+                value={windowMinutes}
+                onChange={setWindowMinutes}
+              />
+            </View>
+            <Pressable
+              onPress={() => setLineChart((v) => !v)}
+              accessibilityRole="button"
+              accessibilityLabel={lineChart ? 'Show candles' : 'Show a line chart'}
+              style={({ hovered }: { pressed: boolean; hovered?: boolean }) => [
+                styles.chartType,
+                hovered && { backgroundColor: colors.surface2 },
+              ]}
+            >
+              {lineChart ? (
+                <CandlestickChart size={20} color={colors.text} strokeWidth={2} />
+              ) : (
+                <ChartLine size={20} color={colors.text} strokeWidth={2} />
+              )}
+            </Pressable>
+          </View>
           {chart.isError ? (
             <ErrorState message="Couldn’t load the chart." onRetry={() => chart.refetch()} />
+          ) : lineChart && (chart.data?.points.length ?? 0) > 1 ? (
+            <PriceChart points={chart.data?.points ?? []} />
           ) : (
             <CandleChart
               points={chart.data?.points ?? []}
-              height={exchange ? 340 : undefined}
+              height={exchange ? 340 : 260}
               emptyHeight={140}
               windowMinutes={windowMinutes}
             />
           )}
 
-          <Metrics stats={stats.data} token={info} windowLabel={windowLabel} />
+          <StatTiles mint={mint} enabled={valid} />
           <RiskSignals
             risk={risk.data}
             unavailable={risk.isError}
@@ -261,7 +280,7 @@ export default function TokenScreen() {
           <View style={styles.side}>
             <ScrollView style={styles.flex} contentContainerStyle={styles.sideContent}>
               <Text style={styles.sideTitle} accessibilityRole="header">
-                Trade {symbol}
+                TRADE
               </Text>
               <TradeFields form={form} />
             </ScrollView>
@@ -343,80 +362,12 @@ function MoreRow({
   );
 }
 
-function CopyAddress({ address }: { address: string }) {
-  const [copied, setCopied] = useState(false);
-  return (
-    <Pressable
-      onPress={async () => {
-        await Clipboard.setStringAsync(address);
-        haptic.select();
-        setCopied(true);
-        setTimeout(() => setCopied(false), 1800);
-      }}
-      accessibilityRole="button"
-      accessibilityLabel="Copy token address"
-      hitSlop={10}
-      style={styles.copy}
-    >
-      <Text mono style={[styles.address, copied && { color: colors.up }]}>
-        {copied ? 'Copied' : shortAddress(address)}
-      </Text>
-      {copied ? (
-        <Check size={14} color={colors.up} strokeWidth={2.4} />
-      ) : (
-        <Copy size={14} color={colors.muted} strokeWidth={2} />
-      )}
-    </Pressable>
-  );
-}
-
-/** Watchlist star: needs sign-in; filled when watching. */
-export function WatchStar({ mint }: { mint: string }) {
-  const { token } = useSession();
-  const queryClient = useQueryClient();
-  const watchlist = useWatchlist();
-  const watching = watchlist.data?.tokens.some((t) => t.mint === mint) ?? false;
-  const toggle = useMutation({
-    mutationFn: () => (watching ? socialApi.unwatch(token!, mint) : socialApi.watch(token!, mint)),
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['social'] }),
-  });
-  return (
-    <IconButton
-      label={watching ? 'Remove from watchlist' : 'Add to watchlist'}
-      onPress={() => {
-        if (!token) {
-          router.push('/watchlist');
-          return;
-        }
-        haptic.select();
-        toggle.mutate();
-      }}
-    >
-      <Star
-        size={20}
-        color={watching ? colors.caution : colors.text}
-        fill={watching ? colors.caution : 'none'}
-        strokeWidth={2}
-      />
-    </IconButton>
-  );
-}
-
 const styles = StyleSheet.create({
   columns: { flex: 1, flexDirection: 'row' },
-  side: {
-    width: 380,
-    backgroundColor: colors.surface,
-    borderLeftWidth: StyleSheet.hairlineWidth,
-    borderLeftColor: colors.border,
-  },
+  side: { width: 400, backgroundColor: dark.bg },
   sideContent: { padding: space.lg, gap: space.md },
-  sideTitle: { fontSize: 16, fontWeight: '600' },
-  sideFoot: {
-    padding: space.lg,
-    borderTopWidth: StyleSheet.hairlineWidth,
-    borderTopColor: colors.border,
-  },
+  sideTitle: { fontSize: 12, fontWeight: '600', letterSpacing: 2, color: dark.muted },
+  sideFoot: { padding: space.lg, borderTopWidth: 1, borderTopColor: dark.border },
   root: { flex: 1, backgroundColor: colors.bg },
   flex: { flex: 1, minWidth: 0 },
   header: {
@@ -426,16 +377,29 @@ const styles = StyleSheet.create({
     paddingHorizontal: space.screen,
     paddingBottom: space.sm,
   },
-  pair: { flex: 1, textAlign: 'center', fontSize: 17, fontWeight: '600' },
-  pairQuote: { color: colors.muted, fontWeight: '500' },
+  headerLogo: { flex: 1, alignItems: 'center' },
+  pairTitle: { fontSize: 26, fontWeight: '700', letterSpacing: -0.4 },
+  pairQuote: { color: colors.text2, fontWeight: '400' },
   content: { paddingHorizontal: space.screen, paddingTop: space.sm, gap: space.md },
   identity: { flexDirection: 'row', alignItems: 'center', gap: space.md },
-  name: { fontSize: 20, fontWeight: '600', letterSpacing: -0.3 },
+  name: { fontSize: 17, color: colors.muted, marginTop: 2 },
   copy: { flexDirection: 'row', alignItems: 'center', gap: 6, minHeight: 28 },
   address: { fontSize: 13, color: colors.muted },
   priceBlock: { gap: 4 },
-  priceRow: { flexDirection: 'row', alignItems: 'baseline', gap: 8 },
-  price: { fontSize: 34, fontWeight: '700', letterSpacing: -0.8, flexShrink: 1 },
+  priceRow: { flexDirection: 'row', alignItems: 'baseline', gap: 14, flexWrap: 'wrap' },
+  priceValue: { flexDirection: 'row', alignItems: 'baseline', gap: 6, flexShrink: 1 },
+  chartControls: { flexDirection: 'row', alignItems: 'center', gap: space.sm },
+  chartType: {
+    width: 50,
+    height: 50,
+    borderRadius: radius.card,
+    borderWidth: 1,
+    borderColor: colors.border,
+    backgroundColor: colors.surface,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  price: { fontSize: 40, fontWeight: '800', letterSpacing: -1.2, flexShrink: 1 },
   priceUnit: { fontSize: 17, fontWeight: '600', color: colors.muted },
   noPrice: { fontSize: 24, fontWeight: '600', color: colors.muted },
   changeRow: { flexDirection: 'row', alignItems: 'center', gap: 8 },
@@ -460,15 +424,15 @@ const styles = StyleSheet.create({
   },
   action: {
     flex: 1,
-    height: 52,
+    height: 56,
     borderRadius: radius.input,
     alignItems: 'center',
     justifyContent: 'center',
   },
   buy: { backgroundColor: colors.accent },
-  sell: { backgroundColor: colors.surface2 },
-  buyText: { fontSize: 16, fontWeight: '700', color: colors.onAccent },
-  sellText: { fontSize: 16, fontWeight: '700', color: colors.text },
+  sell: { backgroundColor: colors.surface, borderWidth: 1.5, borderColor: colors.accent },
+  buyText: { fontSize: 18, fontWeight: '700', color: colors.onAccent },
+  sellText: { fontSize: 18, fontWeight: '700', color: colors.accent },
   moreRow: { flexDirection: 'row', alignItems: 'center', gap: 12, minHeight: 48 },
   moreText: { fontSize: 15, fontWeight: '500' },
 });

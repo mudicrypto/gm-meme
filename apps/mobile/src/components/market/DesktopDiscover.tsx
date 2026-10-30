@@ -4,7 +4,7 @@ import { useEffect, useState } from 'react';
 import { Pressable, ScrollView, StyleSheet, View, useWindowDimensions } from 'react-native';
 import { transition } from '../../lib/motion';
 import { DEFAULT_FILTERS, LIST_WINDOWS, activeFilterCount, filterChips } from '../../lib/market';
-import { colors, radius, space } from '../../lib/theme';
+import { colors, dark, radius, space } from '../../lib/theme';
 import { ErrorState } from '../States';
 import { Text } from '../Text';
 import { EmptyFeed } from './EmptyFeed';
@@ -21,7 +21,7 @@ import { useNetwork } from '../../lib/network';
 
 const SIDEBAR = 64;
 /** The token panel: 400 on wide screens, 360 on smaller desktops. */
-const panelWidth = (width: number) => (width >= 1440 ? 400 : 360);
+const panelWidth = (width: number) => (width >= 1440 ? 420 : 380);
 const DRAWER = 320;
 
 /**
@@ -72,11 +72,9 @@ export function DesktopDiscover({
         <ScrollView style={styles.main} contentContainerStyle={styles.mainContent}>
           <View style={styles.titleRow}>
             <View>
+              <Text style={styles.eyebrow}>ON-CHAIN DISCOVERY</Text>
               <Text style={styles.title} accessibilityRole="header">
                 Discover
-              </Text>
-              <Text style={styles.subtitle} numberOfLines={1}>
-                Every token checked for scam patterns first.
               </Text>
             </View>
             <View style={styles.status}>
@@ -212,7 +210,9 @@ export function DesktopDiscover({
               />
             ) : (
               <View style={styles.panelEmpty}>
-                <Text style={styles.subtitle}>Select a token to see its chart and trade it.</Text>
+                <Text style={[styles.subtitle, { color: dark.muted }]}>
+                  Select a token to see its chart and trade it.
+                </Text>
               </View>
             )}
           </View>
@@ -286,7 +286,8 @@ const styles = StyleSheet.create({
     gap: space.md,
   },
   status: { flexShrink: 1 },
-  title: { fontSize: 24, fontWeight: '700', letterSpacing: -0.5 },
+  eyebrow: { fontSize: 12, fontWeight: '600', letterSpacing: 2, color: colors.muted },
+  title: { fontSize: 40, fontWeight: '800', letterSpacing: -1, marginTop: 4 },
   subtitle: { fontSize: 14, color: colors.muted, marginTop: 2 },
   controls: {
     flexDirection: 'row',
@@ -348,11 +349,7 @@ const styles = StyleSheet.create({
     overflow: 'hidden',
   },
   footnote: { fontSize: 12, color: colors.faint, lineHeight: 18, maxWidth: 760 },
-  panel: {
-    backgroundColor: colors.surface,
-    borderLeftWidth: StyleSheet.hairlineWidth,
-    borderLeftColor: colors.border,
-  },
+  panel: { backgroundColor: dark.bg },
   backdrop: {
     position: 'absolute',
     top: 0,

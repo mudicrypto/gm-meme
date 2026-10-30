@@ -1,6 +1,7 @@
 import type { TokenStats } from '@sift/shared';
 import * as Clipboard from 'expo-clipboard';
 import { router } from 'expo-router';
+import { ArrowDown, ArrowUp, ArrowUpDown } from 'lucide-react-native';
 import { useState } from 'react';
 import { Pressable, StyleSheet, View } from 'react-native';
 import {
@@ -15,6 +16,7 @@ import type { MarketToken, SortKey } from '../../lib/market';
 import { transition } from '../../lib/motion';
 import { colors, radius, tint } from '../../lib/theme';
 import { HoverTip } from '../HoverTip';
+import { WatchStar } from '../WatchStar';
 import { Text } from '../Text';
 import { TokenAvatar } from '../TokenAvatar';
 import { Change } from './Change';
@@ -34,21 +36,19 @@ interface Column {
 }
 
 // Explicit widths; the token column takes what's left (at least TOKEN_MIN). Optional
-// columns join in priority order while they fit: risk first, then trend, then buys/sells.
-const TOKEN_MIN = 160;
+// columns join in priority order while they fit: risk first, then the trend, then market cap.
+const TOKEN_MIN = 180;
 const BASE: Column[] = [
-  { key: 'rank', label: '#', flex: 0, width: 36 },
   { key: 'token', label: 'Token', flex: 1, sort: 'age' },
-  { key: 'price', label: 'Price (SOL)', flex: 0, width: 112, align: 'right', sort: 'price' },
-  { key: 'change', label: '%', flex: 0, width: 80, align: 'right', sort: 'change' },
-  { key: 'volume', label: 'Volume', flex: 0, width: 100, align: 'right', sort: 'volume' },
-  { key: 'txns', label: 'Buys / sells', flex: 0, width: 100, align: 'right' },
-  { key: 'mcap', label: 'Mkt cap', flex: 0, width: 112, align: 'right', sort: 'marketCap' },
-  { key: 'risk', label: 'Risk', flex: 0, width: 112 },
-  { key: 'trend', label: 'Trend', flex: 0, width: 112, align: 'center' },
-  { key: 'action', label: '', flex: 0, width: 88, align: 'right' },
+  { key: 'price', label: 'Price (SOL)', flex: 0, width: 120, align: 'right', sort: 'price' },
+  { key: 'change', label: '%', flex: 0, width: 88, align: 'right', sort: 'change' },
+  { key: 'volume', label: 'Volume', flex: 0, width: 120, align: 'right', sort: 'volume' },
+  { key: 'mcap', label: 'Market cap', flex: 0, width: 124, align: 'right', sort: 'marketCap' },
+  { key: 'risk', label: 'Risk', flex: 0, width: 108 },
+  { key: 'trend', label: 'Last', flex: 0, width: 116, align: 'center' },
+  { key: 'watch', label: '', flex: 0, width: 52, align: 'center' },
 ];
-const OPTIONAL = ['risk', 'trend', 'txns'];
+const OPTIONAL = ['risk', 'trend', 'mcap'];
 
 function pickColumns(width: number, windowLabel: string): Column[] {
   const fixed = (keys: Set<string>) =>
@@ -58,9 +58,15 @@ function pickColumns(width: number, windowLabel: string): Column[] {
     const next = new Set(keys).add(key);
     if (fixed(next) + TOKEN_MIN <= width) keys.add(key);
   }
-  return BASE.filter((c) => keys.has(c.key)).map((c) =>
-    c.key === 'change' ? { ...c, label: `${windowLabel} %` } : c,
-  );
+  const labels: Record<string, string> = {
+    change: `${windowLabel} %`,
+    volume: `Volume (${windowLabel})`,
+    trend: `Last ${windowLabel}`,
+  };
+  return BASE.filter((c) => keys.has(c.key)).map((c) => ({
+    ...c,
+    label: labels[c.key] ?? c.label,
+  }));
 }
 
 /** The discovery table: dense, sortable, with a clear selected row. Desktop and tablet only. */
@@ -106,10 +112,15 @@ export function MarketTable({
                 transition,
               ]}
             >
-              <Text style={styles.headText} numberOfLines={1}>
-                {column.label}
-                {sortMark(column.sort!)}
-              </Text>
+              <View style={[styles.headInner, column.align === 'right' && styles.headRight]}>
+                <Text
+                  style={[styles.headText, sortMark(column.sort!) ? styles.headOn : null]}
+                  numberOfLines={1}
+                >
+                  {column.label}
+                </Text>
+                <SortIcon mark={sortMark(column.sort!)} />
+              </View>
             </Pressable>
           ) : (
             <View
@@ -123,7 +134,7 @@ export function MarketTable({
           ),
         )}
       </View>
-      {tokens.map((token, index) => {
+      {tokens.map((token) => {
         const s = stats.get(token.mint);
         const isSelected = selected === token.mint;
         const symbol = (token.symbol ?? token.name ?? shortAddress(token.mint)).slice(0, 12);
@@ -156,17 +167,13 @@ export function MarketTable({
                 key={column.key}
                 style={[styles.cell, cellSize(column), alignStyle(column.align)]}
               >
-                {column.key === 'rank' ? (
-                  <Text mono style={styles.muted}>
-                    {index + 1}
-                  </Text>
-                ) : column.key === 'token' ? (
+                {column.key === 'token' ? (
                   <View style={styles.tokenCell}>
                     <TokenAvatar
                       uri={token.imageUrl}
                       label={token.symbol ?? token.name}
                       seed={token.mint}
-                      size={32}
+                      size={36}
                     />
                     <View style={styles.flex}>
                       <Text style={styles.symbol} numberOfLines={1}>
@@ -175,7 +182,7 @@ export function MarketTable({
                       <Text style={styles.small} numberOfLines={1}>
                         {smart
                           ? `${smart} smart ${smart === 1 ? 'trader' : 'traders'}`
-                          : `SOL · ${age === 'just now' ? 'new' : `${age} ago`}`}
+                          : `${(token.name ?? 'Unnamed').slice(0, 24)} · ${age === 'just now' ? 'new' : age}`}
                       </Text>
                     </View>
                   </View>
@@ -193,13 +200,9 @@ export function MarketTable({
                   <Text mono style={styles.value} numberOfLines={1}>
                     {s ? formatSol(s.volumeSol) : '–'}
                   </Text>
-                ) : column.key === 'txns' ? (
-                  <Text mono style={styles.value} numberOfLines={1}>
-                    {s ? `${s.buys} / ${s.sells}` : '–'}
-                  </Text>
                 ) : column.key === 'mcap' ? (
                   <Text mono style={styles.value} numberOfLines={1}>
-                    {s?.marketCapSol ? `${formatCompact(s.marketCapSol)} SOL` : '–'}
+                    {s?.marketCapSol ? formatCompact(s.marketCapSol) : '–'}
                   </Text>
                 ) : column.key === 'risk' ? (
                   <RiskTag level={token.riskLevel} />
@@ -207,22 +210,11 @@ export function MarketTable({
                   <Sparkline
                     points={s?.sparkline ?? []}
                     changePct={s?.changePct}
-                    width={104}
-                    height={28}
+                    width={100}
+                    height={30}
                   />
                 ) : (
-                  <Pressable
-                    onPress={() => router.push(`/trade/${token.mint}?side=buy`)}
-                    accessibilityRole="button"
-                    accessibilityLabel={`Trade ${symbol}`}
-                    style={({ hovered }: { pressed: boolean; hovered?: boolean }) => [
-                      styles.trade,
-                      hovered && styles.tradeHover,
-                      transition,
-                    ]}
-                  >
-                    <Text style={styles.tradeText}>Trade</Text>
-                  </Pressable>
+                  <WatchStar mint={token.mint} size={18} color={colors.faint} />
                 )}
               </View>
             ))}
@@ -231,6 +223,12 @@ export function MarketTable({
       })}
     </View>
   );
+}
+
+/** Up/down arrows on a sortable heading; one filled arrow when it's the active sort. */
+function SortIcon({ mark }: { mark: string }) {
+  const Icon = mark.includes('↓') ? ArrowDown : mark.includes('↑') ? ArrowUp : ArrowUpDown;
+  return <Icon size={13} color={mark ? colors.accent : colors.faint} strokeWidth={2.2} />;
 }
 
 /** A price with its full precision on hover or focus; clicking copies it. */
@@ -267,7 +265,9 @@ const styles = StyleSheet.create({
   flex: { flex: 1, minWidth: 0 },
   // No overflow clipping: price tooltips rise above the first row.
   table: {
-    borderRadius: radius.card,
+    borderRadius: radius.card + 2,
+    borderWidth: 1,
+    borderColor: colors.border,
     backgroundColor: colors.surface,
   },
   priceTap: { paddingVertical: 4, borderRadius: 4 },
@@ -275,44 +275,34 @@ const styles = StyleSheet.create({
   head: {
     flexDirection: 'row',
     alignItems: 'center',
-    height: 40,
+    height: 48,
     paddingHorizontal: 12,
-    borderBottomWidth: StyleSheet.hairlineWidth,
+    borderBottomWidth: 1,
     borderBottomColor: colors.border,
   },
-  headText: { fontSize: 12, fontWeight: '500', color: colors.faint },
+  headInner: { flexDirection: 'row', alignItems: 'center', gap: 4 },
+  headRight: { justifyContent: 'flex-end' },
+  headText: { fontSize: 13, fontWeight: '500', color: colors.muted },
+  headOn: { color: colors.text, fontWeight: '600' },
   headHover: { backgroundColor: colors.surface2, borderRadius: 6 },
   row: {
     flexDirection: 'row',
     alignItems: 'center',
-    minHeight: 60,
+    minHeight: 68,
     paddingHorizontal: 12,
-    borderBottomWidth: StyleSheet.hairlineWidth,
-    borderBottomColor: colors.border,
-    borderLeftWidth: 2,
+    borderBottomWidth: 1,
+    borderBottomColor: colors.divider,
+    borderLeftWidth: 3,
     borderLeftColor: 'transparent',
   },
   rowHover: { backgroundColor: colors.surface2 },
-  rowSelected: { backgroundColor: tint(colors.accent, 0.06), borderLeftColor: colors.accent },
+  rowSelected: { backgroundColor: tint(colors.accent, 0.07), borderLeftColor: colors.accent },
   rowFocus: { outlineColor: colors.accent, outlineWidth: 1, outlineStyle: 'solid' } as object,
   cell: { paddingHorizontal: 8, justifyContent: 'center', minWidth: 0, minHeight: 36 },
   right: { alignItems: 'flex-end' },
   center: { alignItems: 'center' },
   tokenCell: { flexDirection: 'row', alignItems: 'center', gap: 10 },
-  symbol: { fontSize: 14, fontWeight: '500' },
+  symbol: { fontSize: 15, fontWeight: '700' },
   small: { fontSize: 12, color: colors.muted, marginTop: 2 },
-  value: { fontSize: 14, fontWeight: '500' },
-  muted: { fontSize: 13, color: colors.muted },
-  trade: {
-    minHeight: 36,
-    minWidth: 72,
-    paddingHorizontal: 14,
-    borderRadius: radius.chip,
-    borderWidth: 1,
-    borderColor: colors.borderStrong,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  tradeHover: { borderColor: colors.accent },
-  tradeText: { fontSize: 13, fontWeight: '600' },
+  value: { fontSize: 15, fontWeight: '500' },
 });

@@ -1,8 +1,8 @@
 import { router } from 'expo-router';
-import { Bell, ListOrdered, MoreHorizontal, SlidersHorizontal, Trophy } from 'lucide-react-native';
+import { Bell, ListOrdered, Settings, SlidersHorizontal, Trophy } from 'lucide-react-native';
 import { StyleSheet, View } from 'react-native';
 import { transition } from '../../lib/motion';
-import { colors, space } from '../../lib/theme';
+import { colors, space, tint } from '../../lib/theme';
 import { HoverTip } from '../HoverTip';
 
 /** Secondary tools beside the table (the header holds the main navigation). */
@@ -44,9 +44,9 @@ export function Sidebar({
       active: false,
     },
     {
-      key: 'more',
-      label: 'More',
-      icon: MoreHorizontal,
+      key: 'settings',
+      label: 'Wallet & settings',
+      icon: Settings,
       onPress: () => router.push('/wallet'),
       active: false,
     },
@@ -56,24 +56,25 @@ export function Sidebar({
       {items.map((item) => {
         const Icon = item.icon;
         return (
-          <HoverTip
-            key={item.key}
-            tip={item.label}
-            side="right"
-            onPress={item.onPress}
-            accessibilityRole="button"
-            accessibilityLabel={item.label}
-            accessibilityState={{ selected: item.active }}
-            style={({ hovered, focused }) => [
-              styles.item,
-              item.active && styles.active,
-              (hovered || focused) && !item.active && styles.hover,
-              focused && styles.focus,
-              transition,
-            ]}
-          >
-            <Icon size={20} color={item.active ? colors.accent : colors.muted} strokeWidth={2} />
-          </HoverTip>
+          <View key={item.key} style={item.key === 'settings' ? styles.bottom : undefined}>
+            <HoverTip
+              tip={item.label}
+              side="right"
+              onPress={item.onPress}
+              accessibilityRole="button"
+              accessibilityLabel={item.label}
+              accessibilityState={{ selected: item.active }}
+              style={({ hovered, focused }) => [
+                styles.item,
+                item.active && styles.active,
+                (hovered || focused) && !item.active && styles.hover,
+                focused && styles.focus,
+                transition,
+              ]}
+            >
+              <Icon size={20} color={item.active ? colors.accent : colors.muted} strokeWidth={2} />
+            </HoverTip>
+          </View>
         );
       })}
     </View>
@@ -86,18 +87,21 @@ const styles = StyleSheet.create({
     paddingVertical: space.md,
     gap: space.sm,
     alignItems: 'center',
-    borderRightWidth: StyleSheet.hairlineWidth,
+    borderRightWidth: 1,
     borderRightColor: colors.border,
+    backgroundColor: colors.surface,
     zIndex: 20,
   },
+  // Settings sits at the foot of the rail, apart from the tools.
+  bottom: { marginTop: 'auto' },
   item: {
     width: 44,
     height: 44,
-    borderRadius: 8,
+    borderRadius: 10,
     alignItems: 'center',
     justifyContent: 'center',
   },
-  active: { backgroundColor: colors.surface2 },
-  hover: { backgroundColor: colors.surface },
+  active: { backgroundColor: tint(colors.accent, 0.1) },
+  hover: { backgroundColor: colors.surface2 },
   focus: { outlineColor: colors.accent, outlineWidth: 1, outlineStyle: 'solid' } as object,
 });

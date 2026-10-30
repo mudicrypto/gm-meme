@@ -1,3 +1,4 @@
+import { type ComponentRef, type ReactNode, type Ref, createContext, useContext } from 'react';
 import {
   Text as RNText,
   TextInput as RNTextInput,
@@ -23,27 +24,47 @@ function weightOf(style: TextStyle): Weight {
 function fontStyle(style: TextStyle, mono: boolean): TextStyle {
   const weight = weightOf(style);
   return {
-    // The terminal look tops out at bold: 800 reads as 700.
-    fontFamily: fonts.ui[weight === 800 ? 700 : weight],
+    fontFamily: fonts.ui[weight],
     // The family already carries the weight; a second one makes Android fall back.
     fontWeight: undefined,
     ...(mono || style.fontFamily === 'monospace' ? { fontVariant: ['tabular-nums'] } : {}),
   };
 }
 
+/**
+ * The default text colour for a surface. Dark trade surfaces wrap their content in
+ * `<Ink color={dark.text}>` so text reads light there without restyling every line.
+ */
+const InkContext = createContext<string>(colors.text);
+export function Ink({ color, children }: { color: string; children: ReactNode }) {
+  return <InkContext.Provider value={color}>{children}</InkContext.Provider>;
+}
+export const useInk = () => useContext(InkContext);
+
 /** Text in Sift's type: use instead of React Native's Text everywhere. */
 export function Text({ style, mono = false, ...rest }: TextProps & { mono?: boolean }) {
+  const ink = useContext(InkContext);
   const flat = StyleSheet.flatten(style) ?? {};
-  return <RNText {...rest} style={[{ color: colors.text }, style, fontStyle(flat, mono)]} />;
+  return <RNText {...rest} style={[{ color: ink }, style, fontStyle(flat, mono)]} />;
 }
 
-export function TextInput({ style, mono = false, ...rest }: TextInputProps & { mono?: boolean }) {
+/** What a ref to `TextInput` holds (`focus()`, `blur()`). */
+export type TextInputHandle = ComponentRef<typeof RNTextInput>;
+
+export function TextInput({
+  style,
+  mono = false,
+  ref,
+  ...rest
+}: TextInputProps & { mono?: boolean; ref?: Ref<TextInputHandle> }) {
+  const ink = useContext(InkContext);
   const flat = StyleSheet.flatten(style) ?? {};
   return (
     <RNTextInput
+      ref={ref}
       placeholderTextColor={colors.faint}
       {...rest}
-      style={[{ color: colors.text }, style, fontStyle(flat, mono)]}
+      style={[{ color: ink }, style, fontStyle(flat, mono)]}
     />
   );
 }

@@ -23,10 +23,25 @@ const ICONS = {
   unknown: ShieldQuestionMark,
 } as const;
 
-export function RiskTag({ level, size = 12 }: { level: RiskLevel | undefined; size?: number }) {
+export function RiskTag({
+  level,
+  size = 12,
+  iconOnly = false,
+}: {
+  level: RiskLevel | undefined;
+  size?: number;
+  /** Just the shield: each level has its own shape, and the label is still read out. */
+  iconOnly?: boolean;
+}) {
   const key = level ?? 'unknown';
   const Icon = ICONS[key];
   const color = RISK_COLORS[key].fg;
+  if (iconOnly)
+    return (
+      <View accessible accessibilityLabel={`Risk: ${RISK_TAGS[key]}`}>
+        <Icon size={size + 2} color={color} strokeWidth={2} />
+      </View>
+    );
   return (
     <View style={styles.row}>
       <Icon size={size + 1} color={color} strokeWidth={2} />

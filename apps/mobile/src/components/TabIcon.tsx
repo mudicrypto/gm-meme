@@ -1,12 +1,12 @@
-import { Compass, Star, Users, Wallet } from 'lucide-react-native';
+import { Compass, PieChart, Star, Users } from 'lucide-react-native';
 import { useEffect, useState } from 'react';
-import { Animated, type ColorValue, StyleSheet } from 'react-native';
+import { Animated, type ColorValue, StyleSheet, View } from 'react-native';
 import { EASE_OUT, NATIVE, useReduceMotion } from '../lib/motion';
-import { colors, tint } from '../lib/theme';
+import { colors } from '../lib/theme';
 
-const ICONS = { discover: Compass, friends: Users, watchlist: Star, portfolio: Wallet } as const;
+const ICONS = { discover: Compass, friends: Users, watchlist: Star, portfolio: PieChart } as const;
 
-/** Tab bar icons: lucide line icons at a 2px stroke, in a soft pill when active. */
+/** Tab bar icons: line icons; the active one sits white on a filled green circle. */
 export function TabIcon({
   name,
   color,
@@ -34,24 +34,32 @@ export function TabIcon({
           styles.pill,
           {
             opacity: on,
-            transform: [{ scaleX: on.interpolate({ inputRange: [0, 1], outputRange: [0.6, 1] }) }],
+            transform: [{ scale: on.interpolate({ inputRange: [0, 1], outputRange: [0.6, 1] }) }],
           },
         ]}
       />
-      <Icon size={22} color={color as string} strokeWidth={focused ? 2.3 : 2} />
+      {/* Above the circle: on the web an absolutely placed view paints over its siblings. */}
+      <View style={styles.icon}>
+        <Icon
+          size={focused ? 18 : 22}
+          color={focused ? colors.onAccent : (color as string)}
+          strokeWidth={2}
+        />
+      </View>
     </Animated.View>
   );
 }
 
 const styles = StyleSheet.create({
-  wrap: { width: 56, height: 30, alignItems: 'center', justifyContent: 'center' },
+  wrap: { width: 32, height: 32, alignItems: 'center', justifyContent: 'center' },
+  icon: { zIndex: 1 },
   pill: {
     position: 'absolute',
     top: 0,
     left: 0,
     right: 0,
     bottom: 0,
-    borderRadius: 15,
-    backgroundColor: tint(colors.accent, 0.16),
+    borderRadius: 16,
+    backgroundColor: colors.accent,
   },
 });

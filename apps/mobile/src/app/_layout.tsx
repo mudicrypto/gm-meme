@@ -70,7 +70,7 @@ export default function RootLayout() {
                 options={wide ? { headerShown: true } : { title: 'Profile' }}
               />
             </Stack>
-            <StatusBar style="light" />
+            <StatusBar style="dark" />
           </SessionProvider>
         </WalletProvider>
       </ModeProvider>

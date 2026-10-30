@@ -1,7 +1,7 @@
 import { router, usePathname } from 'expo-router';
 import { Briefcase, LayoutGrid, Star, Users, Wallet } from 'lucide-react-native';
-import { useState } from 'react';
-import { Pressable, StyleSheet, View, useWindowDimensions } from 'react-native';
+import { useEffect, useRef, useState } from 'react';
+import { Platform, Pressable, StyleSheet, View, useWindowDimensions } from 'react-native';
 import { searchAddress } from '../../lib/market';
 import { shortAddress } from '../../lib/format';
 import { breakpoints, colors, radius, space } from '../../lib/theme';
@@ -9,8 +9,8 @@ import { useWallet } from '../../lib/wallet';
 import { Sheet } from '../Sheet';
 import { transition } from '../../lib/motion';
 import { Logo } from '../Logo';
-import { Text } from '../Text';
-import { NetworkChip, NetworkNote } from './Network';
+import { Text, type TextInputHandle } from '../Text';
+import { DevnetPill, NetworkChip, NetworkNote } from './Network';
 import { SearchBar } from './SearchBar';
 
 const NAV = [
@@ -38,7 +38,21 @@ export function TerminalHeader({
   const wallet = useWallet();
   const [local, setLocal] = useState('');
   const [networkOpen, setNetworkOpen] = useState(false);
+  const searchRef = useRef<TextInputHandle>(null);
   const value = query ?? local;
+  // ⌘K / Ctrl+K jumps to search, as the hint in the box says.
+  useEffect(() => {
+    if (Platform.OS !== 'web') return;
+    const onKey = (e: KeyboardEvent) => {
+      if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 'k') {
+        e.preventDefault();
+        searchRef.current?.focus();
+      }
+    };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, []);
+  const mac = Platform.OS === 'web' && /Mac|iPhone|iPad/.test(navigator.platform);
   const setValue = onQuery ?? setLocal;
   const submit = () => {
     const address = searchAddress(value);
@@ -73,9 +87,10 @@ export function TerminalHeader({
                 transition,
               ]}
             >
-              <Icon size={16} color={active ? colors.text : colors.muted} strokeWidth={2} />
-              {compact ? null : (
-                <Text style={[styles.navText, active && { color: colors.text }]}>{item.label}</Text>
+              {compact ? (
+                <Icon size={18} color={active ? colors.accent : colors.muted} strokeWidth={2} />
+              ) : (
+                <Text style={[styles.navText, active && styles.navTextActive]}>{item.label}</Text>
               )}
             </Pressable>
           );
@@ -86,10 +101,13 @@ export function TerminalHeader({
           value={value}
           onChange={setValue}
           onSubmit={submit}
-          placeholder="Search token or address…"
+          placeholder="Search token or address"
+          hint={compact ? undefined : mac ? '⌘K' : 'Ctrl K'}
+          inputRef={searchRef}
         />
       </View>
       <NetworkChip onPress={() => setNetworkOpen(true)} />
+      {compact ? null : <DevnetPill />}
       {wallet.address ? (
         <Pressable
           onPress={() => router.navigate('/portfolio')}
@@ -114,7 +132,6 @@ export function TerminalHeader({
             hovered && { opacity: 0.9 },
           ]}
         >
-          <Wallet size={16} color={colors.onAccent} strokeWidth={2} />
           <Text style={styles.connectText}>{compact ? 'Connect' : 'Connect wallet'}</Text>
         </Pressable>
       )}
@@ -130,26 +147,27 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: space.lg,
-    height: 64,
+    height: 72,
     paddingHorizontal: space.xl,
     borderBottomWidth: 1,
     borderBottomColor: colors.border,
     backgroundColor: colors.bg,
   },
   brand: { marginRight: space.sm },
-  nav: { flexDirection: 'row', alignItems: 'stretch', height: 64 },
+  nav: { flexDirection: 'row', alignItems: 'stretch', height: 72, gap: 4 },
   navItem: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 8,
     paddingHorizontal: 14,
-    borderBottomWidth: 2,
+    borderBottomWidth: 2.5,
     borderBottomColor: 'transparent',
   },
   navActive: { borderBottomColor: colors.accent },
-  navHover: { backgroundColor: colors.surface },
-  navText: { fontSize: 14, fontWeight: '500', color: colors.muted },
-  search: { flex: 1, maxWidth: 520, marginLeft: 'auto' },
+  navHover: { borderBottomColor: colors.borderStrong },
+  navText: { fontSize: 15, fontWeight: '500', color: colors.muted },
+  navTextActive: { color: colors.accent, fontWeight: '700' },
+  search: { flex: 1, maxWidth: 480, marginLeft: 'auto' },
   walletChip: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -167,9 +185,9 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: 8,
     minHeight: 44,
-    paddingHorizontal: 16,
-    borderRadius: radius.input,
-    backgroundColor: colors.accent,
+    paddingHorizontal: 18,
+    borderRadius: radius.input + 2,
+    backgroundColor: '#0F3B2A',
   },
-  connectText: { fontSize: 14, fontWeight: '600', color: colors.onAccent },
+  connectText: { fontSize: 15, fontWeight: '600', color: colors.onAccent },
 });

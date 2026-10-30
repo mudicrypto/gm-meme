@@ -124,6 +124,8 @@ export const socialApi = {
   signIn: (wallet: string, nonce: string, signature: string) =>
     postJson<AuthSession>('/auth/session', { wallet, nonce, signature }),
   signOut: (token: string) => authed<void>(token, 'DELETE', '/auth/session'),
+  /** Deletes everything Sift keeps about this wallet. A Sift wallet must be empty first. */
+  deleteAccount: (token: string) => authed<void>(token, 'DELETE', '/me', { confirm: 'DELETE' }),
   me: (token: string) => authed<MeResponse>(token, 'GET', '/me'),
   saveProfile: (token: string, update: ProfileUpdate) =>
     authed<{ profile: MyProfile }>(token, 'PUT', '/me/profile', update),

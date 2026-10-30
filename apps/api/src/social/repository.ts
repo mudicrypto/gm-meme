@@ -92,4 +92,8 @@ export interface SocialRepository {
   /** Only the wallet that registered a token can remove it. */
   deletePushToken(wallet: string, token: string): Promise<void>;
   pushTokens(wallets: readonly string[]): Promise<{ wallet: string; token: string }[]>;
+
+  /** Removes everything kept about a wallet: profile, follows, shared trades, sessions,
+   * watchlist, alerts and push tokens. */
+  deleteAccount(wallet: string): Promise<void>;
 }

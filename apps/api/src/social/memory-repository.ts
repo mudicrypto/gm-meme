@@ -162,6 +162,29 @@ export class InMemorySocialRepository implements SocialRepository {
     if (this.push.get(token) === wallet) this.push.delete(token);
   }
 
+  async deleteAccount(wallet: string) {
+    this.profiles.delete(wallet);
+    for (const key of this.follows) {
+      const [follower, followee] = key.split(':');
+      if (follower === wallet || followee === wallet) this.follows.delete(key);
+    }
+    for (const [signature, trade] of this.trades) {
+      if (trade.wallet === wallet) this.trades.delete(signature);
+    }
+    for (const [hash, session] of this.sessions) {
+      if (session.wallet === wallet) this.sessions.delete(hash);
+    }
+    for (const [key, item] of this.watching) {
+      if (item.wallet === wallet) this.watching.delete(key);
+    }
+    for (const [id, alert] of this.alerts) {
+      if (alert.wallet === wallet) this.alerts.delete(id);
+    }
+    for (const [token, owner] of this.push) {
+      if (owner === wallet) this.push.delete(token);
+    }
+  }
+
   async pushTokens(wallets: readonly string[]) {
     const wanted = new Set(wallets);
     return [...this.push.entries()]

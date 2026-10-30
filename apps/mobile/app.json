@@ -3,18 +3,24 @@
     "name": "Sift",
     "slug": "sift",
     "scheme": "sift",
-    "version": "0.1.0",
+    "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
-    "userInterfaceStyle": "automatic",
+    "userInterfaceStyle": "dark",
     "ios": {
       "supportsTablet": true,
-      "bundleIdentifier": "app.sift.mobile"
+      "bundleIdentifier": "app.sift.mobile",
+      "config": {
+        "usesNonExemptEncryption": false
+      },
+      "infoPlist": {
+        "ITSAppUsesNonExemptEncryption": false
+      }
     },
     "android": {
       "package": "app.sift.mobile",
       "adaptiveIcon": {
-        "backgroundColor": "#E6F4FE",
+        "backgroundColor": "#63E6BE",
         "foregroundImage": "./assets/android-icon-foreground.png",
         "backgroundImage": "./assets/android-icon-background.png",
         "monochromeImage": "./assets/android-icon-monochrome.png"
@@ -31,7 +37,7 @@
         "expo-notifications",
         {
           "icon": "./assets/android-icon-monochrome.png",
-          "color": "#0F766E"
+          "color": "#63E6BE"
         }
       ],
       [
@@ -40,7 +46,17 @@
           "faceIDPermission": "Sift uses Face ID to confirm it’s you before showing your private key or removing your wallet."
         }
       ],
-      "expo-status-bar"
-    ]
+      "expo-status-bar",
+      [
+        "expo-splash-screen",
+        {
+          "image": "./assets/splash-icon.png",
+          "imageWidth": 120,
+          "backgroundColor": "#0B0D10",
+          "resizeMode": "contain"
+        }
+      ]
+    ],
+    "backgroundColor": "#0B0D10"
   }
 }

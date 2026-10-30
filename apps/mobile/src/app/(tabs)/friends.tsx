@@ -6,6 +6,8 @@ import { useState } from 'react';
 import { Pressable, ScrollView, StyleSheet, View } from 'react-native';
 import { Button, IconButton } from '../../components/Button';
 import { Card } from '../../components/Card';
+import { DeleteAccount } from '../../components/DeleteAccount';
+import { LegalLinks } from '../../components/LegalLinks';
 import { PersonAvatar } from '../../components/PersonAvatar';
 import { Screen, SectionTitle } from '../../components/Screen';
 import { Text, TextInput } from '../../components/Text';
@@ -32,6 +34,7 @@ export default function FriendsScreen() {
     return (
       <Screen title="Friends" subtitle="Trades your friends chose to share" right={<TopTraders />}>
         <SignInCard reason="Sign in to follow friends and see the trades they share." />
+        <LegalLinks />
       </Screen>
     );
   }
@@ -45,6 +48,8 @@ export default function FriendsScreen() {
     return (
       <Screen title="Friends">
         <ProfileForm profile={null} />
+        <DeleteAccount />
+        <LegalLinks />
       </Screen>
     );
   }
@@ -155,6 +160,8 @@ function Feed({ profile }: { profile: MyProfile }) {
       )}
       <View style={styles.signOut}>
         <Button label="Sign out" variant="secondary" onPress={() => void session.signOut()} />
+        <DeleteAccount />
+        <LegalLinks />
       </View>
     </Screen>
   );

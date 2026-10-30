@@ -133,6 +133,10 @@ export class SupabaseSiftWalletRepository implements SiftWalletRepository {
     return Number(row?.open_count ?? 0);
   }
 
+  async deleteWallet(owner: string) {
+    await this.call('delete_sift_wallet', { wallet_owner: owner });
+  }
+
   async cancelOrder(owner: string, id: string) {
     const [row] = await this.call<{ cancelled: boolean }>('cancel_sift_order', {
       order_owner: owner,

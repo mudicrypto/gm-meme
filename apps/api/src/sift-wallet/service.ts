@@ -302,6 +302,35 @@ export function createSiftWalletService(deps: SiftWalletDeps) {
   return {
     signingState,
 
+    /**
+     * Account deletion: removes the Sift wallet record, but only once the wallet is empty
+     * on chain (no tokens, at most dust SOL), so nobody loses funds by deleting. Checking
+     * needs the chain; without it a wallet that exists is never deleted.
+     */
+    async deleteForAccount(owner: string): Promise<void> {
+      const wallet = await repo.getWallet(owner);
+      if (!wallet) return;
+      if (!deps.chain)
+        throw new SiftWalletError(
+          503,
+          'NOT_CONFIGURED',
+          'Sift can’t check your Sift wallet’s balance right now. Try again later.',
+        );
+      const [balance, tokens] = await Promise.all([
+        deps.chain.solBalance(wallet.address),
+        deps.chain.holdsTokens(wallet.address),
+      ]);
+      if (tokens || balance > DELETION_DUST_LAMPORTS)
+        throw new SiftWalletError(
+          409,
+          'FUNDS_LEFT',
+          tokens
+            ? 'Your Sift wallet still holds tokens. Sell them and withdraw your SOL first.'
+            : `Your Sift wallet still holds ${sol(balance)} SOL. Withdraw it first.`,
+        );
+      await repo.deleteWallet(owner);
+    },
+
     async get(owner: string): Promise<SiftWalletInfo | null> {
       const wallet = await repo.getWallet(owner);
       return wallet ? info(wallet) : null;
@@ -631,6 +660,9 @@ function orderName(order: Pick<OrderRecord, 'kind'>): string {
 function orderVerb(order: Pick<OrderRecord, 'kind'>): string {
   return order.kind === 'limit_buy' ? 'Bought' : 'Sold';
 }
+
+/** What may be left in a Sift wallet when its account is deleted: 0.001 SOL. */
+export const DELETION_DUST_LAMPORTS = 1_000_000;
 
 function sol(lamports: number): string {
   return Number((lamports / LAMPORTS_PER_SOL).toPrecision(4)).toString();

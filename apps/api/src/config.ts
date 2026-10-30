@@ -101,6 +101,18 @@ const ConfigSchema = z
       .int()
       .refine((ms) => ms === 0 || ms >= 5_000, { message: 'must be 0 (off) or at least 5000' })
       .default(15_000),
+    // Shown on the public privacy, terms and support pages (app store listings link them).
+    SUPPORT_EMAIL: z
+      .email()
+      .optional()
+      .or(z.literal('').transform(() => undefined)),
+    // The legal name of the company that runs Sift, for those pages.
+    OPERATOR_NAME: z
+      .string()
+      .trim()
+      .max(120)
+      .optional()
+      .transform((value) => value || undefined),
     // Optional: Expo push access token, if "enhanced push security" is on for the project.
     EXPO_ACCESS_TOKEN: optionalSecret,
     // This server's public https address. When set (Render sets RENDER_EXTERNAL_URL itself),

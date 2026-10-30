@@ -1,4 +1,4 @@
-import { bytesToBase64 } from '@sift/shared';
+import { TOKEN_2022_PROGRAM, TOKEN_PROGRAM, bytesToBase64 } from '@sift/shared';
 import {
   ComputeBudgetProgram,
   type Connection,
@@ -16,6 +16,8 @@ export interface WalletChain {
     owner: string,
     mint: string,
   ): Promise<{ amountRaw: string; decimals: number } | null>;
+  /** Whether the owner holds any amount of any token (classic or Token-2022). */
+  holdsTokens(owner: string): Promise<boolean>;
   /** An unsigned SOL transfer (base64), paid by `from`. */
   buildTransfer(from: string, to: string, lamports: number): Promise<string>;
   sendSigned(transaction: string): Promise<string>;
@@ -43,6 +45,24 @@ export function createWalletChain(connection: Connection): WalletChain {
         decimals = info.decimals ?? decimals;
       }
       return total > 0n ? { amountRaw: total.toString(), decimals } : null;
+    },
+
+    async holdsTokens(owner) {
+      for (const program of [TOKEN_PROGRAM, TOKEN_2022_PROGRAM]) {
+        const { value } = await connection.getParsedTokenAccountsByOwner(new PublicKey(owner), {
+          programId: new PublicKey(program),
+        });
+        const held = value.some((account) => {
+          const amount = (
+            account.account.data as {
+              parsed?: { info?: { tokenAmount?: { amount?: string } } };
+            }
+          ).parsed?.info?.tokenAmount?.amount;
+          return amount !== undefined && BigInt(amount) > 0n;
+        });
+        if (held) return true;
+      }
+      return false;
     },
 
     async buildTransfer(from, to, lamports) {

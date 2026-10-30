@@ -17,6 +17,7 @@ import {
   createDefaultWalletChain,
 } from './trading/factory';
 import type { ConfirmedTrade, TradeService } from './trading/service';
+import { accountRoutes } from './routes/account';
 import { siftWalletRoutes } from './routes/sift-wallet';
 import type { WalletChain } from './sift-wallet/chain';
 import { InMemorySiftWalletRepository } from './sift-wallet/memory-repository';
@@ -32,6 +33,7 @@ import type { SocialRepository } from './social/repository';
 import { createSocialService } from './social/service';
 import { SupabaseSocialRepository } from './social/supabase-repository';
 import { healthRoutes } from './routes/health';
+import { legalRoutes } from './routes/legal';
 import { chartRoutes } from './routes/chart';
 import { heliusWebhookRoutes } from './routes/helius-webhook';
 import { riskRoutes } from './routes/risk';
@@ -224,6 +226,7 @@ export function buildApp(config: Config, deps: AppDeps = {}) {
   };
 
   app.register(healthRoutes, { config });
+  app.register(legalRoutes, { config });
   // Set once the risk queue exists (it needs Helius).
   let rescore: ((mints: string[]) => void) | undefined;
   app.register(tokenRoutes, { repository, now, scoreLater: (mints) => rescore?.(mints) });
@@ -327,6 +330,7 @@ export function buildApp(config: Config, deps: AppDeps = {}) {
     },
   });
   app.register(siftWalletRoutes, { auth, wallets });
+  app.register(accountRoutes, { auth, social: socialRepository, wallets });
   if (config.ORDER_CHECK_INTERVAL_MS > 0) {
     let timer: NodeJS.Timeout | undefined;
     let running = false;

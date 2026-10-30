@@ -60,6 +60,14 @@ export class InMemorySiftWalletRepository implements SiftWalletRepository {
     return [...this.orders.values()].filter((o) => o.owner === owner && o.status === 'open').length;
   }
 
+  async deleteWallet(owner: string) {
+    this.wallets.delete(owner);
+    for (const [id, order] of this.orders) {
+      if (order.owner === owner) this.orders.delete(id);
+    }
+    this.spends = this.spends.filter((spend) => spend.owner !== owner);
+  }
+
   async cancelOrder(owner: string, id: string) {
     const order = this.orders.get(id);
     if (!order || order.owner !== owner || order.status !== 'open') return false;

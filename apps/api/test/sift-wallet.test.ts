@@ -94,6 +94,7 @@ function setup(
   });
   const signer = fakeSigner();
   const push = { send: vi.fn(async () => []) };
+  const walletRepo = new InMemorySiftWalletRepository();
   const app = buildApp(
     loadConfig({
       LOG_LEVEL: 'silent',
@@ -105,7 +106,7 @@ function setup(
     {
       tokenRepository: tokens,
       socialRepository: new InMemorySocialRepository(),
-      siftWalletRepository: new InMemorySiftWalletRepository(),
+      siftWalletRepository: walletRepo,
       push,
       helius: null,
       tradeService: trades,
@@ -114,7 +115,7 @@ function setup(
       now: () => clock,
     },
   );
-  return { app, trades, tokens, prices, signer, connection, push };
+  return { app, trades, tokens, prices, signer, connection, push, walletRepo };
 }
 
 type App = ReturnType<typeof setup>['app'];
@@ -697,5 +698,73 @@ describe('without a signing provider', () => {
     expect(res.statusCode).toBe(503);
     expect(res.json().error).toBe('PAUSED');
     await app.close();
+  });
+});
+
+describe('Account deletion', () => {
+  let ctx: ReturnType<typeof setup>;
+  let app: App;
+  beforeEach(() => {
+    ctx = setup();
+    app = ctx.app;
+  });
+  afterEach(() => app.close());
+
+  const remove = (headers: Record<string, string>, payload: object = { confirm: 'DELETE' }) =>
+    app.inject({ method: 'DELETE', url: '/me', headers, payload });
+
+  it('needs sign-in and an explicit confirmation', async () => {
+    expect((await app.inject({ method: 'DELETE', url: '/me' })).statusCode).toBe(401);
+    const headers = await signIn(app);
+    expect((await remove(headers, {})).statusCode).toBe(400);
+    expect((await remove(headers, { confirm: 'delete' })).statusCode).toBe(400);
+  });
+
+  it('deletes the profile and signs the session out', async () => {
+    const headers = await signIn(app);
+    const saved = await app.inject({
+      method: 'PUT',
+      url: '/me/profile',
+      headers,
+      payload: { handle: 'leaving', displayName: 'Leaving', shareTrades: true },
+    });
+    expect(saved.statusCode).toBe(200);
+    expect((await remove(headers)).statusCode).toBe(204);
+    expect((await app.inject({ method: 'GET', url: '/profiles/leaving' })).statusCode).toBe(404);
+    expect((await app.inject({ method: 'GET', url: '/me', headers })).statusCode).toBe(401);
+  });
+
+  it('refuses while the Sift wallet holds SOL or tokens, and keeps everything', async () => {
+    const { headers } = await withWallet(app);
+    // The fake chain says 5 SOL and a token balance.
+    const refused = await remove(headers);
+    expect(refused.statusCode).toBe(409);
+    expect(refused.json<{ message: string }>().message).toMatch(/still holds tokens/);
+    ctx.connection.getParsedTokenAccountsByOwner.mockResolvedValue({
+      context: { slot: 1 },
+      value: [],
+    });
+    const solLeft = await remove(headers);
+    expect(solLeft.statusCode).toBe(409);
+    expect(solLeft.json<{ message: string }>().message).toMatch(/still holds 5 SOL/);
+    const still = await app.inject({ method: 'GET', url: '/me/sift-wallet', headers });
+    expect(still.json<{ wallet: unknown }>().wallet).not.toBeNull();
+  });
+
+  it('deletes an empty Sift wallet (dust allowed) with the account', async () => {
+    const { headers } = await withWallet(app);
+    const me = await app.inject({ method: 'GET', url: '/me', headers });
+    const owner = me.json<{ wallet: string }>().wallet;
+    expect(await ctx.walletRepo.getWallet(owner)).not.toBeNull();
+    ctx.connection.getParsedTokenAccountsByOwner.mockResolvedValue({
+      context: { slot: 1 },
+      value: [],
+    });
+    ctx.connection.getBalance.mockResolvedValue(5_000);
+    expect((await remove(headers)).statusCode).toBe(204);
+    expect(await ctx.walletRepo.getWallet(owner)).toBeNull();
+    expect((await app.inject({ method: 'GET', url: '/me/sift-wallet', headers })).statusCode).toBe(
+      401,
+    );
   });
 });

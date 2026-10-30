@@ -13,14 +13,33 @@
     "preview": {
       "extends": "base",
       "distribution": "internal",
-      "android": { "buildType": "apk", "image": "latest" },
-      "ios": { "image": "latest" }
+      "android": {
+        "buildType": "apk",
+        "image": "latest"
+      },
+      "ios": {
+        "image": "latest"
+      }
     },
     "production": {
       "extends": "base",
       "autoIncrement": true,
-      "android": { "image": "latest" },
-      "ios": { "image": "latest" }
+      "android": {
+        "image": "latest",
+        "buildType": "app-bundle"
+      },
+      "ios": {
+        "image": "latest"
+      }
+    }
+  },
+  "submit": {
+    "production": {
+      "android": {
+        "track": "internal",
+        "releaseStatus": "draft"
+      },
+      "ios": {}
     }
   }
 }

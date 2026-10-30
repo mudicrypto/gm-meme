@@ -167,4 +167,19 @@ describe.each(implementations)('SiftWalletRepository: %s', (_name, create) => {
     expect(expired[0]?.status).toBe('expired');
     expect((await repo.openOrders()).map((o) => o.id)).toEqual([id(2)]);
   });
+
+  it('deletes a wallet with its orders and spending, and only that one', async () => {
+    await repo.insertWallet(wallet(BOB, MINT_A));
+    await repo.insertOrder(order({}));
+    await repo.insertOrder(order({ id: id(2), owner: BOB }));
+    await repo.recordSpend(ALICE, 100, at(1));
+    await repo.recordSpend(BOB, 200, at(1));
+    await repo.deleteWallet(ALICE);
+    expect(await repo.getWallet(ALICE)).toBeNull();
+    expect(await repo.ordersOf(ALICE, 10)).toEqual([]);
+    expect(await repo.spentSince(ALICE, at(0))).toBe(0);
+    expect(await repo.getWallet(BOB)).not.toBeNull();
+    expect((await repo.openOrders()).map((o) => o.id)).toEqual([id(2)]);
+    expect(await repo.spentSince(BOB, at(0))).toBe(200);
+  });
 });

@@ -259,4 +259,51 @@ describe.each(implementations)('SocialRepository: %s', (_name, create) => {
     expect(await repo.pushTokens([BOB])).toEqual([{ wallet: BOB, token: 'ExponentPushToken[b]' }]);
     expect(await repo.pushTokens([])).toEqual([]);
   });
+
+  it('deletes an account: everything about that wallet goes, nobody else’s', async () => {
+    await repo.saveProfile(profile(ALICE, 'alice'));
+    await repo.saveProfile(profile(BOB, 'bob'));
+    await repo.saveProfile(profile(CAROL, 'carol'));
+    await repo.follow(ALICE, BOB);
+    await repo.follow(BOB, ALICE);
+    await repo.follow(CAROL, BOB);
+    await repo.recordTrade(trade({ signature: 'a1', wallet: ALICE }));
+    await repo.recordTrade(trade({ signature: 'b1', wallet: BOB }));
+    await repo.createSession({ tokenHash: 'ha', wallet: ALICE, expiresAt: at(50) });
+    await repo.createSession({ tokenHash: 'hb', wallet: BOB, expiresAt: at(50) });
+    await repo.watch(ALICE, MINT_A, at(1));
+    await repo.watch(BOB, MINT_A, at(1));
+    await repo.createAlert({
+      id: ALERT_1,
+      wallet: ALICE,
+      mint: MINT_A,
+      direction: 'above',
+      priceSol: 0.002,
+      createdAt: at(1),
+    });
+    await repo.savePushToken(ALICE, 'ExponentPushToken[a]');
+    await repo.savePushToken(BOB, 'ExponentPushToken[b]');
+
+    await repo.deleteAccount(ALICE);
+
+    expect(await repo.getProfile(ALICE)).toBeNull();
+    expect(await repo.sessionWallet('ha', new Date(at(10)))).toBeNull();
+    expect(await repo.watchlist(ALICE)).toEqual([]);
+    expect(await repo.alertsOf(ALICE)).toEqual([]);
+    expect(await repo.pushTokens([ALICE])).toEqual([]);
+    expect(await repo.tradesBy(ALICE, 10)).toEqual([]);
+    expect(await repo.isFollowing(ALICE, BOB)).toBe(false);
+    expect(await repo.isFollowing(BOB, ALICE)).toBe(false);
+    // Bob and Carol are untouched.
+    const bob = await repo.getProfile(BOB);
+    expect(bob?.followers).toBe(1);
+    expect(bob?.following).toBe(0);
+    expect(await repo.isFollowing(CAROL, BOB)).toBe(true);
+    expect(await repo.sessionWallet('hb', new Date(at(10)))).toBe(BOB);
+    expect((await repo.tradesBy(BOB, 10)).map((t) => t.signature)).toEqual(['b1']);
+    expect(await repo.watchlist(BOB)).toHaveLength(1);
+    expect(await repo.pushTokens([BOB])).toHaveLength(1);
+    // Deleting again is harmless.
+    await repo.deleteAccount(ALICE);
+  });
 });

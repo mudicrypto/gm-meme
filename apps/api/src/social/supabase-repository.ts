@@ -205,6 +205,10 @@ export class SupabaseSocialRepository implements SocialRepository {
     await this.call('delete_push_token', { push_token: token, owner: wallet });
   }
 
+  async deleteAccount(wallet: string) {
+    await this.call('delete_account', { account_wallet: wallet });
+  }
+
   async pushTokens(wallets: readonly string[]) {
     if (wallets.length === 0) return [];
     return this.call<{ wallet: string; token: string }>('push_tokens_for', {

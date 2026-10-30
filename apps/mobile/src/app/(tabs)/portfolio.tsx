@@ -9,6 +9,7 @@ import { DevnetBadge } from '../../components/DevnetBadge';
 import { ModeToggle } from '../../components/ModeToggle';
 import { PrivateKeyReveal } from '../../components/PrivateKeyReveal';
 import { RiskDot } from '../../components/RiskBadge';
+import { LegalLinks } from '../../components/LegalLinks';
 import { Screen, SectionTitle } from '../../components/Screen';
 import { SiftWalletCard } from '../../components/SiftWalletCard';
 import { Text, TextInput } from '../../components/Text';
@@ -66,6 +67,7 @@ export default function PortfolioScreen() {
           )}
         </>
       )}
+      <LegalLinks />
     </Screen>
   );
 }

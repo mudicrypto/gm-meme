@@ -62,6 +62,8 @@ export interface SiftWalletRepository {
   /** Store a new wallet unless the owner has one; returns the stored wallet. */
   insertWallet(record: WalletRecord): Promise<WalletRecord>;
   updateWallet(owner: string, fields: MutableWalletFields): Promise<void>;
+  /** Deletes the wallet record with its spend history and orders. */
+  deleteWallet(owner: string): Promise<void>;
 
   /** SOL spent on buys from the Sift wallet, for the daily cap. */
   recordSpend(owner: string, lamports: number, at: string): Promise<void>;

@@ -892,11 +892,26 @@ function Review({
 
       {payingFrom}
       {left > 0 ? (
-        <SlideToConfirm
-          label={`Slide to ${quote.side} · ${left}s`}
-          onConfirm={onConfirm}
-          disabled={!verified}
-        />
+        // Phones slide to confirm (hard to do by accident in a pocket); on the web a click is
+        // easier, and the browser wallet still asks for its own approval after this.
+        Platform.OS === 'web' ? (
+          <Button
+            label={
+              verified
+                ? `Confirm ${quote.side} · ${left}s`
+                : 'Can’t confirm: this transaction doesn’t match the quote'
+            }
+            onPress={onConfirm}
+            disabled={!verified}
+            confirm
+          />
+        ) : (
+          <SlideToConfirm
+            label={`Slide to ${quote.side} · ${left}s`}
+            onConfirm={onConfirm}
+            disabled={!verified}
+          />
+        )
       ) : (
         <Button label="Price expired · get a new one" onPress={onRefresh} />
       )}

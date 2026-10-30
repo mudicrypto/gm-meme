@@ -1,5 +1,5 @@
 import { router, usePathname } from 'expo-router';
-import { Briefcase, LayoutGrid, Star, Users, Wallet } from 'lucide-react-native';
+import { Briefcase, House, LayoutGrid, Star, Users } from 'lucide-react-native';
 import { useEffect, useRef, useState } from 'react';
 import { Platform, Pressable, StyleSheet, View, useWindowDimensions } from 'react-native';
 import { searchAddress } from '../../lib/market';
@@ -14,10 +14,10 @@ import { DevnetPill, NetworkChip, NetworkNote } from './Network';
 import { SearchBar } from './SearchBar';
 
 const NAV = [
-  { href: '/', label: 'Discover', icon: LayoutGrid },
+  { href: '/', label: 'Home', icon: House },
+  { href: '/markets', label: 'Markets', icon: LayoutGrid },
   { href: '/watchlist', label: 'Watchlist', icon: Star },
   { href: '/friends', label: 'Friends', icon: Users },
-  { href: '/wallet', label: 'Wallets', icon: Wallet },
   { href: '/portfolio', label: 'Portfolio', icon: Briefcase },
 ] as const;
 
@@ -57,7 +57,7 @@ export function TerminalHeader({
   const submit = () => {
     const address = searchAddress(value);
     if (address) router.push(`/token/${address}`);
-    else if (!onQuery && value.trim()) router.push('/');
+    else if (!onQuery && value.trim()) router.push('/markets');
   };
   return (
     <View style={styles.bar} accessibilityRole="header">

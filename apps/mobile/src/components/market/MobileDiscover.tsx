@@ -39,9 +39,9 @@ export function MobileDiscover({ state }: { state: DiscoverState }) {
         </View>
       </View>
       <View>
-        <Text style={styles.eyebrow}>MARKETS</Text>
+        <Text style={styles.eyebrow}>ON-CHAIN DISCOVERY</Text>
         <Text style={styles.title} accessibilityRole="header">
-          Discover
+          Markets
         </Text>
       </View>
       <SearchBar value={state.query} onChange={state.setQuery} onSubmit={state.openAddress} />

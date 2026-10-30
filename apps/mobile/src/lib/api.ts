@@ -226,7 +226,18 @@ export const api = {
   tradeStatus: (signature: string) => getJson<TradeStatusResponse>(`/trades/${enc(signature)}`),
   airdrop: (address: string) =>
     postJson<{ signature: string }>(`/wallets/${enc(address)}/airdrop`, {}),
+  /** A plain SOL transfer from your own wallet, for the device to check and sign. */
+  buildTransfer: (transfer: SolTransfer) =>
+    postJson<{ transaction: string; feeLamports: number }>('/transfers/build', transfer),
+  sendTransfer: (transfer: SolTransfer, transaction: string) =>
+    postJson<{ signature: string }>('/transfers/send', { transfer, transaction }),
 };
+
+export interface SolTransfer {
+  from: string;
+  to: string;
+  lamports: number;
+}
 
 /**
  * The platform fee wallet, built into the app at build time. The app checks every trade

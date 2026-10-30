@@ -76,7 +76,7 @@ export function DesktopDiscover({
             <View>
               <Text style={styles.eyebrow}>ON-CHAIN DISCOVERY</Text>
               <Text style={styles.title} accessibilityRole="header">
-                Discover
+                Markets
               </Text>
             </View>
             <View style={styles.status}>

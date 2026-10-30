@@ -1,10 +1,16 @@
-import { Compass, PieChart, Star, Users } from 'lucide-react-native';
+import { CandlestickChart, House, PieChart, Star, Users } from 'lucide-react-native';
 import { useEffect, useState } from 'react';
 import { Animated, type ColorValue, StyleSheet, View } from 'react-native';
 import { EASE_OUT, NATIVE, useReduceMotion } from '../lib/motion';
 import { colors } from '../lib/theme';
 
-const ICONS = { discover: Compass, friends: Users, watchlist: Star, portfolio: PieChart } as const;
+const ICONS = {
+  home: House,
+  markets: CandlestickChart,
+  friends: Users,
+  watchlist: Star,
+  portfolio: PieChart,
+} as const;
 
 /** Tab bar icons: line icons; the active one sits white on a filled green circle. */
 export function TabIcon({

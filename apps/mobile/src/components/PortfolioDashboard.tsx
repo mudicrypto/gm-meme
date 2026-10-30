@@ -1,10 +1,9 @@
-import { useQuery } from '@tanstack/react-query';
 import { router } from 'expo-router';
 import { Wallet } from 'lucide-react-native';
 import { Pressable, StyleSheet, View } from 'react-native';
-import { api } from '../lib/api';
 import { formatCompact, formatSol, formatSolPrice, shortAddress } from '../lib/format';
 import { transition } from '../lib/motion';
+import { usePortfolio } from '../lib/portfolio-hooks';
 import { colors, radius, space } from '../lib/theme';
 import { EmptyState } from './EmptyState';
 import { Change } from './market/Change';
@@ -18,30 +17,7 @@ import { TokenAvatar } from './TokenAvatar';
  * profit/loss, only the value now and its 24h change.
  */
 export function PortfolioDashboard({ address }: { address: string }) {
-  const holdings = useQuery({
-    queryKey: ['holdings', address],
-    queryFn: () => api.holdings(address),
-    refetchInterval: 20_000,
-  });
-  const items = holdings.data?.holdings ?? [];
-  const mints = items.map((h) => h.mint);
-  const stats = useQuery({
-    queryKey: ['token-stats', mints, 1440],
-    queryFn: () => api.stats(mints, 1440),
-    enabled: mints.length > 0,
-    refetchInterval: 30_000,
-  });
-  const byMint = new Map((stats.data?.stats ?? []).map((s) => [s.mint, s]));
-  const rows = items
-    .map((h) => {
-      const s = byMint.get(h.mint);
-      const value = s?.priceSol !== undefined ? h.amount * s.priceSol : undefined;
-      return { h, s, value };
-    })
-    .sort((a, b) => (b.value ?? -1) - (a.value ?? -1));
-  const sol = holdings.data?.solBalance;
-  const tokenValue = rows.reduce((sum, r) => sum + (r.value ?? 0), 0);
-  const priced = rows.filter((r) => r.value !== undefined).length;
+  const { holdings, items, rows, sol, tokenValue, priced, pricesPending } = usePortfolio(address);
 
   return (
     <View style={styles.wrap}>
@@ -49,7 +25,7 @@ export function PortfolioDashboard({ address }: { address: string }) {
         <Tile label="SOL balance" value={sol !== undefined ? formatSol(sol) : '…'} />
         <Tile
           label="Tokens (est.)"
-          value={stats.isPending && mints.length > 0 ? '…' : formatSol(tokenValue)}
+          value={pricesPending ? '…' : formatSol(tokenValue)}
           hint={rows.length > priced ? `${rows.length - priced} without a price` : undefined}
         />
         <Tile
@@ -72,7 +48,7 @@ export function PortfolioDashboard({ address }: { address: string }) {
             icon={Wallet}
             title="No tokens yet"
             body="Tokens you buy show up here with their value and risk."
-            action={{ label: 'Discover tokens', onPress: () => router.navigate('/') }}
+            action={{ label: 'Discover tokens', onPress: () => router.navigate('/markets') }}
           />
         ) : (
           <>

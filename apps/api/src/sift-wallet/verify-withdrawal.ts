@@ -1,15 +1,4 @@
-import { COMPUTE_BUDGET_PROGRAM, base64ToBytes, decodeTransaction } from '@sift/shared';
-
-const SYSTEM_PROGRAM = '11111111111111111111111111111111';
-const MAX_WITHDRAWAL_PRIORITY_MICRO_LAMPORTS = 1_000_000n;
-
-function readU32(data: Uint8Array, offset: number): number {
-  return new DataView(data.buffer, data.byteOffset, data.byteLength).getUint32(offset, true);
-}
-
-function readU64(data: Uint8Array, offset: number): bigint {
-  return new DataView(data.buffer, data.byteOffset, data.byteLength).getBigUint64(offset, true);
-}
+import { transferProblems } from '@sift/shared';
 
 /**
  * Problems with a withdrawal before it goes to the signing provider; empty when it is exactly
@@ -20,43 +9,5 @@ export function withdrawalProblems(
   transaction: string,
   expected: { from: string; to: string; lamports: number },
 ): string[] {
-  let tx: ReturnType<typeof decodeTransaction>;
-  try {
-    tx = decodeTransaction(base64ToBytes(transaction));
-  } catch {
-    return ['unreadable transaction'];
-  }
-  const problems: string[] = [];
-  if (tx.addressTableLookups > 0) problems.push('uses address lookup tables');
-  if (tx.numRequiredSignatures !== 1 || tx.accountKeys[0] !== expected.from)
-    problems.push('not paid by the Sift wallet alone');
-
-  let transfers = 0;
-  for (const ix of tx.instructions) {
-    if (ix.programId === COMPUTE_BUDGET_PROGRAM) {
-      const tag = ix.data[0];
-      if (tag === 2 && ix.data.length === 5) continue;
-      if (tag === 3 && ix.data.length === 9) {
-        if (readU64(ix.data, 1) > MAX_WITHDRAWAL_PRIORITY_MICRO_LAMPORTS)
-          problems.push('priority fee too high');
-        continue;
-      }
-      problems.push('unexpected compute budget instruction');
-    } else if (ix.programId === SYSTEM_PROGRAM) {
-      const isTransfer = ix.data.length === 12 && readU32(ix.data, 0) === 2;
-      if (!isTransfer) {
-        problems.push('unexpected system instruction');
-        continue;
-      }
-      transfers += 1;
-      const [from, to] = ix.accounts;
-      if (from !== expected.from) problems.push('transfer not from the Sift wallet');
-      if (to !== expected.to) problems.push('transfer not to the saved address');
-      if (readU64(ix.data, 4) !== BigInt(expected.lamports)) problems.push('wrong amount');
-    } else {
-      problems.push(`unexpected program ${ix.programId}`);
-    }
-  }
-  if (transfers !== 1) problems.push('must be exactly one transfer');
-  return [...new Set(problems)];
+  return transferProblems(transaction, expected);
 }

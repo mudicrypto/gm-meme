@@ -13,7 +13,7 @@ export default function TabLayout() {
     <Tabs
       screenOptions={{
         // Phones: each screen draws its own header (components/Screen.tsx). Wide screens
-        // get the terminal header; Discover draws its own, with the search wired in.
+        // get the terminal header; Markets draws its own, with the search wired in.
         headerShown: wide,
         header: () => <TerminalHeader />,
         tabBarActiveTintColor: colors.accent,
@@ -35,10 +35,19 @@ export default function TabLayout() {
       <Tabs.Screen
         name="index"
         options={{
-          title: 'Discover',
+          title: 'Home',
+          tabBarIcon: ({ color, focused }) => (
+            <TabIcon name="home" color={color} focused={focused} />
+          ),
+        }}
+      />
+      <Tabs.Screen
+        name="markets"
+        options={{
+          title: 'Markets',
           headerShown: false,
           tabBarIcon: ({ color, focused }) => (
-            <TabIcon name="discover" color={color} focused={focused} />
+            <TabIcon name="markets" color={color} focused={focused} />
           ),
         }}
       />

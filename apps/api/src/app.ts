@@ -40,6 +40,7 @@ import { riskRoutes } from './routes/risk';
 import { socialRoutes } from './routes/social';
 import { summaryRoutes } from './routes/summary';
 import { tokenRoutes } from './routes/tokens';
+import { transferRoutes } from './routes/transfers';
 import { tradeRoutes } from './routes/trades';
 import { walletRoutes } from './routes/wallets';
 import { createDiscoveryService } from './tokens/discovery';
@@ -307,6 +308,9 @@ export function buildApp(config: Config, deps: AppDeps = {}) {
   } else {
     app.log.warn('HELIUS_API_KEY not set: GET /tokens/:mint/risk and /summary are disabled');
   }
+
+  // Sends from the user's own wallet: built here, checked and signed on the device.
+  app.register(transferRoutes, { chain: trades ? walletChain : null });
 
   const walletSigner =
     deps.walletSigner !== undefined ? deps.walletSigner : createWalletSigner(config);

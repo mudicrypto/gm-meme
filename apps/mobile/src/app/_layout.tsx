@@ -75,6 +75,8 @@ export default function RootLayout() {
               <Stack.Screen name="wallet" options={{ headerShown: wide }} />
               <Stack.Screen name="orders" options={{ headerShown: wide }} />
               <Stack.Screen name="leaderboard" options={{ headerShown: wide }} />
+              <Stack.Screen name="deposit" options={{ headerShown: wide }} />
+              <Stack.Screen name="send" options={{ headerShown: wide }} />
               <Stack.Screen
                 name="order/[mint]"
                 options={{ headerShown: wide, presentation: wide ? 'card' : 'modal' }}

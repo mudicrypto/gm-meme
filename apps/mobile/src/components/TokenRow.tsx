@@ -33,7 +33,7 @@ export function TokenRow({ token }: { token: TokenSummary | TrendingToken }) {
         <View style={styles.top}>
           <TokenAvatar
             uri={token.imageUrl}
-            label={token.name ?? token.symbol}
+            label={token.symbol ?? token.name}
             seed={token.mint}
             size={48}
           />

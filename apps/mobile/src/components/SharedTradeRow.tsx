@@ -40,7 +40,7 @@ export function SharedTradeRow({
         <Pressable style={StyleSheet.flatten(styles.token)}>
           <TokenAvatar
             uri={trade.token.imageUrl}
-            label={trade.token.name ?? trade.token.symbol}
+            label={trade.token.symbol ?? trade.token.name}
             seed={trade.token.mint}
             size={36}
           />

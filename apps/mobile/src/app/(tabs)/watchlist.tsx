@@ -67,7 +67,12 @@ export default function WatchlistScreen() {
                 { backgroundColor: palette.card, borderColor: palette.border },
               ])}
             >
-              <TokenAvatar uri={token.imageUrl} label={tokenLabel(token)} size={36} />
+              <TokenAvatar
+                uri={token.imageUrl}
+                label={tokenLabel(token)}
+                seed={token.mint}
+                size={36}
+              />
               <View style={styles.flex}>
                 <Text style={[styles.name, { color: palette.text }]} numberOfLines={1}>
                   {tokenLabel(token)}

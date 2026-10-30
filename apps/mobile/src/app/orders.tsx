@@ -203,7 +203,7 @@ function OrderCard({ order, price }: { order: SiftOrder; price: number | undefin
           <Pressable style={StyleSheet.flatten(styles.tokenLink)}>
             <TokenAvatar
               uri={order.token.imageUrl}
-              label={order.token.name ?? order.token.symbol}
+              label={order.token.symbol ?? order.token.name}
               seed={order.token.mint}
               size={22}
             />

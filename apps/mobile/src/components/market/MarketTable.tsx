@@ -164,7 +164,7 @@ export function MarketTable({
                   <View style={styles.tokenCell}>
                     <TokenAvatar
                       uri={token.imageUrl}
-                      label={token.name ?? token.symbol}
+                      label={token.symbol ?? token.name}
                       seed={token.mint}
                       size={32}
                     />

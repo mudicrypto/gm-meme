@@ -1,7 +1,7 @@
 import { router } from 'expo-router';
 import { ChevronDown, SlidersHorizontal, Wallet } from 'lucide-react-native';
 import { useState } from 'react';
-import { FlatList, Pressable, RefreshControl, StyleSheet, View } from 'react-native';
+import { Animated, FlatList, Pressable, RefreshControl, StyleSheet, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { LIST_WINDOWS, activeFilterCount } from '../../lib/market';
 import { transition } from '../../lib/motion';
@@ -9,6 +9,8 @@ import { colors, radius, space } from '../../lib/theme';
 import { IconButton } from '../Button';
 import { Sheet } from '../Sheet';
 import { ErrorState } from '../States';
+import { Logo } from '../Logo';
+import { usePulse } from '../Motion';
 import { Text } from '../Text';
 import { EmptyFeed } from './EmptyFeed';
 import { FiltersSheet } from './FiltersSheet';
@@ -31,9 +33,7 @@ export function MobileDiscover({ state }: { state: DiscoverState }) {
   const header = (
     <View style={styles.header}>
       <View style={styles.top}>
-        <Text style={styles.brand} accessibilityRole="header">
-          SIFT
-        </Text>
+        <Logo size={26} />
         <View style={styles.topRight}>
           <NetworkChip onPress={() => setNetworkOpen(true)} />
           <IconButton label="Wallet" onPress={() => router.push('/wallet')}>
@@ -180,8 +180,9 @@ export function MobileDiscover({ state }: { state: DiscoverState }) {
 
 /** Placeholder rows while the list loads. */
 export function LoadingRows({ count = 8 }: { count?: number }) {
+  const pulse = usePulse();
   return (
-    <View accessibilityLabel="Loading tokens">
+    <Animated.View accessibilityLabel="Loading tokens" style={{ opacity: pulse }}>
       {Array.from({ length: count }, (_, i) => (
         <View key={i} style={styles.skeleton}>
           <View style={styles.skAvatar} />
@@ -192,7 +193,7 @@ export function LoadingRows({ count = 8 }: { count?: number }) {
           <View style={[styles.skLine, { width: 64 }]} />
         </View>
       ))}
-    </View>
+    </Animated.View>
   );
 }
 

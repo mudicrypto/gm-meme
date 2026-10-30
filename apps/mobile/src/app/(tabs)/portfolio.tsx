@@ -3,7 +3,7 @@ import { type Holding, isSolanaAddress } from '@sift/shared';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { Link } from 'expo-router';
 import { useEffect, useState } from 'react';
-import { Platform, Pressable, StyleSheet, View } from 'react-native';
+import { Platform, Pressable, StyleSheet, View, useWindowDimensions } from 'react-native';
 import { Card } from '../../components/Card';
 import { DevnetBadge } from '../../components/DevnetBadge';
 import { ModeToggle } from '../../components/ModeToggle';
@@ -11,6 +11,7 @@ import { PrivateKeyReveal } from '../../components/PrivateKeyReveal';
 import { RiskDot } from '../../components/RiskBadge';
 import { BrowserConnect } from '../../components/BrowserConnect';
 import { LegalLinks } from '../../components/LegalLinks';
+import { PortfolioDashboard } from '../../components/PortfolioDashboard';
 import { Screen, SectionTitle } from '../../components/Screen';
 import { SiftWalletCard } from '../../components/SiftWalletCard';
 import { Text, TextInput } from '../../components/Text';
@@ -20,7 +21,7 @@ import { api } from '../../lib/api';
 import { confirmOwner } from '../../lib/device-auth';
 import { formatCompact, shortAddress } from '../../lib/format';
 import { useMode } from '../../lib/mode';
-import { RISK_COLORS, RISK_LABELS, colors, radius, usePalette } from '../../lib/theme';
+import { breakpoints, RISK_COLORS, RISK_LABELS, colors, radius, usePalette } from '../../lib/theme';
 import { mwaErrorMessage } from '../../lib/mwa-results';
 import { cancelPhantomRequest, isCancelled } from '../../lib/phantom';
 import { type WalletKind, useWallet } from '../../lib/wallet';
@@ -44,8 +45,11 @@ export default function PortfolioScreen() {
   };
 
   const config = useQuery({ queryKey: ['config'], queryFn: api.config, staleTime: Infinity });
+  const desktop = useWindowDimensions().width >= breakpoints.desktop;
+  const dashboard = desktop && wallet.status !== 'loading' && !!wallet.address && !!wallet.kind;
   return (
     <Screen
+      maxWidth={dashboard ? 1200 : 760}
       title="Portfolio"
       right={
         <View style={styles.headerRight}>
@@ -54,17 +58,31 @@ export default function PortfolioScreen() {
         </View>
       }
     >
-      <SiftWalletCard />
-      {wallet.status === 'loading' ? <Loading /> : null}
-      {wallet.status === 'loading' ? null : wallet.address && wallet.kind ? (
-        <OwnWallet address={wallet.address} kind={wallet.kind} />
+      {dashboard && wallet.address && wallet.kind ? (
+        <View style={styles.dashboard}>
+          <View style={styles.dashMain}>
+            <PortfolioDashboard address={wallet.address} />
+          </View>
+          <View style={styles.dashSide}>
+            <SiftWalletCard />
+            <OwnWallet address={wallet.address} kind={wallet.kind} hideHoldings />
+          </View>
+        </View>
       ) : (
         <>
-          {Platform.OS === 'web' ? <BrowserConnect /> : <CreateWallet />}
-          {watched ? (
-            <Holdings address={watched} title="Watched wallet" onClear={() => watch(null)} />
+          <SiftWalletCard />
+          {wallet.status === 'loading' ? <Loading /> : null}
+          {wallet.status === 'loading' ? null : wallet.address && wallet.kind ? (
+            <OwnWallet address={wallet.address} kind={wallet.kind} />
           ) : (
-            <WatchWallet onWatch={watch} />
+            <>
+              {Platform.OS === 'web' ? <BrowserConnect /> : <CreateWallet />}
+              {watched ? (
+                <Holdings address={watched} title="Watched wallet" onClear={() => watch(null)} />
+              ) : (
+                <WatchWallet onWatch={watch} />
+              )}
+            </>
           )}
         </>
       )}
@@ -230,7 +248,16 @@ function WalletSwitch({ kind }: { kind: WalletKind }) {
   );
 }
 
-function OwnWallet({ address, kind }: { address: string; kind: WalletKind }) {
+function OwnWallet({
+  address,
+  kind,
+  hideHoldings = false,
+}: {
+  address: string;
+  kind: WalletKind;
+  /** The desktop dashboard shows the holdings itself. */
+  hideHoldings?: boolean;
+}) {
   const palette = usePalette();
   const queryClient = useQueryClient();
   const config = useQuery({ queryKey: ['config'], queryFn: api.config, staleTime: Infinity });
@@ -246,16 +273,18 @@ function OwnWallet({ address, kind }: { address: string; kind: WalletKind }) {
   return (
     <>
       <WalletSwitch kind={kind} />
-      <Holdings
-        address={address}
-        title={
-          kind === 'phantom'
-            ? 'Phantom wallet'
-            : kind === 'walletApp'
-              ? 'Wallet app'
-              : 'Phone wallet'
-        }
-      />
+      {hideHoldings ? null : (
+        <Holdings
+          address={address}
+          title={
+            kind === 'phantom'
+              ? 'Phantom wallet'
+              : kind === 'walletApp'
+                ? 'Wallet app'
+                : 'Phone wallet'
+          }
+        />
+      )}
 
       {config.data?.cluster === 'devnet' ? (
         <Card title="Test SOL">
@@ -523,6 +552,9 @@ function HoldingRow({ item }: { item: Holding }) {
 }
 
 const styles = StyleSheet.create({
+  dashboard: { flexDirection: 'row', alignItems: 'flex-start', gap: 24 },
+  dashMain: { flex: 1, minWidth: 0 },
+  dashSide: { width: 360, gap: 8 },
   headerRight: { flexDirection: 'row', alignItems: 'center', gap: 8 },
   switch: {
     flexDirection: 'row',

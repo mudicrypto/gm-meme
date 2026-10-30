@@ -14,6 +14,7 @@ export function Screen({
   refreshing,
   onRefresh,
   footer,
+  maxWidth = 760,
 }: {
   title?: string;
   subtitle?: string;
@@ -26,6 +27,8 @@ export function Screen({
   onRefresh?: () => void;
   /** Pinned to the bottom (sticky buttons). */
   footer?: ReactNode;
+  /** Content width on wide screens (760 reads well; dashboards go wider). */
+  maxWidth?: number;
 }) {
   const insets = useSafeAreaInsets();
   // Tablets and desktops: the terminal header sits above, and content keeps a reading width.
@@ -36,7 +39,7 @@ export function Screen({
         contentContainerStyle={[
           styles.content,
           { paddingTop: wide ? space.xl : insets.top + 16 },
-          wide && styles.wide,
+          wide && [styles.wide, { maxWidth }],
         ]}
         refreshControl={
           onRefresh ? (

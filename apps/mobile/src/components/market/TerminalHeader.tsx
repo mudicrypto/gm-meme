@@ -8,6 +8,7 @@ import { breakpoints, colors, radius, space } from '../../lib/theme';
 import { useWallet } from '../../lib/wallet';
 import { Sheet } from '../Sheet';
 import { transition } from '../../lib/motion';
+import { Logo } from '../Logo';
 import { Text } from '../Text';
 import { NetworkChip, NetworkNote } from './Network';
 import { SearchBar } from './SearchBar';
@@ -46,7 +47,14 @@ export function TerminalHeader({
   };
   return (
     <View style={styles.bar} accessibilityRole="header">
-      <Text style={styles.brand}>SIFT</Text>
+      <Pressable
+        onPress={() => router.navigate('/')}
+        accessibilityRole="link"
+        accessibilityLabel="Sift home"
+        style={styles.brand}
+      >
+        <Logo size={28} />
+      </Pressable>
       <View style={styles.nav} accessibilityRole="tablist">
         {NAV.map((item) => {
           const active = item.href === '/' ? pathname === '/' : pathname.startsWith(item.href);
@@ -128,7 +136,7 @@ const styles = StyleSheet.create({
     borderBottomColor: colors.border,
     backgroundColor: colors.bg,
   },
-  brand: { fontSize: 18, fontWeight: '700', letterSpacing: 2.5, marginRight: space.sm },
+  brand: { marginRight: space.sm },
   nav: { flexDirection: 'row', alignItems: 'stretch', height: 64 },
   navItem: {
     flexDirection: 'row',

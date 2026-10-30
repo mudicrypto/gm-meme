@@ -27,6 +27,7 @@ import { CandleChart } from '../../components/market/CandleChart';
 import { Change } from '../../components/market/Change';
 import { Tabs } from '../../components/market/Tabs';
 import { ActivityList, Metrics, RiskSignals } from '../../components/market/TokenPanels';
+import { TradeAction, TradeFields, useTradeForm } from '../../components/market/TradeForm';
 import { useTokenInfo } from '../../components/market/useTokenInfo';
 import { Sheet } from '../../components/Sheet';
 import { ErrorState } from '../../components/States';
@@ -55,8 +56,11 @@ function pastWindow(minutes: number): string {
 
 export default function TokenScreen() {
   const insets = useSafeAreaInsets();
-  // On wide screens (web, tablets) the column keeps a readable width, centred.
-  const gutter = Math.max(space.screen, (useWindowDimensions().width - 760) / 2);
+  const { width } = useWindowDimensions();
+  // Desktop: an exchange layout, details on the left and the trade form on the right.
+  const exchange = width >= 1100;
+  // Tablets keep one readable centred column.
+  const gutter = exchange ? space.xl : Math.max(space.screen, (width - 760) / 2);
   const { mint = '' } = useLocalSearchParams<{ mint: string }>();
   const valid = isSolanaAddress(mint);
   const [windowMinutes, setWindowMinutes] = useState(60);
@@ -93,6 +97,7 @@ export default function TokenScreen() {
   const name = (info?.name ?? info?.symbol ?? shortAddress(mint)).slice(0, 32);
   const windowLabel = CHART_WINDOWS.find((w) => w.minutes === windowMinutes)?.label ?? '1h';
   const price = stats.data?.priceSol;
+  const form = useTradeForm(mint, symbol, price);
   const footerHeight = 76 + insets.bottom;
 
   const header = (
@@ -125,153 +130,175 @@ export default function TokenScreen() {
   return (
     <View style={styles.root}>
       {header}
-      <ScrollView
-        contentContainerStyle={[
-          styles.content,
-          { paddingBottom: footerHeight + space.lg, paddingHorizontal: gutter },
-        ]}
-      >
-        <View style={styles.identity}>
-          <TokenAvatar
-            uri={info?.imageUrl}
-            label={info?.symbol ?? info?.name}
-            seed={mint}
-            size={52}
-          />
-          <View style={styles.flex}>
-            <Text style={styles.name} numberOfLines={1}>
-              {name}
-            </Text>
-            <CopyAddress address={mint} />
+      <View style={exchange ? styles.columns : styles.flex}>
+        <ScrollView
+          style={styles.flex}
+          contentContainerStyle={[
+            styles.content,
+            {
+              paddingBottom: exchange ? space.xl * 2 : footerHeight + space.lg,
+              paddingHorizontal: gutter,
+            },
+          ]}
+        >
+          <View style={styles.identity}>
+            <TokenAvatar
+              uri={info?.imageUrl}
+              label={info?.symbol ?? info?.name}
+              seed={mint}
+              size={52}
+            />
+            <View style={styles.flex}>
+              <Text style={styles.name} numberOfLines={1}>
+                {name}
+              </Text>
+              <CopyAddress address={mint} />
+            </View>
           </View>
-        </View>
 
-        <View style={styles.priceBlock}>
-          {price ? (
-            <View style={styles.priceRow}>
-              <FlashText value={price} style={styles.price}>
-                {formatSolPrice(price)}
-              </FlashText>
-              <Text style={styles.priceUnit}>SOL</Text>
+          <View style={styles.priceBlock}>
+            {price ? (
+              <View style={styles.priceRow}>
+                <FlashText value={price} style={styles.price}>
+                  {formatSolPrice(price)}
+                </FlashText>
+                <Text style={styles.priceUnit}>SOL</Text>
+              </View>
+            ) : (
+              <Text style={styles.noPrice}>
+                {stats.isPending ? 'Loading price…' : 'No trades yet'}
+              </Text>
+            )}
+            <View style={styles.changeRow}>
+              <Change pct={stats.data?.changePct} size={16} arrow />
+              <Text style={styles.windowText}>{pastWindow(windowMinutes)}</Text>
+            </View>
+          </View>
+
+          <Tabs
+            compact
+            label="Chart window"
+            options={CHART_WINDOWS.map((w) => ({ value: w.minutes, label: w.label }))}
+            value={windowMinutes}
+            onChange={setWindowMinutes}
+          />
+          {chart.isError ? (
+            <ErrorState message="Couldn’t load the chart." onRetry={() => chart.refetch()} />
+          ) : (
+            <CandleChart
+              points={chart.data?.points ?? []}
+              height={exchange ? 340 : undefined}
+              emptyHeight={140}
+              windowMinutes={windowMinutes}
+            />
+          )}
+
+          <Metrics stats={stats.data} token={info} windowLabel={windowLabel} />
+          <RiskSignals
+            risk={risk.data}
+            unavailable={risk.isError}
+            onRetry={() => void risk.refetch()}
+          />
+
+          <Tabs
+            label="Token sections"
+            options={[
+              { value: 'activity', label: 'Activity' },
+              { value: 'holders', label: 'Holders' },
+              { value: 'info', label: 'Info' },
+            ]}
+            value={section}
+            onChange={setSection}
+          />
+
+          {section === 'activity' ? (
+            <ActivityList
+              trades={activity.data?.trades}
+              symbol={symbol}
+              loading={activity.isPending}
+            />
+          ) : section === 'holders' ? (
+            <View style={styles.sectionBody}>
+              {(risk.data?.reasons ?? [])
+                .filter((r) => r.check === 'holder_concentration' || r.check === 'dev_history')
+                .map((r) => (
+                  <View key={r.check} style={styles.infoRow}>
+                    <Text style={styles.infoLabel}>
+                      {r.check === 'holder_concentration' ? 'Top holders' : 'Creator'}
+                    </Text>
+                    <Text style={styles.infoText}>{r.message}</Text>
+                  </View>
+                ))}
+              <Text style={styles.note}>
+                Sift checks the 20 largest accounts. A full holder list isn’t available yet.
+              </Text>
             </View>
           ) : (
-            <Text style={styles.noPrice}>
-              {stats.isPending ? 'Loading price…' : 'No trades yet'}
-            </Text>
+            <View style={styles.sectionBody}>
+              <View style={styles.infoRow}>
+                <Text style={styles.infoLabel}>
+                  In plain words{summary.data?.source === 'ai' ? ' · AI' : ''}
+                </Text>
+                <Text style={styles.infoText}>
+                  {summary.isPending
+                    ? 'Writing a summary…'
+                    : summary.isError
+                      ? 'Summary unavailable right now.'
+                      : summary.data.summary}
+                </Text>
+              </View>
+              <View style={styles.infoRow}>
+                <Text style={styles.infoLabel}>Token address</Text>
+                <Text mono selectable style={styles.infoText}>
+                  {mint}
+                </Text>
+              </View>
+              <TokenWatch mint={mint} priceSol={price} />
+            </View>
           )}
-          <View style={styles.changeRow}>
-            <Change pct={stats.data?.changePct} size={16} arrow />
-            <Text style={styles.windowText}>{pastWindow(windowMinutes)}</Text>
-          </View>
-        </View>
-
-        <Tabs
-          compact
-          label="Chart window"
-          options={CHART_WINDOWS.map((w) => ({ value: w.minutes, label: w.label }))}
-          value={windowMinutes}
-          onChange={setWindowMinutes}
-        />
-        {chart.isError ? (
-          <ErrorState message="Couldn’t load the chart." onRetry={() => chart.refetch()} />
-        ) : (
-          <CandleChart
-            points={chart.data?.points ?? []}
-            emptyHeight={140}
-            windowMinutes={windowMinutes}
-          />
-        )}
-
-        <Metrics stats={stats.data} token={info} windowLabel={windowLabel} />
-        <RiskSignals
-          risk={risk.data}
-          unavailable={risk.isError}
-          onRetry={() => void risk.refetch()}
-        />
-
-        <Tabs
-          label="Token sections"
-          options={[
-            { value: 'activity', label: 'Activity' },
-            { value: 'holders', label: 'Holders' },
-            { value: 'info', label: 'Info' },
-          ]}
-          value={section}
-          onChange={setSection}
-        />
-
-        {section === 'activity' ? (
-          <ActivityList
-            trades={activity.data?.trades}
-            symbol={symbol}
-            loading={activity.isPending}
-          />
-        ) : section === 'holders' ? (
-          <View style={styles.sectionBody}>
-            {(risk.data?.reasons ?? [])
-              .filter((r) => r.check === 'holder_concentration' || r.check === 'dev_history')
-              .map((r) => (
-                <View key={r.check} style={styles.infoRow}>
-                  <Text style={styles.infoLabel}>
-                    {r.check === 'holder_concentration' ? 'Top holders' : 'Creator'}
-                  </Text>
-                  <Text style={styles.infoText}>{r.message}</Text>
-                </View>
-              ))}
-            <Text style={styles.note}>
-              Sift checks the 20 largest accounts. A full holder list isn’t available yet.
-            </Text>
-          </View>
-        ) : (
-          <View style={styles.sectionBody}>
-            <View style={styles.infoRow}>
-              <Text style={styles.infoLabel}>
-                In plain words{summary.data?.source === 'ai' ? ' · AI' : ''}
+        </ScrollView>
+        {exchange ? (
+          <View style={styles.side}>
+            <ScrollView style={styles.flex} contentContainerStyle={styles.sideContent}>
+              <Text style={styles.sideTitle} accessibilityRole="header">
+                Trade {symbol}
               </Text>
-              <Text style={styles.infoText}>
-                {summary.isPending
-                  ? 'Writing a summary…'
-                  : summary.isError
-                    ? 'Summary unavailable right now.'
-                    : summary.data.summary}
-              </Text>
+              <TradeFields form={form} />
+            </ScrollView>
+            <View style={styles.sideFoot}>
+              <TradeAction form={form} />
             </View>
-            <View style={styles.infoRow}>
-              <Text style={styles.infoLabel}>Token address</Text>
-              <Text mono selectable style={styles.infoText}>
-                {mint}
-              </Text>
-            </View>
-            <TokenWatch mint={mint} priceSol={price} />
           </View>
-        )}
-      </ScrollView>
-
-      <View
-        style={[
-          styles.footer,
-          { paddingBottom: insets.bottom + space.md, paddingHorizontal: gutter },
-        ]}
-      >
-        <Link href={`/trade/${mint}?side=buy`} asChild>
-          <Pressable
-            style={StyleSheet.flatten([styles.action, styles.buy])}
-            accessibilityRole="button"
-            accessibilityLabel={`Buy ${symbol}`}
-          >
-            <Text style={styles.buyText}>Buy</Text>
-          </Pressable>
-        </Link>
-        <Link href={`/trade/${mint}?side=sell`} asChild>
-          <Pressable
-            style={StyleSheet.flatten([styles.action, styles.sell])}
-            accessibilityRole="button"
-            accessibilityLabel={`Sell ${symbol}`}
-          >
-            <Text style={styles.sellText}>Sell</Text>
-          </Pressable>
-        </Link>
+        ) : null}
       </View>
+
+      {exchange ? null : (
+        <View
+          style={[
+            styles.footer,
+            { paddingBottom: insets.bottom + space.md, paddingHorizontal: gutter },
+          ]}
+        >
+          <Link href={`/trade/${mint}?side=buy`} asChild>
+            <Pressable
+              style={StyleSheet.flatten([styles.action, styles.buy])}
+              accessibilityRole="button"
+              accessibilityLabel={`Buy ${symbol}`}
+            >
+              <Text style={styles.buyText}>Buy</Text>
+            </Pressable>
+          </Link>
+          <Link href={`/trade/${mint}?side=sell`} asChild>
+            <Pressable
+              style={StyleSheet.flatten([styles.action, styles.sell])}
+              accessibilityRole="button"
+              accessibilityLabel={`Sell ${symbol}`}
+            >
+              <Text style={styles.sellText}>Sell</Text>
+            </Pressable>
+          </Link>
+        </View>
+      )}
 
       <Sheet visible={moreOpen} onClose={() => setMoreOpen(false)} title={name}>
         <MoreRow
@@ -376,6 +403,20 @@ export function WatchStar({ mint }: { mint: string }) {
 }
 
 const styles = StyleSheet.create({
+  columns: { flex: 1, flexDirection: 'row' },
+  side: {
+    width: 380,
+    backgroundColor: colors.surface,
+    borderLeftWidth: StyleSheet.hairlineWidth,
+    borderLeftColor: colors.border,
+  },
+  sideContent: { padding: space.lg, gap: space.md },
+  sideTitle: { fontSize: 16, fontWeight: '600' },
+  sideFoot: {
+    padding: space.lg,
+    borderTopWidth: StyleSheet.hairlineWidth,
+    borderTopColor: colors.border,
+  },
   root: { flex: 1, backgroundColor: colors.bg },
   flex: { flex: 1, minWidth: 0 },
   header: {

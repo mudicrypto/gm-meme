@@ -16,6 +16,7 @@ import { Tabs } from './Tabs';
 import { TerminalHeader } from './TerminalHeader';
 import { TokenPanel } from './TokenPanel';
 import { type DiscoverState, FEEDS, emptyMessage } from './useDiscover';
+import { useNetwork } from '../../lib/network';
 
 const SIDEBAR = 76;
 const PANEL = 400;
@@ -34,6 +35,7 @@ export function DesktopDiscover({
   showPanel: boolean;
 }) {
   const { width } = useWindowDimensions();
+  const { isDevnet } = useNetwork();
   const [screener, setScreener] = useState(false);
   const [filtersOpen, setFiltersOpen] = useState(false);
   const { market, rows } = state;
@@ -165,9 +167,10 @@ export function DesktopDiscover({
             />
           )}
           <Text style={styles.footnote}>
-            Liquidity and holder counts aren’t shown yet: Sift has no live source for them on
-            devnet. Prices are in test SOL and have no real value. Risk signals describe what Sift
-            checked; they don’t guarantee a token is harmless. Not financial advice.
+            Liquidity and holder counts aren’t shown yet: Sift has no live source for them.
+            {isDevnet ? ' Prices are in test SOL and have no real value.' : ''} Risk signals
+            describe what Sift checked; they don’t guarantee a token is harmless. Not financial
+            advice.
           </Text>
         </ScrollView>
         {showPanel ? (

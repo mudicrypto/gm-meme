@@ -5,10 +5,12 @@ import { isStale } from '../../lib/market';
 import { colors } from '../../lib/theme';
 import { Text } from '../Text';
 import type { DiscoverState } from './useDiscover';
+import { useNetwork } from '../../lib/network';
 
 /** Live / stale status, row count and volume, plus the devnet and advice notes. */
 export function StatusLine({ state, inline = false }: { state: DiscoverState; inline?: boolean }) {
   const [now, setNow] = useState(Date.now);
+  const { isDevnet } = useNetwork();
   useEffect(() => {
     const timer = setInterval(() => setNow(Date.now()), 5000);
     return () => clearInterval(timer);
@@ -41,7 +43,7 @@ export function StatusLine({ state, inline = false }: { state: DiscoverState; in
           </Text>
         </>
       ) : null}
-      <Text style={styles.text}>· Devnet data. Not financial advice.</Text>
+      <Text style={styles.text}>{isDevnet ? '· Devnet data. ' : '· '}Not financial advice.</Text>
     </View>
   );
 }

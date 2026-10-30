@@ -3,14 +3,16 @@ import { Pressable, StyleSheet, View } from 'react-native';
 import { transition } from '../../lib/motion';
 import { colors, radius, tint } from '../../lib/theme';
 import { Text } from '../Text';
+import { useNetwork } from '../../lib/network';
 
-/** The network selector. Sift runs on Solana devnet only until its security audit. */
+/** The network selector: Solana, with a DEVNET tag while Sift runs on the test network. */
 export function NetworkChip({ onPress }: { onPress: () => void }) {
+  const { isDevnet } = useNetwork();
   return (
     <Pressable
       onPress={onPress}
       accessibilityRole="button"
-      accessibilityLabel="Network: Solana devnet"
+      accessibilityLabel={isDevnet ? 'Network: Solana devnet' : 'Network: Solana'}
       // 36 tall to keep the header compact; the slop makes the target 44.
       hitSlop={4}
       style={({ pressed, hovered }: { pressed: boolean; hovered?: boolean }) => [
@@ -21,9 +23,11 @@ export function NetworkChip({ onPress }: { onPress: () => void }) {
     >
       <SolanaMark size={12} />
       <Text style={styles.text}>Solana</Text>
-      <View style={styles.devnet}>
-        <Text style={styles.devnetText}>DEVNET</Text>
-      </View>
+      {isDevnet ? (
+        <View style={styles.devnet}>
+          <Text style={styles.devnetText}>DEVNET</Text>
+        </View>
+      ) : null}
       <ChevronDown size={13} color={colors.muted} strokeWidth={2} />
     </Pressable>
   );
@@ -51,6 +55,21 @@ export function SolanaMark({ size = 14 }: { size?: number }) {
 }
 
 export function NetworkNote() {
+  const { isMainnet } = useNetwork();
+  if (isMainnet)
+    return (
+      <View style={styles.note}>
+        <View style={styles.option}>
+          <SolanaMark size={18} />
+          <View style={{ flex: 1 }}>
+            <Text style={styles.optionTitle}>Solana</Text>
+            <Text style={styles.optionSub}>Real SOL. Blockchain transactions are final.</Text>
+          </View>
+          <Text style={styles.selected}>Selected</Text>
+        </View>
+        <Text style={styles.optionSub}>Other networks aren’t supported.</Text>
+      </View>
+    );
   return (
     <View style={styles.note}>
       <View style={styles.option}>

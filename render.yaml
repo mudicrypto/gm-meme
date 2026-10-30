@@ -40,3 +40,32 @@ services:
         sync: false
       - key: ANTHROPIC_API_KEY
         sync: false
+      # Public pages (/privacy, /terms, /support) for the store listings.
+      - key: SUPPORT_EMAIL
+        sync: false
+      - key: OPERATOR_NAME
+        sync: false
+
+  # The website: plain HTML in apps/site, no build step. Free on Render's static hosting.
+  - type: web
+    name: sift-site
+    runtime: static
+    buildCommand: echo "static site, nothing to build"
+    staticPublishPath: apps/site
+    autoDeploy: true
+    headers:
+      - path: /*
+        name: X-Frame-Options
+        value: DENY
+      - path: /*
+        name: X-Content-Type-Options
+        value: nosniff
+      - path: /*
+        name: Referrer-Policy
+        value: strict-origin-when-cross-origin
+      - path: /*
+        name: Content-Security-Policy
+        value: "default-src 'self'; img-src 'self'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; script-src 'none'; frame-ancestors 'none'"
+      - path: /img/*
+        name: Cache-Control
+        value: public, max-age=604800

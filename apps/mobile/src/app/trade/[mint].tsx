@@ -58,6 +58,7 @@ import { cancelPhantomRequest, isCancelled } from '../../lib/phantom';
 import { useSession } from '../../lib/session';
 import { useSiftWallet } from '../../lib/social-hooks';
 import { useWallet } from '../../lib/wallet';
+import { solscanUrl, useNetwork } from '../../lib/network';
 
 const BUY_PRESETS = ['0.1', '0.5', '1'];
 const SELL_PRESETS = [25, 50, 75, 100];
@@ -110,6 +111,7 @@ function SuccessCheck() {
 
 export default function TradeScreen() {
   const { mode } = useMode();
+  const { cluster, isDevnet, isMainnet } = useNetwork();
   const wallet = useWallet();
   const queryClient = useQueryClient();
   const params = useLocalSearchParams<{
@@ -360,8 +362,21 @@ export default function TradeScreen() {
             {stage.name === 'review' ? `Review ${title.toLowerCase()}` : `Trade ${symbol}`}
           </Text>
           <View style={styles.networkPill}>
-            <View style={styles.networkDot} />
-            <Text style={styles.networkText}>Devnet · Test SOL</Text>
+            <View
+              style={[
+                styles.networkDot,
+                {
+                  backgroundColor: isDevnet
+                    ? colors.caution
+                    : isMainnet
+                      ? colors.accent
+                      : colors.muted,
+                },
+              ]}
+            />
+            <Text style={styles.networkText}>
+              {isDevnet ? 'Devnet · Test SOL' : isMainnet ? 'Solana · Real SOL' : 'Solana'}
+            </Text>
           </View>
         </View>
         <IconButton label="Trade settings" onPress={() => setSettingsOpen(true)}>
@@ -413,7 +428,9 @@ export default function TradeScreen() {
               <View style={styles.field}>
                 <View style={styles.fieldHead}>
                   <Text style={styles.fieldLabel}>You pay</Text>
-                  <Text style={styles.fieldHint}>Test SOL, no real value</Text>
+                  <Text style={styles.fieldHint}>
+                    {isDevnet ? 'Test SOL, no real value' : isMainnet ? 'Trades are final' : ''}
+                  </Text>
                 </View>
                 <View style={styles.amountPanel}>
                   <View style={styles.amountRow}>
@@ -635,7 +652,7 @@ export default function TradeScreen() {
                 : 'The SOL is in your wallet.'}
             </Text>
             {protectNote ? <Text style={styles.protectNote}>{protectNote}</Text> : null}
-            <Pressable onPress={() => Linking.openURL(explorerUrl(stage.signature))}>
+            <Pressable onPress={() => Linking.openURL(solscanUrl('tx', stage.signature, cluster))}>
               <Text style={[styles.center, styles.link]}>View on Solscan</Text>
             </Pressable>
             <Button
@@ -654,7 +671,11 @@ export default function TradeScreen() {
         ) : null}
 
         <Text style={styles.note}>
-          Trades run on Solana devnet with test SOL. Not financial advice.
+          {isDevnet
+            ? 'Trades run on Solana devnet with test SOL. Not financial advice.'
+            : isMainnet
+              ? 'Trades run on Solana with real SOL and are final. Not financial advice.'
+              : 'Not financial advice.'}
         </Text>
       </ScrollView>
 
@@ -935,10 +956,6 @@ function ProtectCard({
   );
 }
 
-function explorerUrl(signature: string): string {
-  return `https://solscan.io/tx/${signature}?cluster=devnet`;
-}
-
 const styles = StyleSheet.create({
   root: { flex: 1, backgroundColor: colors.bg },
   screen: { padding: space.screen, gap: space.md, paddingBottom: 40 },
@@ -960,7 +977,7 @@ const styles = StyleSheet.create({
     borderRadius: 999,
     backgroundColor: colors.surface,
   },
-  networkDot: { width: 6, height: 6, borderRadius: 3, backgroundColor: colors.caution },
+  networkDot: { width: 6, height: 6, borderRadius: 3 },
   networkText: { fontSize: 11, fontWeight: '500', color: colors.muted },
   pressed: { opacity: 0.7 },
   sides: {

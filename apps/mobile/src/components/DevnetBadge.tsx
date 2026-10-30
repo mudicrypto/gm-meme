@@ -1,9 +1,12 @@
 import { StyleSheet, View } from 'react-native';
 import { colors, tint } from '../lib/theme';
 import { Text } from './Text';
+import { useNetwork } from '../lib/network';
 
-/** Shown on trade and portfolio screens while Sift runs on devnet. */
+/** Shown on trade and portfolio screens while Sift runs on devnet; hidden on mainnet. */
 export function DevnetBadge() {
+  const { isDevnet } = useNetwork();
+  if (!isDevnet) return null;
   return (
     <View style={styles.badge} accessibilityLabel="Devnet: test network, test SOL only">
       <Text style={styles.text}>DEVNET</Text>

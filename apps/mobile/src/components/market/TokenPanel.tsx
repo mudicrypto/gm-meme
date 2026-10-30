@@ -19,6 +19,7 @@ import { Change } from './Change';
 import { Tabs } from './Tabs';
 import { SolPrice } from './SolPrice';
 import { Metrics, RiskSignals } from './TokenPanels';
+import { useNetwork } from '../../lib/network';
 
 const BUY_PRESETS = ['0.1', '0.5', '1', '5'];
 const SELL_PRESETS = [25, 50, 75, 100];
@@ -56,6 +57,7 @@ export function TokenPanel({
   const [sellPercent, setSellPercent] = useState(50);
   const [slippage, setSlippage] = useState(500);
   const wallet = useWallet();
+  const { isDevnet } = useNetwork();
   const sift = useSiftWallet();
   const siftWallet = sift.data?.wallet;
   const payer =
@@ -289,7 +291,7 @@ export function TokenPanel({
         )}
         <Text style={styles.note}>
           Review shows the full cost and minimum received. You confirm before anything is signed.
-          Devnet, test SOL only.
+          {isDevnet ? ' Devnet, test SOL only.' : ''}
         </Text>
       </View>
     </ScrollView>

@@ -34,6 +34,7 @@ import { haptic } from '../../lib/motion';
 import { useSession } from '../../lib/session';
 import { useWatchlist } from '../../lib/social-hooks';
 import { colors, radius, space } from '../../lib/theme';
+import { solscanUrl, useNetwork } from '../../lib/network';
 
 type Section = 'activity' | 'holders' | 'info';
 
@@ -52,6 +53,7 @@ export default function TokenScreen() {
   const [windowMinutes, setWindowMinutes] = useState(60);
   const [section, setSection] = useState<Section>('activity');
   const [moreOpen, setMoreOpen] = useState(false);
+  const { cluster } = useNetwork();
   const info = useTokenInfo(mint);
 
   const risk = useQuery({
@@ -262,7 +264,7 @@ export default function TokenScreen() {
         <MoreRow
           icon={<ExternalLink size={18} color={colors.text} strokeWidth={2} />}
           label="View on Solscan"
-          onPress={() => void Linking.openURL(`https://solscan.io/token/${mint}?cluster=devnet`)}
+          onPress={() => void Linking.openURL(solscanUrl('token', mint, cluster))}
         />
         <Text style={styles.note}>
           Safety checks reduce risk, they don’t remove it. Not financial advice.

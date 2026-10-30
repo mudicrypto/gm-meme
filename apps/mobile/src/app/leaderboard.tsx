@@ -12,6 +12,7 @@ import { Text } from '../components/Text';
 import { api } from '../lib/api';
 import { formatCompact } from '../lib/format';
 import { colors, radius, space } from '../lib/theme';
+import { useNetwork } from '../lib/network';
 
 const PERIODS = [
   { value: 1, label: '24h' },
@@ -27,6 +28,7 @@ type Days = (typeof PERIODS)[number]['value'];
  */
 export default function LeaderboardScreen() {
   const [days, setDays] = useState<Days>(7);
+  const { isDevnet } = useNetwork();
   const board = useQuery({
     queryKey: ['leaderboard', days],
     queryFn: () => api.leaderboard(days),
@@ -60,8 +62,9 @@ export default function LeaderboardScreen() {
       )}
       <Text style={styles.note}>
         Profit counts only sells of tokens the trader’s shared buys cover, at their average cost.
-        Only trades people chose to share are included. Devnet test SOL, no real value. Past results
-        don’t predict anything, and this isn’t financial advice.
+        Only trades people chose to share are included.
+        {isDevnet ? ' Devnet test SOL, no real value.' : ''} Past results don’t predict anything,
+        and this isn’t financial advice.
       </Text>
     </Screen>
   );

@@ -40,6 +40,7 @@ import { formatCompact, shortAddress } from '../lib/format';
 import { useSession } from '../lib/session';
 import { useSiftBalance, useSiftWallet } from '../lib/social-hooks';
 import { colors, radius, tint } from '../lib/theme';
+import { solWord, useNetwork } from '../lib/network';
 
 type SheetName = '2fa' | 'address' | 'withdraw' | 'export' | 'limits' | null;
 
@@ -176,6 +177,7 @@ function WalletDetails({
   const { token } = useSession();
   const refresh = useRefreshWallet();
   const balance = useSiftBalance(wallet.address);
+  const { isDevnet } = useNetwork();
   const [copied, setCopied] = useState(false);
   const [unfreezing, setUnfreezing] = useState(false);
   const freeze = useMutation({ mutationFn: () => siftApi.freeze(token!), onSuccess: refresh });
@@ -215,7 +217,7 @@ function WalletDetails({
         </View>
         <Text style={styles.body}>
           {copied
-            ? 'Address copied. Send test SOL to it to add funds.'
+            ? `Address copied. Send ${solWord(isDevnet)} to it to add funds.`
             : 'Created for you. Sift runs your orders from it, even when your phone is off.'}
         </Text>
         {wallet.frozen ? (

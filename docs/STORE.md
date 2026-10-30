@@ -129,6 +129,28 @@ Not a store setting: it's the API and the app build. In order:
 3. Render: `SOLANA_CLUSTER=mainnet-beta`, `ALLOW_MAINNET_TRADING=true`; real fee wallet.
 4. Consider launching mainnet with phone/Phantom trades first and the Sift wallet (custodial)
    after its own review.
-5. Code change (small): the network chip and the trade screen's "Devnet · Test SOL" labels
-   are fixed text today; switch them to follow the API's cluster, as Portfolio's badge
-   already does. Then a new store build.
+5. A new store build with `EXPO_PUBLIC_SOLANA_RPC_URL` set. No code change: the app reads
+   the network from the API (`useNetwork()` in `apps/mobile/src/lib/network.ts`), so the
+   DEVNET tags, "test SOL" wording and devnet Solscan links switch off by themselves.
+
+## 8. Store images (ready)
+
+All in `apps/mobile/store/`, made at the exact sizes the stores ask for (sample coins, shown
+the way a mainnet build looks):
+
+| File                             | For                           |
+| -------------------------------- | ----------------------------- |
+| `iphone-6.9-*.png` (1320 × 2868) | App Store, iPhone 6.9"        |
+| `iphone-6.5-*.png` (1284 × 2778) | App Store, iPhone 6.5"        |
+| `ipad-13-*.png` (2064 × 2752)    | App Store, iPad 13"           |
+| `android-*.png` (1080 × 2160)    | Google Play phone screenshots |
+| `play-feature-1024x500.png`      | Google Play feature graphic   |
+| `play-icon-512.png`              | Google Play app icon          |
+
+## 9. Website
+
+`apps/site/` is the landing page (plain HTML, no scripts). `render.yaml` adds it as the
+static site `sift-site`. In Render, open the Blueprint and click **Sync** (or Manual sync) to
+create it; after that it redeploys on every push. To use your own domain: Render → sift-site
+→ Settings → Custom domains, then point your DNS there. When the store links exist, replace
+the two "coming soon" buttons in `apps/site/index.html` with them.

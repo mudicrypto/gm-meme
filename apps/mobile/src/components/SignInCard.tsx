@@ -40,7 +40,9 @@ export function SignInCard({ reason }: { reason: string }) {
           ? 'Phantom will ask you to sign a short message.'
           : wallet.kind === 'walletApp'
             ? 'Your wallet app will ask you to sign a short message.'
-            : 'Your wallet signs a short message on this phone.'}{' '}
+            : wallet.kind === 'browser'
+              ? `${wallet.browserWalletName ?? 'Your wallet'} will ask you to sign a short message.`
+              : 'Your wallet signs a short message on this phone.'}{' '}
         It proves the wallet is yours. It is not a transaction: it can’t move funds or cost
         anything.
       </Text>

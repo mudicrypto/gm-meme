@@ -86,14 +86,25 @@ export function SessionProvider({ children }: { children: ReactNode }) {
   }, [saved, forget]);
 
   // A wallet removed from this phone (or a wallet app disconnected) is signed out everywhere.
-  const { embeddedAddress, phantomAddress, walletAppAddress } = wallet;
+  const { embeddedAddress, phantomAddress, walletAppAddress, browserAddress } = wallet;
   useEffect(() => {
     if (!loaded || wallet.status === 'loading' || !saved) return;
-    if (![embeddedAddress, phantomAddress, walletAppAddress].includes(saved.wallet)) {
+    if (
+      ![embeddedAddress, phantomAddress, walletAppAddress, browserAddress].includes(saved.wallet)
+    ) {
       // After this render: signing out updates state.
       void Promise.resolve().then(signOut);
     }
-  }, [loaded, wallet.status, saved, embeddedAddress, phantomAddress, walletAppAddress, signOut]);
+  }, [
+    loaded,
+    wallet.status,
+    saved,
+    embeddedAddress,
+    phantomAddress,
+    walletAppAddress,
+    browserAddress,
+    signOut,
+  ]);
 
   const expired = useCallback(
     (error: unknown) => {

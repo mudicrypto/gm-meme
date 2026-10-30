@@ -12,7 +12,14 @@ import {
   Timer,
 } from 'lucide-react-native';
 import { type ReactNode, useState } from 'react';
-import { Linking, Pressable, ScrollView, StyleSheet, View } from 'react-native';
+import {
+  Linking,
+  Pressable,
+  ScrollView,
+  StyleSheet,
+  View,
+  useWindowDimensions,
+} from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { IconButton } from '../../components/Button';
 import { FlashText } from '../../components/FlashText';
@@ -48,6 +55,8 @@ function pastWindow(minutes: number): string {
 
 export default function TokenScreen() {
   const insets = useSafeAreaInsets();
+  // On wide screens (web, tablets) the column keeps a readable width, centred.
+  const gutter = Math.max(space.screen, (useWindowDimensions().width - 760) / 2);
   const { mint = '' } = useLocalSearchParams<{ mint: string }>();
   const valid = isSolanaAddress(mint);
   const [windowMinutes, setWindowMinutes] = useState(60);
@@ -87,7 +96,7 @@ export default function TokenScreen() {
   const footerHeight = 76 + insets.bottom;
 
   const header = (
-    <View style={[styles.header, { paddingTop: insets.top + space.sm }]}>
+    <View style={[styles.header, { paddingTop: insets.top + space.sm, paddingHorizontal: gutter }]}>
       <IconButton
         label="Back"
         onPress={() => (router.canGoBack() ? router.back() : router.replace('/'))}
@@ -117,7 +126,10 @@ export default function TokenScreen() {
     <View style={styles.root}>
       {header}
       <ScrollView
-        contentContainerStyle={[styles.content, { paddingBottom: footerHeight + space.lg }]}
+        contentContainerStyle={[
+          styles.content,
+          { paddingBottom: footerHeight + space.lg, paddingHorizontal: gutter },
+        ]}
       >
         <View style={styles.identity}>
           <TokenAvatar
@@ -231,7 +243,12 @@ export default function TokenScreen() {
         )}
       </ScrollView>
 
-      <View style={[styles.footer, { paddingBottom: insets.bottom + space.md }]}>
+      <View
+        style={[
+          styles.footer,
+          { paddingBottom: insets.bottom + space.md, paddingHorizontal: gutter },
+        ]}
+      >
         <Link href={`/trade/${mint}?side=buy`} asChild>
           <Pressable
             style={StyleSheet.flatten([styles.action, styles.buy])}

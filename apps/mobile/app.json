@@ -28,7 +28,12 @@
       "predictiveBackGestureEnabled": false
     },
     "web": {
-      "favicon": "./assets/favicon.png"
+      "favicon": "./assets/favicon.png",
+      "name": "Sift",
+      "shortName": "Sift",
+      "description": "Solana meme coins with a risk check on every token, the full cost before every trade, and your keys in your own wallet.",
+      "themeColor": "#0B0D10",
+      "backgroundColor": "#0B0D10"
     },
     "plugins": [
       "expo-router",

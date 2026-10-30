@@ -19,6 +19,20 @@ import {
   useState,
 } from 'react';
 import { Platform } from 'react-native';
+import {
+  type BrowserCluster,
+  type BrowserSession,
+  type BrowserWalletInfo,
+  browserSignMessage,
+  browserSignTransaction,
+  browserWalletsAvailable,
+  connectBrowserWallet,
+  disconnectBrowserWallet,
+  installedWallets,
+  onWalletsChanged,
+  readBrowserSession,
+  startDiscovery,
+} from './browser-wallet';
 import { keyStore, phantomStore, walletAppStore } from './keystore';
 import {
   type MwaSession,
@@ -30,8 +44,11 @@ import {
 import { type PhantomSession, phantomConnect, phantomSign, phantomSignMessage } from './phantom';
 import type { PhantomCluster } from './phantom-protocol';
 
-/** A key on this phone, Phantom by deeplink (iOS), or any wallet app via MWA (Android). */
-export type WalletKind = 'embedded' | 'phantom' | 'walletApp';
+/**
+ * A key on this phone, Phantom by deeplink (iOS), any wallet app via MWA (Android), or a
+ * browser extension through the Wallet Standard (web).
+ */
+export type WalletKind = 'embedded' | 'phantom' | 'walletApp' | 'browser';
 
 interface WalletState {
   status: 'loading' | 'none' | 'ready';
@@ -41,6 +58,11 @@ interface WalletState {
   embeddedAddress: string | null;
   phantomAddress: string | null;
   walletAppAddress: string | null;
+  browserAddress: string | null;
+  /** The connected browser wallet's name (web), e.g. "Phantom". */
+  browserWalletName: string | null;
+  /** Wallet extensions found in this browser (web only; empty elsewhere). */
+  browserWallets: BrowserWalletInfo[];
   /** Phantom by deeplink: iOS. Android connects wallet apps through MWA instead. */
   phantomAvailable: boolean;
   /** Mobile Wallet Adapter (Phantom, Solflare, Backpack…): Android only. */
@@ -55,6 +77,10 @@ interface WalletState {
   connectWalletApp(cluster: PhantomCluster): Promise<void>;
   /** Forget the wallet app on this phone. The wallet keeps its keys and funds. */
   disconnectWalletApp(): Promise<void>;
+  /** Connect a browser extension wallet by name (web). It shows its own approval. */
+  connectBrowser(name: string, cluster: BrowserCluster): Promise<void>;
+  /** Forget the browser wallet here. The extension keeps its keys and funds. */
+  disconnectBrowser(): Promise<void>;
   use(kind: WalletKind): void;
   /** Sign a transaction (base64) whose only signer is the active wallet. */
   signTransaction(transactionBase64: string): Promise<string>;
@@ -65,12 +91,16 @@ interface WalletState {
 }
 
 const ACTIVE_KEY = 'sift.wallet.active';
+// Which extension and address (public information, not a key).
+const BROWSER_KEY = 'sift.wallet.browser';
 const WalletContext = createContext<WalletState | null>(null);
 
 export function WalletProvider({ children }: { children: ReactNode }) {
   const [seed, setSeed] = useState<Uint8Array | null>(null);
   const [phantom, setPhantom] = useState<PhantomSession | null>(null);
   const [walletApp, setWalletApp] = useState<MwaSession | null>(null);
+  const [browser, setBrowser] = useState<BrowserSession | null>(null);
+  const [browserWallets, setBrowserWallets] = useState<BrowserWalletInfo[]>([]);
   const [preferred, setPreferred] = useState<WalletKind | null>(null);
   const [loaded, setLoaded] = useState(false);
 
@@ -80,14 +110,22 @@ export function WalletProvider({ children }: { children: ReactNode }) {
       phantomStore.load().catch(() => null),
       walletAppStore.load().catch(() => null),
       AsyncStorage.getItem(ACTIVE_KEY).catch(() => null),
+      browserWalletsAvailable ? AsyncStorage.getItem(BROWSER_KEY).catch(() => null) : null,
     ])
-      .then(([savedSeed, savedPhantom, savedWalletApp, active]) => {
+      .then(([savedSeed, savedPhantom, savedWalletApp, active, savedBrowser]) => {
+        const restored = savedBrowser ? readBrowserSession(savedBrowser) : null;
+        if (restored) setBrowser(restored);
         if (savedSeed) setSeed(base64ToBytes(savedSeed));
         const session = savedPhantom ? readSession(savedPhantom) : null;
         if (session) setPhantom(session);
         const app = savedWalletApp ? readWalletApp(savedWalletApp) : null;
         if (app) setWalletApp(app);
-        if (active === 'embedded' || active === 'phantom' || active === 'walletApp') {
+        if (
+          active === 'embedded' ||
+          active === 'phantom' ||
+          active === 'walletApp' ||
+          active === 'browser'
+        ) {
           setPreferred(active);
         }
       })
@@ -97,16 +135,28 @@ export function WalletProvider({ children }: { children: ReactNode }) {
   const embeddedAddress = useMemo(() => (seed ? solanaKeys.publicKey(seed) : null), [seed]);
   const phantomAddress = phantom?.publicKey ?? null;
   const walletAppAddress = walletApp?.address ?? null;
+  const browserAddress = browser?.address ?? null;
   const addresses: Record<WalletKind, string | null> = {
     embedded: embeddedAddress,
     phantom: phantomAddress,
     walletApp: walletAppAddress,
+    browser: browserAddress,
   };
+
+  // Web: find wallet extensions as they load.
+  useEffect(() => {
+    if (!browserWalletsAvailable) return;
+    startDiscovery();
+    const refresh = () => setBrowserWallets(installedWallets());
+    refresh();
+    return onWalletsChanged(refresh);
+  }, []);
   // The preferred wallet if it still exists, otherwise whichever one does.
   const kind: WalletKind | null =
     preferred && addresses[preferred]
       ? preferred
-      : ((['embedded', 'phantom', 'walletApp'] as const).find((k) => addresses[k]) ?? null);
+      : ((['browser', 'embedded', 'phantom', 'walletApp'] as const).find((k) => addresses[k]) ??
+        null);
   const address = kind ? addresses[kind] : null;
 
   const use = useCallback((next: WalletKind) => {
@@ -158,6 +208,22 @@ export function WalletProvider({ children }: { children: ReactNode }) {
     setWalletApp(null);
   }, []);
 
+  const connectBrowser = useCallback(
+    async (name: string, cluster: BrowserCluster) => {
+      const session = await connectBrowserWallet(name, cluster);
+      await AsyncStorage.setItem(BROWSER_KEY, JSON.stringify(session)).catch(() => {});
+      setBrowser(session);
+      use('browser');
+    },
+    [use],
+  );
+
+  const disconnectBrowser = useCallback(async () => {
+    if (browser) await disconnectBrowserWallet(browser);
+    await AsyncStorage.removeItem(BROWSER_KEY).catch(() => {});
+    setBrowser(null);
+  }, [browser]);
+
   // The wallet may hand out a fresh auth token on each request: keep the latest.
   const keepWalletApp = useCallback(async (session: MwaSession) => {
     await walletAppStore.save(JSON.stringify(session)).catch(() => {});
@@ -173,6 +239,8 @@ export function WalletProvider({ children }: { children: ReactNode }) {
         throw new Error('This transaction is not for your wallet.');
       }
       if (kind === 'phantom' && phantom) return bytesToBase64(await phantomSign(phantom, bytes));
+      if (kind === 'browser' && browser)
+        return bytesToBase64(await browserSignTransaction(browser, bytes));
       if (kind === 'walletApp' && walletApp) {
         const { signed, session } = await mwaSignTransaction(walletApp, bytes);
         await keepWalletApp(session);
@@ -181,7 +249,7 @@ export function WalletProvider({ children }: { children: ReactNode }) {
       if (!seed) throw new Error('No wallet on this device.');
       return bytesToBase64(withSignature(bytes, 0, solanaKeys.sign(tx.message, seed)));
     },
-    [address, kind, phantom, walletApp, keepWalletApp, seed],
+    [address, kind, phantom, walletApp, browser, keepWalletApp, seed],
   );
 
   const signMessage = useCallback(
@@ -189,6 +257,7 @@ export function WalletProvider({ children }: { children: ReactNode }) {
       // A signed message must never be something that could pass as a transaction.
       if (message[0] === undefined || message[0] < 0x20) throw new Error('Not a text message.');
       if (kind === 'phantom' && phantom) return phantomSignMessage(phantom, message);
+      if (kind === 'browser' && browser) return browserSignMessage(browser, message);
       if (kind === 'walletApp' && walletApp) {
         const { signature, session } = await mwaSignMessage(walletApp, message);
         await keepWalletApp(session);
@@ -197,7 +266,7 @@ export function WalletProvider({ children }: { children: ReactNode }) {
       if (!seed) throw new Error('No wallet on this device.');
       return solanaKeys.sign(message, seed);
     },
-    [kind, phantom, walletApp, keepWalletApp, seed],
+    [kind, phantom, walletApp, browser, keepWalletApp, seed],
   );
 
   const exportPrivateKey = useCallback(async () => {
@@ -216,6 +285,9 @@ export function WalletProvider({ children }: { children: ReactNode }) {
       embeddedAddress,
       phantomAddress,
       walletAppAddress,
+      browserAddress,
+      browserWalletName: browser?.walletName ?? null,
+      browserWallets,
       phantomAvailable: Platform.OS === 'ios',
       walletAppAvailable: mwaAvailable,
       persistent: keyStore.persistent,
@@ -225,6 +297,8 @@ export function WalletProvider({ children }: { children: ReactNode }) {
       disconnectPhantom,
       connectWalletApp,
       disconnectWalletApp,
+      connectBrowser,
+      disconnectBrowser,
       use,
       signTransaction,
       signMessage,
@@ -237,12 +311,17 @@ export function WalletProvider({ children }: { children: ReactNode }) {
       embeddedAddress,
       phantomAddress,
       walletAppAddress,
+      browserAddress,
+      browser,
+      browserWallets,
       create,
       remove,
       connectPhantom,
       disconnectPhantom,
       connectWalletApp,
       disconnectWalletApp,
+      connectBrowser,
+      disconnectBrowser,
       use,
       signTransaction,
       signMessage,

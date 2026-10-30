@@ -29,6 +29,9 @@ services:
       # Render's proxy adds the caller's IP; trust exactly that one hop for rate limits.
       - key: TRUST_PROXY_HOPS
         value: '1'
+      # Sift on the web (sift-site) calls the API from the browser.
+      - key: CORS_ORIGINS
+        value: https://sift-site.onrender.com
       # Generated once by Render; the API registers its Helius webhook with it at startup.
       - key: HELIUS_WEBHOOK_SECRET
         generateValue: true
@@ -46,13 +49,31 @@ services:
       - key: OPERATOR_NAME
         sync: false
 
-  # The website: plain HTML in apps/site, no build step. Free on Render's static hosting.
+  # Sift on the web: the Expo web build of the app at /, the landing page at /about.
+  # Wallets on the web are browser extensions (Phantom, Solflare…): keys stay there.
   - type: web
     name: sift-site
     runtime: static
-    buildCommand: echo "static site, nothing to build"
-    staticPublishPath: apps/site
+    buildCommand: >-
+      corepack enable &&
+      pnpm install --frozen-lockfile --filter "@sift/mobile..." &&
+      cd apps/mobile && npx expo export --platform web --output-dir dist &&
+      mkdir -p dist/about && cp -r ../site/. dist/about/
+    staticPublishPath: apps/mobile/dist
     autoDeploy: true
+    envVars:
+      - key: NODE_VERSION
+        value: '22'
+      - key: EXPO_PUBLIC_API_URL
+        value: https://sift-api-ggmv.onrender.com
+    routes:
+      - type: rewrite
+        source: /about
+        destination: /about/index.html
+      # Every app screen (/token/…, /trade/…) is the single-page app.
+      - type: rewrite
+        source: /*
+        destination: /index.html
     headers:
       - path: /*
         name: X-Frame-Options
@@ -64,8 +85,11 @@ services:
         name: Referrer-Policy
         value: strict-origin-when-cross-origin
       - path: /*
+        name: Permissions-Policy
+        value: camera=(), microphone=(), geolocation=()
+      - path: /*
         name: Content-Security-Policy
-        value: "default-src 'self'; img-src 'self'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; script-src 'none'; frame-ancestors 'none'"
-      - path: /img/*
+        value: "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' data: https://fonts.gstatic.com; img-src 'self' https: data: blob:; connect-src 'self' https://sift-api-ggmv.onrender.com https://*.solana.com https://*.helius-rpc.com; frame-ancestors 'none'; base-uri 'self'; form-action 'none'"
+      - path: /_expo/*
         name: Cache-Control
-        value: public, max-age=604800
+        value: public, max-age=31536000, immutable

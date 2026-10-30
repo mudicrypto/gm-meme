@@ -30,6 +30,7 @@ import {
   ScrollView,
   StyleSheet,
   View,
+  useWindowDimensions,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { NATIVE, haptic, transition, useReduceMotion } from '../../lib/motion';
@@ -87,6 +88,7 @@ const PAYING_FROM = {
   embedded: 'Phone wallet',
   phantom: 'Phantom',
   walletApp: 'your wallet app',
+  browser: 'Browser wallet',
 } as const;
 
 /** The done tick: pops in with one success haptic. */
@@ -149,6 +151,8 @@ export default function TradeScreen() {
   const [protectNote, setProtectNote] = useState<string | null>(null);
   const [settingsOpen, setSettingsOpen] = useState(false);
   const insets = useSafeAreaInsets();
+  // On wide screens (web, tablets) the column keeps a readable width, centred.
+  const gutter = Math.max(space.screen, (useWindowDimensions().width - 600) / 2);
   const tokenInfo = useTokenInfo(mint);
   // The last trade in a day: new tokens can go quiet for an hour.
   const priceStats = useTokenStats(mint, 1440, isSolanaAddress(mint));
@@ -350,7 +354,9 @@ export default function TradeScreen() {
       behavior={Platform.OS === 'ios' ? 'padding' : undefined}
     >
       <Stack.Screen options={{ headerShown: false }} />
-      <View style={[styles.header, { paddingTop: insets.top + space.sm }]}>
+      <View
+        style={[styles.header, { paddingTop: insets.top + space.sm, paddingHorizontal: gutter }]}
+      >
         <IconButton
           label="Back"
           onPress={() => (router.canGoBack() ? router.back() : router.replace(`/token/${mint}`))}
@@ -387,6 +393,7 @@ export default function TradeScreen() {
       <ScrollView
         contentContainerStyle={[
           styles.screen,
+          { paddingHorizontal: gutter },
           editing && { paddingBottom: footerHeight + space.lg },
         ]}
         keyboardShouldPersistTaps="handled"
@@ -631,7 +638,9 @@ export default function TradeScreen() {
                     ? 'Approve the trade in Phantom…'
                     : wallet.kind === 'walletApp'
                       ? 'Approve the trade in your wallet app…'
-                      : 'Signing on this phone and sending…'}
+                      : wallet.kind === 'browser'
+                        ? `Approve the trade in ${wallet.browserWalletName ?? 'your wallet'}…`
+                        : 'Signing on this phone and sending…'}
             </Text>
             {stage.name === 'sending' && wallet.kind === 'phantom' ? (
               <Pressable onPress={cancelPhantomRequest}>
@@ -680,7 +689,12 @@ export default function TradeScreen() {
       </ScrollView>
 
       {editing ? (
-        <View style={[styles.footer, { paddingBottom: insets.bottom + space.md }]}>
+        <View
+          style={[
+            styles.footer,
+            { paddingBottom: insets.bottom + space.md, paddingHorizontal: gutter },
+          ]}
+        >
           <Button
             confirm
             label={stage.name === 'quoting' ? 'Getting price…' : `Review ${title.toLowerCase()}`}
@@ -865,7 +879,7 @@ function Review({
           <StatusIcon size={18} color={status.fg} strokeWidth={2} />
           <Text style={[styles.flex, { color: status.fg, fontWeight: '700' }]}>
             {verified
-              ? 'Checked on this phone against Solana: the transaction does exactly this.'
+              ? `Checked ${Platform.OS === 'web' ? 'in this browser' : 'on this phone'} against Solana: the transaction does exactly this.`
               : 'Do not sign: this transaction doesn’t match the quote.'}
           </Text>
         </View>

@@ -3,12 +3,13 @@ import { type Holding, isSolanaAddress } from '@sift/shared';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { Link } from 'expo-router';
 import { useEffect, useState } from 'react';
-import { Pressable, StyleSheet, View } from 'react-native';
+import { Platform, Pressable, StyleSheet, View } from 'react-native';
 import { Card } from '../../components/Card';
 import { DevnetBadge } from '../../components/DevnetBadge';
 import { ModeToggle } from '../../components/ModeToggle';
 import { PrivateKeyReveal } from '../../components/PrivateKeyReveal';
 import { RiskDot } from '../../components/RiskBadge';
+import { BrowserConnect } from '../../components/BrowserConnect';
 import { LegalLinks } from '../../components/LegalLinks';
 import { Screen, SectionTitle } from '../../components/Screen';
 import { SiftWalletCard } from '../../components/SiftWalletCard';
@@ -59,7 +60,7 @@ export default function PortfolioScreen() {
         <OwnWallet address={wallet.address} kind={wallet.kind} />
       ) : (
         <>
-          <CreateWallet />
+          {Platform.OS === 'web' ? <BrowserConnect /> : <CreateWallet />}
           {watched ? (
             <Holdings address={watched} title="Watched wallet" onClear={() => watch(null)} />
           ) : (
@@ -287,15 +288,38 @@ function OwnWallet({ address, kind }: { address: string; kind: WalletKind }) {
   );
 }
 
-function ExternalWallet({ kind }: { kind: 'phantom' | 'walletApp' }) {
+function ExternalWallet({ kind }: { kind: 'phantom' | 'walletApp' | 'browser' }) {
   const palette = usePalette();
   const wallet = useWallet();
-  const name = kind === 'phantom' ? 'Phantom' : 'your wallet app';
-  const address = kind === 'phantom' ? wallet.phantomAddress : wallet.walletAppAddress;
-  const disconnect = kind === 'phantom' ? wallet.disconnectPhantom : wallet.disconnectWalletApp;
+  const name =
+    kind === 'phantom'
+      ? 'Phantom'
+      : kind === 'browser'
+        ? (wallet.browserWalletName ?? 'your browser wallet')
+        : 'your wallet app';
+  const address =
+    kind === 'phantom'
+      ? wallet.phantomAddress
+      : kind === 'browser'
+        ? wallet.browserAddress
+        : wallet.walletAppAddress;
+  const disconnect =
+    kind === 'phantom'
+      ? wallet.disconnectPhantom
+      : kind === 'browser'
+        ? wallet.disconnectBrowser
+        : wallet.disconnectWalletApp;
   return (
     <>
-      <Card title={kind === 'phantom' ? 'Connected with Phantom' : 'Connected wallet app'}>
+      <Card
+        title={
+          kind === 'phantom'
+            ? 'Connected with Phantom'
+            : kind === 'browser'
+              ? `Connected with ${name}`
+              : 'Connected wallet app'
+        }
+      >
         <Text style={{ color: palette.muted }}>
           Your keys stay in {name}. Sift shows you the full cost first, then {name} asks you to
           approve each trade.
@@ -308,7 +332,7 @@ function ExternalWallet({ kind }: { kind: 'phantom' | 'walletApp' }) {
           {address}
         </Text>
       </Card>
-      {!wallet.embeddedAddress ? (
+      {!wallet.embeddedAddress && wallet.persistent ? (
         <Pressable onPress={() => void wallet.create()}>
           <Text style={[styles.center, { color: palette.accent }]}>
             Also create a wallet on this phone
@@ -317,7 +341,7 @@ function ExternalWallet({ kind }: { kind: 'phantom' | 'walletApp' }) {
       ) : null}
       <Pressable onPress={() => void disconnect()}>
         <Text style={[styles.center, { color: palette.down }]}>
-          Disconnect {kind === 'phantom' ? 'Phantom' : 'wallet app'}
+          Disconnect {kind === 'walletApp' ? 'wallet app' : name}
         </Text>
       </Pressable>
       <Text style={{ color: palette.muted, fontSize: 13, textAlign: 'center' }}>

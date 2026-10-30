@@ -144,7 +144,7 @@ export default function TokenScreen() {
               uri={info?.imageUrl}
               label={info?.symbol ?? info?.name}
               seed={mint}
-              size={exchange ? 56 : 68}
+              size={exchange ? 44 : 48}
             />
             <View style={styles.flex}>
               <Text style={styles.pairTitle} numberOfLines={1}>
@@ -170,7 +170,7 @@ export default function TokenScreen() {
                 {stats.isPending ? 'Loading price…' : 'No trades yet'}
               </Text>
             )}
-            <Change pct={stats.data?.changePct} size={24} />
+            <Change pct={stats.data?.changePct} size={16} />
           </View>
 
           <View style={styles.chartControls}>
@@ -378,20 +378,20 @@ const styles = StyleSheet.create({
     paddingBottom: space.sm,
   },
   headerLogo: { flex: 1, alignItems: 'center' },
-  pairTitle: { fontSize: 26, fontWeight: '700', letterSpacing: -0.4 },
+  pairTitle: { fontSize: 19, fontWeight: '700', letterSpacing: -0.2 },
   pairQuote: { color: colors.text2, fontWeight: '400' },
   content: { paddingHorizontal: space.screen, paddingTop: space.sm, gap: space.md },
   identity: { flexDirection: 'row', alignItems: 'center', gap: space.md },
-  name: { fontSize: 17, color: colors.muted, marginTop: 2 },
+  name: { fontSize: 13, color: colors.muted, marginTop: 1 },
   copy: { flexDirection: 'row', alignItems: 'center', gap: 6, minHeight: 28 },
   address: { fontSize: 13, color: colors.muted },
   priceBlock: { gap: 4 },
-  priceRow: { flexDirection: 'row', alignItems: 'baseline', gap: 14, flexWrap: 'wrap' },
+  priceRow: { flexDirection: 'row', alignItems: 'baseline', gap: 10, flexWrap: 'wrap' },
   priceValue: { flexDirection: 'row', alignItems: 'baseline', gap: 6, flexShrink: 1 },
   chartControls: { flexDirection: 'row', alignItems: 'center', gap: space.sm },
   chartType: {
-    width: 50,
-    height: 50,
+    width: 44,
+    height: 44,
     borderRadius: radius.card,
     borderWidth: 1,
     borderColor: colors.border,
@@ -399,9 +399,9 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
-  price: { fontSize: 40, fontWeight: '800', letterSpacing: -1.2, flexShrink: 1 },
-  priceUnit: { fontSize: 17, fontWeight: '600', color: colors.muted },
-  noPrice: { fontSize: 24, fontWeight: '600', color: colors.muted },
+  price: { fontSize: 30, fontWeight: '700', letterSpacing: -0.8, flexShrink: 1 },
+  priceUnit: { fontSize: 14, fontWeight: '600', color: colors.muted },
+  noPrice: { fontSize: 20, fontWeight: '600', color: colors.muted },
   changeRow: { flexDirection: 'row', alignItems: 'center', gap: 8 },
   windowText: { fontSize: 14, color: colors.muted },
   sectionBody: { gap: space.md, paddingTop: space.sm },
@@ -424,15 +424,15 @@ const styles = StyleSheet.create({
   },
   action: {
     flex: 1,
-    height: 56,
+    height: 46,
     borderRadius: radius.input,
     alignItems: 'center',
     justifyContent: 'center',
   },
   buy: { backgroundColor: colors.accent },
   sell: { backgroundColor: colors.surface, borderWidth: 1.5, borderColor: colors.accent },
-  buyText: { fontSize: 18, fontWeight: '700', color: colors.onAccent },
-  sellText: { fontSize: 18, fontWeight: '700', color: colors.accent },
+  buyText: { fontSize: 15, fontWeight: '700', color: colors.onAccent },
+  sellText: { fontSize: 15, fontWeight: '700', color: colors.accent },
   moreRow: { flexDirection: 'row', alignItems: 'center', gap: 12, minHeight: 48 },
   moreText: { fontSize: 15, fontWeight: '500' },
 });

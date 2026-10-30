@@ -126,7 +126,7 @@ export function Chip({
 
 const styles = StyleSheet.create({
   button: {
-    height: 52,
+    height: 48,
     borderRadius: radius.input,
     paddingHorizontal: 18,
     alignItems: 'center',
@@ -136,7 +136,7 @@ const styles = StyleSheet.create({
   primary: { backgroundColor: colors.accent },
   lime: { backgroundColor: colors.lime },
   secondary: { backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.borderStrong },
-  label: { fontSize: 16, fontWeight: '600' },
+  label: { fontSize: 15, fontWeight: '600' },
   icon: {
     width: 44,
     height: 44,

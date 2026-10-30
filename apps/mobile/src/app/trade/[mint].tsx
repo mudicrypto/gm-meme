@@ -506,7 +506,7 @@ export default function TradeScreen() {
               <View style={styles.arrowRow}>
                 <View style={styles.arrowLine} />
                 <View style={styles.arrowCircle}>
-                  <ArrowDown size={20} color={dark.text} strokeWidth={2} />
+                  <ArrowDown size={17} color={dark.text} strokeWidth={2} />
                 </View>
                 <View style={styles.arrowLine} />
               </View>
@@ -878,10 +878,10 @@ function TokenChip({
     <View style={styles.chip}>
       {sol ? (
         <View style={styles.solLogo}>
-          <SolanaMark size={22} />
+          <SolanaMark size={17} />
         </View>
       ) : (
-        <TokenAvatar uri={uri} label={symbol} seed={mint} size={44} />
+        <TokenAvatar uri={uri} label={symbol} seed={mint} size={34} />
       )}
       <View style={styles.flex}>
         <Text style={styles.chipSymbol} numberOfLines={1}>
@@ -1003,61 +1003,61 @@ const styles = StyleSheet.create({
   devPillDark: { backgroundColor: tint(dark.up, 0.16) },
   devPillText: { fontSize: 14, fontWeight: '600', color: colors.accent },
   tHead: { gap: 4, marginTop: space.sm },
-  tTitle: { fontSize: 38, fontWeight: '800', letterSpacing: -1 },
-  tSub: { fontSize: 17, color: dark.muted },
+  tTitle: { fontSize: 24, fontWeight: '700', letterSpacing: -0.5 },
+  tSub: { fontSize: 13, color: dark.muted },
   tTabs: { flexDirection: 'row', marginTop: space.sm },
   tTab: {
     flex: 1,
-    minHeight: 48,
+    minHeight: 42,
     alignItems: 'center',
     justifyContent: 'center',
-    borderBottomWidth: 3,
+    borderBottomWidth: 2.5,
     borderBottomColor: dark.border,
   },
   tTabOn: { borderBottomColor: dark.lime },
-  tTabText: { fontSize: 19, fontWeight: '600', color: dark.text },
-  dLabel: { fontSize: 17, color: dark.text, marginTop: space.sm },
+  tTabText: { fontSize: 15, fontWeight: '600', color: dark.text },
+  dLabel: { fontSize: 13, color: dark.muted, marginTop: space.xs },
   swapCard: {
     flexDirection: 'row',
     alignItems: 'center',
-    minHeight: 88,
-    paddingHorizontal: space.lg,
+    minHeight: 68,
+    paddingHorizontal: 14,
     borderRadius: radius.card,
     borderWidth: 1,
     borderColor: dark.border,
     backgroundColor: dark.surface,
   },
-  swapDivider: { width: 1, alignSelf: 'stretch', marginVertical: 16, backgroundColor: dark.border },
+  swapDivider: { width: 1, alignSelf: 'stretch', marginVertical: 14, backgroundColor: dark.border },
   swapAmount: { flex: 1, alignItems: 'flex-end', paddingLeft: space.md, gap: 2 },
   swapInput: {
     alignSelf: 'stretch',
     textAlign: 'right',
-    fontSize: 32,
+    fontSize: 24,
     fontWeight: '700',
     padding: 0,
     color: dark.text,
   },
-  swapValue: { fontSize: 32, fontWeight: '700' },
-  swapSub: { fontSize: 15, color: dark.muted },
-  chip: { flexDirection: 'row', alignItems: 'center', gap: 12, width: 150 },
+  swapValue: { fontSize: 24, fontWeight: '700' },
+  swapSub: { fontSize: 12, color: dark.muted },
+  chip: { flexDirection: 'row', alignItems: 'center', gap: 10, width: 130 },
   solLogo: {
-    width: 44,
-    height: 44,
-    borderRadius: 22,
+    width: 34,
+    height: 34,
+    borderRadius: 17,
     backgroundColor: '#000000',
     alignItems: 'center',
     justifyContent: 'center',
   },
-  chipSymbol: { fontSize: 18, fontWeight: '700' },
-  chipName: { fontSize: 15, color: dark.muted },
+  chipSymbol: { fontSize: 15, fontWeight: '700' },
+  chipName: { fontSize: 12, color: dark.muted },
   balanceRow: { flexDirection: 'row', alignItems: 'center', gap: 8, minHeight: 28 },
-  dMuted: { fontSize: 15, color: dark.muted, flexShrink: 1 },
+  dMuted: { fontSize: 13, color: dark.muted, flexShrink: 1 },
   arrowRow: { flexDirection: 'row', alignItems: 'center', gap: space.md, marginTop: space.sm },
   arrowLine: { flex: 1, height: 1, backgroundColor: dark.border },
   arrowCircle: {
-    width: 48,
-    height: 48,
-    borderRadius: 24,
+    width: 38,
+    height: 38,
+    borderRadius: 19,
     borderWidth: 1,
     borderColor: dark.border,
     alignItems: 'center',
@@ -1070,9 +1070,9 @@ const styles = StyleSheet.create({
     borderTopWidth: 1,
     borderTopColor: dark.border,
   },
-  dRow: { flexDirection: 'row', alignItems: 'center', gap: 8, minHeight: 44 },
-  dRowLabel: { fontSize: 17 },
-  dRowValue: { fontSize: 16, color: dark.muted },
+  dRow: { flexDirection: 'row', alignItems: 'center', gap: 8, minHeight: 38 },
+  dRowLabel: { fontSize: 14 },
+  dRowValue: { fontSize: 14, color: dark.muted },
   screen: { padding: space.screen, gap: space.md, paddingBottom: 40 },
   header: {
     flexDirection: 'row',
@@ -1082,7 +1082,7 @@ const styles = StyleSheet.create({
     paddingBottom: space.sm,
   },
   headerCenter: { flex: 1, alignItems: 'center', gap: 4 },
-  headerTitle: { textAlign: 'center', fontSize: 17, fontWeight: '600' },
+  headerTitle: { textAlign: 'center', fontSize: 16, fontWeight: '600' },
   networkPill: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -1156,11 +1156,11 @@ const styles = StyleSheet.create({
     borderTopWidth: StyleSheet.hairlineWidth,
     borderTopColor: colors.border,
   },
-  estimate: { fontSize: 24, fontWeight: '700', letterSpacing: -0.4 },
+  estimate: { fontSize: 22, fontWeight: '700', letterSpacing: -0.4 },
   preset: {
     flex: 1,
-    minHeight: 50,
-    borderRadius: radius.input + 2,
+    minHeight: 40,
+    borderRadius: radius.input,
     borderWidth: 1,
     borderColor: dark.border,
     backgroundColor: dark.bg,
@@ -1168,7 +1168,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   presetOn: { backgroundColor: dark.surface2, borderColor: dark.lime },
-  presetText: { fontSize: 17, fontWeight: '500', color: dark.text },
+  presetText: { fontSize: 14, fontWeight: '600', color: dark.text },
   detail: { flexDirection: 'row', alignItems: 'center', gap: 6, minHeight: 44 },
   detailDivider: { borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: colors.border },
   detailLabel: { fontSize: 14, color: colors.muted },

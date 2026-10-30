@@ -57,12 +57,12 @@ export function TokenListRow({
         {stats?.priceSol ? formatSolPrice(stats.priceSol) : '–'}
       </Text>
       <View style={styles.changeCol}>
-        <Change pct={stats?.changePct} size={14} />
+        <Change pct={stats?.changePct} size={13} badge />
       </View>
       <Sparkline
         points={stats?.sparkline ?? []}
         changePct={stats?.changePct}
-        width={64}
+        width={52}
         height={26}
       />
     </Pressable>
@@ -89,6 +89,6 @@ const styles = StyleSheet.create({
   symbol: { fontSize: 16, fontWeight: '700', color: colors.text },
   subRow: { flexDirection: 'row', alignItems: 'center', gap: 6, minWidth: 0 },
   sub: { fontSize: 13, color: colors.muted, flexShrink: 1 },
-  price: { width: 84, textAlign: 'right', fontSize: 15, fontWeight: '500' },
-  changeCol: { width: 64, alignItems: 'flex-end' },
+  price: { width: 80, textAlign: 'right', fontSize: 15, fontWeight: '500' },
+  changeCol: { width: 72, alignItems: 'flex-end' },
 });

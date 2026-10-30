@@ -195,7 +195,7 @@ export function MarketTable({
                     </Text>
                   )
                 ) : column.key === 'change' ? (
-                  <Change pct={s?.changePct} size={14} />
+                  <Change pct={s?.changePct} size={14} badge />
                 ) : column.key === 'volume' ? (
                   <Text mono style={styles.value} numberOfLines={1}>
                     {s ? formatSol(s.volumeSol) : '–'}

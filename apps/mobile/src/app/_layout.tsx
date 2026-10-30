@@ -9,14 +9,23 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { useFonts } from 'expo-font';
 import { Stack } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
-import { useState } from 'react';
-import { useWindowDimensions } from 'react-native';
+import * as SystemUI from 'expo-system-ui';
+import { useEffect, useState } from 'react';
+import { Appearance, Platform, useWindowDimensions } from 'react-native';
+import { scheme, startupMode } from '../lib/appearance';
 import { ModeProvider } from '../lib/mode';
 import { TerminalHeader } from '../components/market/TerminalHeader';
-import { breakpoints, colors, fonts } from '../lib/theme';
+import { breakpoints, colors, fonts, isDark } from '../lib/theme';
 import { WalletProvider } from '../lib/wallet';
 import { PushRegistration } from '../components/PushRegistration';
 import { SessionProvider } from '../lib/session';
+
+// The window behind the app (overscroll, keyboard) and the browser bar match the theme.
+void SystemUI.setBackgroundColorAsync(colors.bg).catch(() => {});
+if (Platform.OS === 'web' && typeof document !== 'undefined') {
+  document.documentElement.style.backgroundColor = colors.bg;
+  document.querySelector('meta[name="theme-color"]')?.setAttribute('content', colors.bg);
+}
 
 export default function RootLayout() {
   const [fontsLoaded, fontError] = useFonts({
@@ -31,6 +40,16 @@ export default function RootLayout() {
   const [queryClient] = useState(
     () => new QueryClient({ defaultOptions: { queries: { staleTime: 10_000, retry: 1 } } }),
   );
+
+  // The colours are fixed at startup, so when the browser switches light/dark and Sift
+  // follows it, reload to repaint. Phones pick the change up on the next launch.
+  useEffect(() => {
+    if (Platform.OS !== 'web' || startupMode !== 'system') return;
+    const sub = Appearance.addChangeListener(({ colorScheme }) => {
+      if ((colorScheme === 'dark' ? 'dark' : 'light') !== scheme) window.location.reload();
+    });
+    return () => sub.remove();
+  }, []);
 
   // A font that fails to load falls back to the system font rather than a blank app.
   if (!fontsLoaded && !fontError) return null;
@@ -70,7 +89,7 @@ export default function RootLayout() {
                 options={wide ? { headerShown: true } : { title: 'Profile' }}
               />
             </Stack>
-            <StatusBar style="dark" />
+            <StatusBar style={isDark ? 'light' : 'dark'} />
           </SessionProvider>
         </WalletProvider>
       </ModeProvider>

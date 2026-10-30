@@ -1,9 +1,10 @@
 import type { RiskLevel } from '@sift/shared';
+import { scheme } from './appearance';
 
-// Sift's design system: a graphite trading terminal (docs/design/TERMINAL.md). Every colour,
-// size and font the screens use comes from here; screens never hard-code them.
+// Sift's design system, light and dark. Every colour, size and font the screens use comes
+// from here; screens never hard-code them.
 
-export const colors = {
+const light = {
   /** Warm off-white page. */
   bg: '#F6F7F2',
   /** Panels, cards, inputs, sheets. */
@@ -39,30 +40,79 @@ export const colors = {
   up: '#108A4E',
   caution: '#A86200',
   down: '#D13A3A',
+  /** Filled change badges, with white text (4.5:1 in both themes). */
+  upFill: '#138A55',
+  downFill: '#D13A4A',
+  onFill: '#FFFFFF',
+  /** The header's Connect button. */
+  cta: '#0F3B2A',
+  onCta: '#FFFFFF',
   /** The bright call to action on dark trade surfaces. */
   lime: '#D5F25B',
   onLime: '#0F1712',
-} as const;
+};
+
+export type Colors = typeof light;
+
+/**
+ * Dark mode: near-black green, an exchange look. The same palette paints the dark trade
+ * surfaces in light mode (see `dark`), so both read as one design.
+ */
+const darkColors: Colors = {
+  bg: '#0B120F',
+  surface: '#131D18',
+  surface2: '#1B2721',
+  border: '#24322B',
+  borderStrong: '#33433B',
+  divider: '#1A2520',
+  tabBar: '#0F1713',
+  track: '#33433B',
+  text: '#F2F5F3',
+  text2: '#D5DDD8',
+  body: '#DCE3DE',
+  muted: '#9AA79F',
+  faint: '#83908A',
+  accent: '#3DD68C',
+  shadow: '#000000',
+  onAccent: '#0B120F',
+  link: '#3DD68C',
+  up: '#3DD68C',
+  caution: '#F5B544',
+  down: '#FF6B6B',
+  upFill: '#138A55',
+  downFill: '#D13A4A',
+  onFill: '#FFFFFF',
+  cta: '#D5F25B',
+  onCta: '#0F1712',
+  lime: '#D5F25B',
+  onLime: '#0F1712',
+};
+
+/** Dark mode is on for this session (the choice applies at startup). */
+export const isDark = scheme === 'dark';
+
+/** The app's colours, light or dark. */
+export const colors: Colors = isDark ? darkColors : light;
 
 /**
  * The dark trade surfaces (the phone Trade screen, the desktop token panel): near-black
- * green with a lime call to action.
+ * green with a lime call to action, in both modes.
  */
 export const dark = {
   bg: '#0F1915',
   surface: '#16231D',
   surface2: '#1E2C26',
   border: '#28372F',
-  text: '#F2F5F3',
-  muted: '#9AA79F',
-  faint: '#83908A',
-  up: '#3DD68C',
-  down: '#FF6B6B',
-  caution: '#F5B544',
-  accent: '#3DD68C',
-  lime: '#D5F25B',
-  onLime: '#0F1712',
-} as const;
+  text: darkColors.text,
+  muted: darkColors.muted,
+  faint: darkColors.faint,
+  up: darkColors.up,
+  down: darkColors.down,
+  caution: darkColors.caution,
+  accent: darkColors.accent,
+  lime: darkColors.lime,
+  onLime: darkColors.onLime,
+};
 
 /** A colour at `alpha` opacity: tinted badge backgrounds (~0.12) and borders (~0.3). */
 export function tint(hex: string, alpha: number): string {
@@ -110,8 +160,7 @@ export const type = {
   caption: { fontSize: 12 },
 } as const;
 
-// The screens used to call usePalette() for a light or dark palette. The design is dark
-// only, so it returns the one palette, under the names those screens use.
+// Some screens call usePalette(): the current colours under the names they use.
 const palette = {
   background: colors.bg,
   card: colors.surface,

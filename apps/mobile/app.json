@@ -6,7 +6,7 @@
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
-    "userInterfaceStyle": "light",
+    "userInterfaceStyle": "automatic",
     "ios": {
       "supportsTablet": true,
       "bundleIdentifier": "app.sift.mobile",
@@ -58,7 +58,8 @@
           "image": "./assets/splash-icon.png",
           "imageWidth": 120,
           "backgroundColor": "#F6F7F2",
-          "resizeMode": "contain"
+          "resizeMode": "contain",
+          "dark": { "backgroundColor": "#0B120F" }
         }
       ]
     ],

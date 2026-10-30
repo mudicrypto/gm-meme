@@ -349,7 +349,7 @@ const styles = StyleSheet.create({
     overflow: 'hidden',
   },
   footnote: { fontSize: 12, color: colors.faint, lineHeight: 18, maxWidth: 760 },
-  panel: { backgroundColor: dark.bg },
+  panel: { backgroundColor: dark.bg, borderLeftWidth: 1, borderLeftColor: dark.border },
   backdrop: {
     position: 'absolute',
     top: 0,

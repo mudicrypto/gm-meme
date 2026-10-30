@@ -9,10 +9,13 @@ export function Change({
   pct,
   size = 13,
   arrow = false,
+  badge = false,
 }: {
   pct: number | undefined;
   size?: number;
   arrow?: boolean;
+  /** A filled green/red box, for market lists. */
+  badge?: boolean;
 }) {
   const known = pct !== undefined && Number.isFinite(pct);
   const up = known && pct >= 0;
@@ -20,6 +23,25 @@ export function Change({
   const pal = useInk() === dark.text ? dark : colors;
   const color = !known ? pal.muted : up ? pal.up : pal.down;
   const Icon = up ? ArrowUpRight : ArrowDownRight;
+  if (badge)
+    return (
+      <View
+        style={[
+          styles.badge,
+          { minWidth: Math.round(size * 5.2), height: Math.round(size * 2.1) },
+          { backgroundColor: !known ? pal.surface2 : up ? colors.upFill : colors.downFill },
+        ]}
+        accessibilityLabel={known ? `${up ? 'Up' : 'Down'} ${formatChange(pct)}` : 'No change data'}
+      >
+        <Text
+          mono
+          numberOfLines={1}
+          style={{ fontSize: size, fontWeight: '600', color: known ? colors.onFill : pal.muted }}
+        >
+          {formatChange(pct)}
+        </Text>
+      </View>
+    );
   return (
     <View
       style={styles.row}
@@ -33,4 +55,12 @@ export function Change({
   );
 }
 
-const styles = StyleSheet.create({ row: { flexDirection: 'row', alignItems: 'center', gap: 2 } });
+const styles = StyleSheet.create({
+  row: { flexDirection: 'row', alignItems: 'center', gap: 2 },
+  badge: {
+    paddingHorizontal: 6,
+    borderRadius: 6,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+});

@@ -251,10 +251,10 @@ const styles = StyleSheet.create({
   hidden: { fontSize: 12, color: colors.muted },
   link: { fontSize: 12, fontWeight: '600', color: colors.accent },
   columns: { flexDirection: 'row', alignItems: 'center', gap: 10, marginTop: 4 },
-  colSpark: { width: 64 },
+  colSpark: { width: 52 },
   colToken: { flex: 1, minHeight: 32, justifyContent: 'center' },
-  colPrice: { width: 84, minHeight: 32, alignItems: 'flex-end', justifyContent: 'center' },
-  colChange: { width: 64, minHeight: 32, alignItems: 'flex-end', justifyContent: 'center' },
+  colPrice: { width: 80, minHeight: 32, alignItems: 'flex-end', justifyContent: 'center' },
+  colChange: { width: 72, minHeight: 32, alignItems: 'flex-end', justifyContent: 'center' },
   colText: { fontSize: 13, color: colors.muted, fontWeight: '500' },
   skeleton: {
     flexDirection: 'row',

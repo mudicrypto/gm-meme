@@ -187,7 +187,7 @@ const styles = StyleSheet.create({
     minHeight: 44,
     paddingHorizontal: 18,
     borderRadius: radius.input + 2,
-    backgroundColor: '#0F3B2A',
+    backgroundColor: colors.cta,
   },
-  connectText: { fontSize: 15, fontWeight: '600', color: colors.onAccent },
+  connectText: { fontSize: 15, fontWeight: '600', color: colors.onCta },
 });

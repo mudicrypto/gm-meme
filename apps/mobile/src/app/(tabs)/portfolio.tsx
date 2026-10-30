@@ -10,6 +10,7 @@ import { ModeToggle } from '../../components/ModeToggle';
 import { PrivateKeyReveal } from '../../components/PrivateKeyReveal';
 import { RiskDot } from '../../components/RiskBadge';
 import { BrowserConnect } from '../../components/BrowserConnect';
+import { AppearanceCard } from '../../components/AppearanceCard';
 import { LegalLinks } from '../../components/LegalLinks';
 import { PortfolioDashboard } from '../../components/PortfolioDashboard';
 import { Screen, SectionTitle } from '../../components/Screen';
@@ -86,6 +87,7 @@ export default function PortfolioScreen() {
           )}
         </>
       )}
+      <AppearanceCard />
       <LegalLinks />
     </Screen>
   );

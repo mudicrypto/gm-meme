@@ -21,7 +21,8 @@ export const FEEDS: ReadonlyArray<{ value: Feed; label: string }> = [
 /** Everything the Discover screens share: feed, window, search, filters, sort, selection. */
 export function useDiscover() {
   const [feed, setFeed] = useState<Feed>('trending');
-  const [windowMinutes, setWindowMinutes] = useState(60);
+  // 24h by default: on a quiet network an hour can pass with no trades at all.
+  const [windowMinutes, setWindowMinutes] = useState(1440);
   const [query, setQuery] = useState('');
   const [filters, setFilters] = useState<MarketFilters>(DEFAULT_FILTERS);
   const [sort, setSort] = useState<SortState>({ key: 'default', direction: 'desc' });
@@ -83,5 +84,14 @@ export function emptyMessage(state: DiscoverState): string {
       : 'No tokens match these filters.';
   if (state.feed === 'smart')
     return 'No smart money activity yet. This shows tokens bought by the leaderboard’s top traders and the people you follow.';
+  if (state.feed === 'trending')
+    return `Nobody traded in the last ${windowWords(state.windowMinutes)}.`;
   return 'No tokens yet. New launches appear here within seconds.';
+}
+
+function windowWords(minutes: number): string {
+  if (minutes < 60) return `${minutes} minutes`;
+  if (minutes === 60) return 'hour';
+  if (minutes < 1440) return `${minutes / 60} hours`;
+  return '24 hours';
 }

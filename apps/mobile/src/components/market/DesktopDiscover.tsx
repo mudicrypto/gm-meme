@@ -5,8 +5,9 @@ import { Pressable, ScrollView, StyleSheet, View, useWindowDimensions } from 're
 import { transition } from '../../lib/motion';
 import { DEFAULT_FILTERS, LIST_WINDOWS, activeFilterCount, filterChips } from '../../lib/market';
 import { colors, radius, space } from '../../lib/theme';
-import { Empty, ErrorState } from '../States';
+import { ErrorState } from '../States';
 import { Text } from '../Text';
+import { EmptyFeed } from './EmptyFeed';
 import { FiltersBody } from './FiltersSheet';
 import { MarketTable } from './MarketTable';
 import { LoadingRows } from './MobileDiscover';
@@ -15,7 +16,7 @@ import { StatusLine } from './StatusLine';
 import { Tabs } from './Tabs';
 import { TerminalHeader } from './TerminalHeader';
 import { TokenPanel } from './TokenPanel';
-import { type DiscoverState, FEEDS, emptyMessage } from './useDiscover';
+import { type DiscoverState, FEEDS } from './useDiscover';
 import { useNetwork } from '../../lib/network';
 
 const SIDEBAR = 64;
@@ -179,7 +180,7 @@ export function DesktopDiscover({
               <LoadingRows />
             </View>
           ) : rows.length === 0 ? (
-            <Empty message={emptyMessage(state)} />
+            <EmptyFeed state={state} />
           ) : (
             <MarketTable
               tokens={rows}

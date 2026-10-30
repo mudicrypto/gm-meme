@@ -8,15 +8,16 @@ import { transition } from '../../lib/motion';
 import { colors, radius, space } from '../../lib/theme';
 import { IconButton } from '../Button';
 import { Sheet } from '../Sheet';
-import { Empty, ErrorState } from '../States';
+import { ErrorState } from '../States';
 import { Text } from '../Text';
+import { EmptyFeed } from './EmptyFeed';
 import { FiltersSheet } from './FiltersSheet';
 import { NetworkChip, NetworkNote } from './Network';
 import { SearchBar } from './SearchBar';
 import { StatusLine } from './StatusLine';
 import { Tabs } from './Tabs';
 import { TokenListRow } from './TokenListRow';
-import { type DiscoverState, FEEDS, emptyMessage } from './useDiscover';
+import { type DiscoverState, FEEDS } from './useDiscover';
 
 /** Discover on a phone: a searchable, filterable list, not a shrunken table. */
 export function MobileDiscover({ state }: { state: DiscoverState }) {
@@ -153,9 +154,7 @@ export function MobileDiscover({ state }: { state: DiscoverState }) {
           ListHeaderComponent={header}
           ListFooterComponent={<StatusLine state={state} />}
           contentContainerStyle={{ paddingTop: insets.top + space.md, paddingBottom: space.xl * 2 }}
-          ListEmptyComponent={
-            market.list.isPending ? <LoadingRows /> : <Empty message={emptyMessage(state)} />
-          }
+          ListEmptyComponent={market.list.isPending ? <LoadingRows /> : <EmptyFeed state={state} />}
           refreshControl={
             <RefreshControl
               refreshing={market.list.isRefetching}

@@ -238,7 +238,6 @@ export default function TradeScreen() {
     };
   }, [stage, queryClient]);
 
-
   const highRisk = risk.data?.level === 'red';
   const request = (): TradeQuoteRequest | null => {
     if (side === 'buy') {

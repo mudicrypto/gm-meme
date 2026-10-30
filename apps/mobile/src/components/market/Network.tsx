@@ -1,6 +1,7 @@
 import { ChevronDown } from 'lucide-react-native';
 import { Pressable, StyleSheet, View } from 'react-native';
-import { colors, radius } from '../../lib/theme';
+import { transition } from '../../lib/motion';
+import { colors, radius, tint } from '../../lib/theme';
 import { Text } from '../Text';
 
 /** The network selector. Sift runs on Solana devnet only until its security audit. */
@@ -10,14 +11,20 @@ export function NetworkChip({ onPress }: { onPress: () => void }) {
       onPress={onPress}
       accessibilityRole="button"
       accessibilityLabel="Network: Solana devnet"
-      style={({ pressed }) => [styles.chip, pressed && { opacity: 0.7 }]}
+      // 36 tall to keep the header compact; the slop makes the target 44.
+      hitSlop={4}
+      style={({ pressed, hovered }: { pressed: boolean; hovered?: boolean }) => [
+        styles.chip,
+        (pressed || hovered) && { backgroundColor: colors.surface2 },
+        transition,
+      ]}
     >
-      <SolanaMark />
+      <SolanaMark size={12} />
       <Text style={styles.text}>Solana</Text>
       <View style={styles.devnet}>
         <Text style={styles.devnetText}>DEVNET</Text>
       </View>
-      <ChevronDown size={14} color={colors.muted} strokeWidth={2} />
+      <ChevronDown size={13} color={colors.muted} strokeWidth={2} />
     </Pressable>
   );
 }
@@ -66,21 +73,19 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 6,
-    minHeight: 44,
+    height: 36,
     paddingHorizontal: 10,
-    borderRadius: radius.input,
-    borderWidth: 1,
-    borderColor: colors.border,
+    borderRadius: radius.chip,
     backgroundColor: colors.surface,
   },
-  text: { fontSize: 14, fontWeight: '600' },
+  text: { fontSize: 13, fontWeight: '600' },
   devnet: {
-    paddingHorizontal: 4,
-    paddingVertical: 1,
+    paddingHorizontal: 5,
+    paddingVertical: 2,
     borderRadius: 4,
-    backgroundColor: colors.surface2,
+    backgroundColor: tint(colors.caution, 0.12),
   },
-  devnetText: { fontSize: 9, fontWeight: '700', letterSpacing: 0.5, color: colors.caution },
+  devnetText: { fontSize: 10, fontWeight: '700', letterSpacing: 0.6, color: colors.caution },
   note: { gap: 12 },
   option: {
     flexDirection: 'row',

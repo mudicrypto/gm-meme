@@ -1,11 +1,12 @@
 import { Pressable, StyleSheet, View } from 'react-native';
-import { haptic } from '../../lib/motion';
-import { colors, radius } from '../../lib/theme';
+import { haptic, transition } from '../../lib/motion';
+import { colors, radius, tint } from '../../lib/theme';
 import { Text } from '../Text';
 
 /**
- * Terminal tabs: a panel with the selected option filled in mint (strong fill is reserved
- * for primary choices). `compact` is the small time-window control.
+ * Tabs in two treatments. `underline` (the default) is text tabs with a thin mint
+ * indicator, for switching lists and sections. `compact` is the small segmented control
+ * for time windows. Neither uses a mint fill: that's for primary actions.
  */
 export function Tabs<T extends string | number>({
   options,
@@ -22,7 +23,7 @@ export function Tabs<T extends string | number>({
 }) {
   return (
     <View
-      style={[styles.row, compact && styles.compactRow]}
+      style={compact ? styles.segments : styles.underlineRow}
       accessibilityRole="tablist"
       accessibilityLabel={label}
     >
@@ -36,6 +37,8 @@ export function Tabs<T extends string | number>({
               onChange(option.value);
             }}
             accessibilityRole="tab"
+            // The segment is 38 tall inside a 3px track: the slop makes the target 44.
+            hitSlop={compact ? 3 : undefined}
             accessibilityState={{ selected }}
             style={({
               pressed,
@@ -46,24 +49,27 @@ export function Tabs<T extends string | number>({
               hovered?: boolean;
               focused?: boolean;
             }) => [
-              styles.option,
-              compact && styles.compactOption,
-              selected && (compact ? styles.compactSelected : styles.selected),
-              !selected && (pressed || hovered) && styles.hover,
+              compact ? styles.segment : styles.tab,
+              compact && selected && styles.segmentSelected,
+              compact && !selected && (pressed || hovered) && styles.segmentHover,
+              !compact && { borderBottomColor: selected ? colors.accent : 'transparent' },
               focused && styles.focus,
+              transition,
             ]}
           >
-            <Text
-              numberOfLines={1}
-              mono={compact}
-              style={[
-                styles.label,
-                compact && styles.compactLabel,
-                { color: selected ? (compact ? colors.text : colors.onAccent) : colors.text2 },
-              ]}
-            >
-              {option.label}
-            </Text>
+            {({ hovered }: { pressed: boolean; hovered?: boolean }) => (
+              <Text
+                numberOfLines={1}
+                mono={compact}
+                style={[
+                  compact ? styles.segmentLabel : styles.tabLabel,
+                  { color: selected ? colors.text : hovered ? colors.text2 : colors.muted },
+                  transition,
+                ]}
+              >
+                {option.label}
+              </Text>
+            )}
           </Pressable>
         );
       })}
@@ -72,29 +78,36 @@ export function Tabs<T extends string | number>({
 }
 
 const styles = StyleSheet.create({
-  row: {
+  underlineRow: {
     flexDirection: 'row',
-    padding: 4,
-    gap: 4,
-    borderRadius: radius.card,
-    borderWidth: 1,
-    borderColor: colors.border,
+    gap: 20,
+    borderBottomWidth: StyleSheet.hairlineWidth,
+    borderBottomColor: colors.border,
+  },
+  tab: {
+    minHeight: 44,
+    justifyContent: 'center',
+    borderBottomWidth: 2,
+    marginBottom: -StyleSheet.hairlineWidth,
+  },
+  tabLabel: { fontSize: 15, fontWeight: '600' },
+  segments: {
+    flexDirection: 'row',
+    padding: 3,
+    gap: 2,
+    borderRadius: radius.input,
     backgroundColor: colors.surface,
   },
-  compactRow: { borderRadius: radius.input },
-  option: {
+  segment: {
     flex: 1,
-    minHeight: 40,
-    paddingHorizontal: 6,
-    borderRadius: radius.input - 2,
+    minHeight: 38,
+    paddingHorizontal: 8,
+    borderRadius: radius.chip,
     alignItems: 'center',
     justifyContent: 'center',
   },
-  compactOption: { minHeight: 36, paddingHorizontal: 10 },
-  selected: { backgroundColor: colors.accent },
-  compactSelected: { backgroundColor: colors.surface2 },
-  hover: { backgroundColor: colors.surface2 },
+  segmentSelected: { backgroundColor: colors.surface2 },
+  segmentHover: { backgroundColor: tint(colors.text, 0.04) },
+  segmentLabel: { fontSize: 13, fontWeight: '600' },
   focus: { outlineColor: colors.muted, outlineWidth: 1, outlineStyle: 'solid' } as object,
-  label: { fontSize: 14, fontWeight: '600' },
-  compactLabel: { fontSize: 13 },
 });

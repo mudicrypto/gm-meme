@@ -48,3 +48,21 @@ export const haptic = {
       void Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning).catch(() => {});
   },
 };
+
+/**
+ * Web only: a 150 ms ease on colour and border changes (hover, selection, tabs, buttons).
+ * Never on layout, so rows don't shift and price updates don't animate. Off when the
+ * browser asks for reduced motion.
+ */
+export const transition: object =
+  Platform.OS === 'web' &&
+  !(
+    typeof globalThis.matchMedia === 'function' &&
+    globalThis.matchMedia('(prefers-reduced-motion: reduce)').matches
+  )
+    ? {
+        transitionProperty: 'background-color, border-color, color, opacity',
+        transitionDuration: '150ms',
+        transitionTimingFunction: 'ease-out',
+      }
+    : {};

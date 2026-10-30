@@ -7,6 +7,7 @@ import { shortAddress } from '../../lib/format';
 import { breakpoints, colors, radius, space } from '../../lib/theme';
 import { useWallet } from '../../lib/wallet';
 import { Sheet } from '../Sheet';
+import { transition } from '../../lib/motion';
 import { Text } from '../Text';
 import { NetworkChip, NetworkNote } from './Network';
 import { SearchBar } from './SearchBar';
@@ -61,6 +62,7 @@ export function TerminalHeader({
                 styles.navItem,
                 active && styles.navActive,
                 hovered && !active && styles.navHover,
+                transition,
               ]}
             >
               <Icon size={16} color={active ? colors.text : colors.muted} strokeWidth={2} />

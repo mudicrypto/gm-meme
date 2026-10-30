@@ -1,4 +1,4 @@
-import type { RiskLevel, TokenStats } from '@sift/shared';
+import type { TokenStats } from '@sift/shared';
 import { router } from 'expo-router';
 import { Pressable, StyleSheet, View } from 'react-native';
 import {
@@ -9,18 +9,13 @@ import {
   shortAddress,
 } from '../../lib/format';
 import type { MarketToken } from '../../lib/market';
-import { RISK_COLORS, colors } from '../../lib/theme';
+import { transition } from '../../lib/motion';
+import { colors } from '../../lib/theme';
 import { Text } from '../Text';
 import { TokenAvatar } from '../TokenAvatar';
 import { Change } from './Change';
+import { RISK_TAGS, RiskTag } from './RiskTag';
 import { Sparkline } from './Sparkline';
-
-const SHORT_RISK: Record<RiskLevel | 'unknown', string> = {
-  green: 'No red flags',
-  amber: 'Caution',
-  red: 'Risky',
-  unknown: 'Not checked',
-};
 
 /** A phone list row: token and risk, price and volume, change and sparkline. */
 export function TokenListRow({
@@ -33,7 +28,6 @@ export function TokenListRow({
   /** Replaces the age in the second line (e.g. "3 top traders bought"). */
   note?: string;
 }) {
-  const level = token.riskLevel ?? 'unknown';
   const symbol = (token.symbol ?? token.name ?? shortAddress(token.mint)).slice(0, 12);
   const age = formatAge(token.launchedAt ?? token.firstSeenAt);
   return (
@@ -42,13 +36,14 @@ export function TokenListRow({
       style={({ pressed, hovered }: { pressed: boolean; hovered?: boolean }) => [
         styles.row,
         (pressed || hovered) && styles.active,
+        transition,
       ]}
       accessibilityRole="link"
-      accessibilityLabel={`${token.name ?? symbol}, ${SHORT_RISK[level]}`}
+      accessibilityLabel={`${token.name ?? symbol}, ${RISK_TAGS[token.riskLevel ?? 'unknown']}`}
     >
       <TokenAvatar
         uri={token.imageUrl}
-        label={token.name ?? token.symbol}
+        label={token.symbol ?? token.name}
         seed={token.mint}
         size={40}
       />
@@ -57,12 +52,9 @@ export function TokenListRow({
           {symbol}
         </Text>
         <View style={styles.subRow}>
-          <View style={[styles.dot, { backgroundColor: RISK_COLORS[level].fg }]} />
-          <Text style={[styles.sub, { color: RISK_COLORS[level].fg }]} numberOfLines={1}>
-            {SHORT_RISK[level]}
-          </Text>
+          <RiskTag level={token.riskLevel} />
           <Text style={styles.sub} numberOfLines={1}>
-            {' · '}
+            {'· '}
             {note ?? (age === 'just now' ? 'new' : age)}
           </Text>
         </View>
@@ -71,12 +63,12 @@ export function TokenListRow({
         <Text mono style={styles.price} numberOfLines={1}>
           {stats?.priceSol ? formatSolPrice(stats.priceSol) : '–'}
         </Text>
-        <Text mono style={styles.sub} numberOfLines={1}>
+        <Text mono style={styles.vol} numberOfLines={1}>
           {stats ? `${formatSol(stats.volumeSol)} vol` : ' '}
         </Text>
       </View>
       <View style={styles.changeCol}>
-        <Change pct={stats?.changePct} />
+        <Change pct={stats?.changePct} size={13} />
         <Sparkline
           points={stats?.sparkline ?? []}
           changePct={stats?.changePct}
@@ -96,20 +88,20 @@ const styles = StyleSheet.create({
   row: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 10,
-    minHeight: 64,
-    paddingVertical: 10,
+    gap: 12,
+    minHeight: 68,
+    paddingVertical: 12,
     paddingHorizontal: 16,
-    borderBottomWidth: 1,
-    borderBottomColor: colors.divider,
+    borderBottomWidth: StyleSheet.hairlineWidth,
+    borderBottomColor: colors.border,
   },
   active: { backgroundColor: colors.surface },
-  name: { flex: 1, minWidth: 0, gap: 3 },
-  symbol: { fontSize: 15, fontWeight: '600' },
-  subRow: { flexDirection: 'row', alignItems: 'center', gap: 4, minWidth: 0 },
-  dot: { width: 6, height: 6, borderRadius: 3 },
-  sub: { fontSize: 12, color: colors.muted, flexShrink: 1 },
-  priceCol: { width: 96, alignItems: 'flex-end', gap: 3 },
-  price: { fontSize: 14, fontWeight: '600' },
-  changeCol: { width: 70, alignItems: 'flex-end', gap: 2 },
+  name: { flex: 1, minWidth: 0, gap: 4 },
+  symbol: { fontSize: 15, fontWeight: '500', color: colors.text },
+  subRow: { flexDirection: 'row', alignItems: 'center', minWidth: 0 },
+  sub: { fontSize: 12, color: colors.faint, flexShrink: 1, marginLeft: 4 },
+  priceCol: { width: 92, alignItems: 'flex-end', gap: 4 },
+  price: { fontSize: 15, fontWeight: '600' },
+  vol: { fontSize: 12, color: colors.faint },
+  changeCol: { width: 68, alignItems: 'flex-end', gap: 4 },
 });

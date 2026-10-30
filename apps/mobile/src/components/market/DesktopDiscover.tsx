@@ -2,6 +2,7 @@ import type { RiskLevel } from '@sift/shared';
 import { SlidersHorizontal } from 'lucide-react-native';
 import { useState } from 'react';
 import { Pressable, ScrollView, StyleSheet, View, useWindowDimensions } from 'react-native';
+import { transition } from '../../lib/motion';
 import { DEFAULT_FILTERS, LIST_WINDOWS, activeFilterCount } from '../../lib/market';
 import { colors, radius, space } from '../../lib/theme';
 import { Empty, ErrorState } from '../States';
@@ -107,7 +108,8 @@ export function DesktopDiscover({
               accessibilityLabel={`Filters${filterCount ? `, ${filterCount} on` : ''}`}
               style={({ hovered }: { pressed: boolean; hovered?: boolean }) => [
                 styles.filters,
-                hovered && { borderColor: colors.borderStrong },
+                hovered && { backgroundColor: colors.surface2 },
+                transition,
               ]}
             >
               <SlidersHorizontal size={16} color={colors.text} strokeWidth={2} />
@@ -225,8 +227,6 @@ const styles = StyleSheet.create({
     paddingHorizontal: 14,
     marginLeft: 'auto',
     borderRadius: radius.input,
-    borderWidth: 1,
-    borderColor: colors.border,
     backgroundColor: colors.surface,
   },
   filtersText: { fontSize: 14, fontWeight: '600' },
@@ -253,12 +253,14 @@ const styles = StyleSheet.create({
   },
   loading: {
     borderRadius: radius.card,
-    borderWidth: 1,
-    borderColor: colors.border,
     backgroundColor: colors.surface,
     overflow: 'hidden',
   },
   footnote: { fontSize: 12, color: colors.faint, lineHeight: 18, maxWidth: 760 },
-  panel: { width: PANEL, borderLeftWidth: 1, borderLeftColor: colors.border },
+  panel: {
+    width: PANEL,
+    borderLeftWidth: StyleSheet.hairlineWidth,
+    borderLeftColor: colors.border,
+  },
   panelEmpty: { flex: 1, alignItems: 'center', justifyContent: 'center', padding: space.xl },
 });

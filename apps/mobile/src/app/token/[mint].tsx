@@ -37,6 +37,14 @@ import { colors, radius, space } from '../../lib/theme';
 
 type Section = 'activity' | 'holders' | 'info';
 
+/** "past hour", "past 4 hours": the period a % change covers, in words. */
+function pastWindow(minutes: number): string {
+  if (minutes < 60) return `past ${minutes} min`;
+  if (minutes === 60) return 'past hour';
+  if (minutes < 1440) return `past ${minutes / 60} hours`;
+  return 'past day';
+}
+
 export default function TokenScreen() {
   const insets = useSafeAreaInsets();
   const { mint = '' } = useLocalSearchParams<{ mint: string }>();
@@ -112,9 +120,9 @@ export default function TokenScreen() {
         <View style={styles.identity}>
           <TokenAvatar
             uri={info?.imageUrl}
-            label={info?.name ?? info?.symbol}
+            label={info?.symbol ?? info?.name}
             seed={mint}
-            size={56}
+            size={52}
           />
           <View style={styles.flex}>
             <Text style={styles.name} numberOfLines={1}>
@@ -124,18 +132,23 @@ export default function TokenScreen() {
           </View>
         </View>
 
-        <View style={styles.priceRow}>
+        <View style={styles.priceBlock}>
           {price ? (
-            <FlashText value={price} style={styles.price}>
-              {`${formatSolPrice(price)} SOL`}
-            </FlashText>
+            <View style={styles.priceRow}>
+              <FlashText value={price} style={styles.price}>
+                {formatSolPrice(price)}
+              </FlashText>
+              <Text style={styles.priceUnit}>SOL</Text>
+            </View>
           ) : (
             <Text style={styles.noPrice}>
               {stats.isPending ? 'Loading price…' : 'No trades yet'}
             </Text>
           )}
-          <Change pct={stats.data?.changePct} size={17} arrow />
-          <Text style={styles.windowText}>{windowLabel}</Text>
+          <View style={styles.changeRow}>
+            <Change pct={stats.data?.changePct} size={16} arrow />
+            <Text style={styles.windowText}>{pastWindow(windowMinutes)}</Text>
+          </View>
         </View>
 
         <Tabs
@@ -152,36 +165,22 @@ export default function TokenScreen() {
         )}
 
         <Metrics stats={stats.data} token={info} windowLabel={windowLabel} />
-        {risk.isError ? (
-          <ErrorState message={risk.error.message} onRetry={() => risk.refetch()} />
-        ) : (
-          <RiskSignals risk={risk.data} />
-        )}
+        <RiskSignals
+          risk={risk.data}
+          unavailable={risk.isError}
+          onRetry={() => void risk.refetch()}
+        />
 
-        <View style={styles.sectionTabs} accessibilityRole="tablist">
-          {(
-            [
-              ['activity', 'Activity'],
-              ['holders', 'Holders'],
-              ['info', 'Info'],
-            ] as const
-          ).map(([value, label]) => {
-            const selected = section === value;
-            return (
-              <Pressable
-                key={value}
-                onPress={() => setSection(value)}
-                accessibilityRole="tab"
-                accessibilityState={{ selected }}
-                style={[styles.sectionTab, selected && styles.sectionTabOn]}
-              >
-                <Text style={[styles.sectionLabel, selected && { color: colors.text }]}>
-                  {label}
-                </Text>
-              </Pressable>
-            );
-          })}
-        </View>
+        <Tabs
+          label="Token sections"
+          options={[
+            { value: 'activity', label: 'Activity' },
+            { value: 'holders', label: 'Holders' },
+            { value: 'info', label: 'Info' },
+          ]}
+          value={section}
+          onChange={setSection}
+        />
 
         {section === 'activity' ? (
           <ActivityList
@@ -367,28 +366,16 @@ const styles = StyleSheet.create({
   pairQuote: { color: colors.muted, fontWeight: '500' },
   content: { paddingHorizontal: space.screen, paddingTop: space.sm, gap: space.md },
   identity: { flexDirection: 'row', alignItems: 'center', gap: space.md },
-  name: { fontSize: 22, fontWeight: '700', letterSpacing: -0.4 },
+  name: { fontSize: 20, fontWeight: '600', letterSpacing: -0.3 },
   copy: { flexDirection: 'row', alignItems: 'center', gap: 6, minHeight: 28 },
-  address: { fontSize: 14, color: colors.muted },
-  priceRow: { flexDirection: 'row', alignItems: 'baseline', gap: 10, flexWrap: 'wrap' },
-  price: { fontSize: 32, fontWeight: '700', letterSpacing: -0.8 },
+  address: { fontSize: 13, color: colors.muted },
+  priceBlock: { gap: 4 },
+  priceRow: { flexDirection: 'row', alignItems: 'baseline', gap: 8 },
+  price: { fontSize: 34, fontWeight: '700', letterSpacing: -0.8, flexShrink: 1 },
+  priceUnit: { fontSize: 17, fontWeight: '600', color: colors.muted },
   noPrice: { fontSize: 24, fontWeight: '600', color: colors.muted },
+  changeRow: { flexDirection: 'row', alignItems: 'center', gap: 8 },
   windowText: { fontSize: 14, color: colors.muted },
-  sectionTabs: {
-    flexDirection: 'row',
-    gap: 4,
-    borderBottomWidth: 1,
-    borderBottomColor: colors.border,
-  },
-  sectionTab: {
-    minHeight: 44,
-    paddingHorizontal: 16,
-    justifyContent: 'center',
-    borderBottomWidth: 2,
-    borderBottomColor: 'transparent',
-  },
-  sectionTabOn: { borderBottomColor: colors.accent },
-  sectionLabel: { fontSize: 15, fontWeight: '600', color: colors.muted },
   sectionBody: { gap: space.md, paddingTop: space.sm },
   infoRow: { gap: 4 },
   infoLabel: { fontSize: 13, color: colors.muted },
@@ -404,7 +391,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: space.screen,
     paddingTop: space.md,
     backgroundColor: colors.bg,
-    borderTopWidth: 1,
+    borderTopWidth: StyleSheet.hairlineWidth,
     borderTopColor: colors.border,
   },
   action: {
@@ -415,7 +402,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   buy: { backgroundColor: colors.accent },
-  sell: { backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.borderStrong },
+  sell: { backgroundColor: colors.surface2 },
   buyText: { fontSize: 16, fontWeight: '700', color: colors.onAccent },
   sellText: { fontSize: 16, fontWeight: '700', color: colors.text },
   moreRow: { flexDirection: 'row', alignItems: 'center', gap: 12, minHeight: 48 },

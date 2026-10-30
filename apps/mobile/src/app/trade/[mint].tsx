@@ -32,7 +32,7 @@ import {
   View,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { NATIVE, haptic, useReduceMotion } from '../../lib/motion';
+import { NATIVE, haptic, transition, useReduceMotion } from '../../lib/motion';
 import { Button, IconButton } from '../../components/Button';
 import { Card } from '../../components/Card';
 import { Confetti } from '../../components/Confetti';
@@ -355,9 +355,15 @@ export default function TradeScreen() {
         >
           <ChevronLeft size={20} color={colors.text} strokeWidth={2} />
         </IconButton>
-        <Text style={styles.headerTitle} numberOfLines={1}>
-          {stage.name === 'review' ? `Review ${title.toLowerCase()}` : `Trade ${symbol}`}
-        </Text>
+        <View style={styles.headerCenter}>
+          <Text style={styles.headerTitle} numberOfLines={1}>
+            {stage.name === 'review' ? `Review ${title.toLowerCase()}` : `Trade ${symbol}`}
+          </Text>
+          <View style={styles.networkPill}>
+            <View style={styles.networkDot} />
+            <Text style={styles.networkText}>Devnet · Test SOL</Text>
+          </View>
+        </View>
         <IconButton label="Trade settings" onPress={() => setSettingsOpen(true)}>
           <Settings size={20} color={colors.text} strokeWidth={2} />
         </IconButton>
@@ -406,7 +412,7 @@ export default function TradeScreen() {
             {side === 'buy' ? (
               <View style={styles.field}>
                 <View style={styles.fieldHead}>
-                  <Text style={styles.fieldLabel}>Amount</Text>
+                  <Text style={styles.fieldLabel}>You pay</Text>
                   <Text style={styles.fieldHint}>Test SOL, no real value</Text>
                 </View>
                 <View style={styles.amountPanel}>
@@ -464,7 +470,7 @@ export default function TradeScreen() {
             ) : holding ? (
               <View style={styles.field}>
                 <View style={styles.fieldHead}>
-                  <Text style={styles.fieldLabel}>Amount</Text>
+                  <Text style={styles.fieldLabel}>You sell</Text>
                   <Text mono style={styles.fieldHint}>
                     Available {formatCompact(rawToTokens(holding.amountRaw, holding.decimals))}{' '}
                     {symbol}
@@ -499,30 +505,32 @@ export default function TradeScreen() {
               </View>
             )}
 
-            <View style={styles.panel}>
-              <View style={styles.fieldHead}>
-                <Text style={styles.fieldLabel}>
-                  Estimated {side === 'buy' ? 'receive' : 'proceeds'}
+            {/* What you get and what it costs, together so the fees are easy to check. */}
+            <View style={styles.summary}>
+              <View style={styles.summaryTop}>
+                <View style={styles.fieldHead}>
+                  <Text style={styles.fieldLabel}>
+                    Estimated {side === 'buy' ? 'receive' : 'proceeds'}
+                  </Text>
+                  <Text style={styles.fieldHint}>At the last price</Text>
+                </View>
+                <Text mono style={styles.estimate} numberOfLines={1} adjustsFontSizeToFit>
+                  {estimate ?? '–'}
                 </Text>
-                <Text style={styles.fieldHint}>At the last price</Text>
+                <Text style={styles.caption}>
+                  The review shows the exact amount, fees and minimum before you confirm.
+                </Text>
               </View>
-              <Text mono style={styles.estimate}>
-                {estimate ?? '–'}
-              </Text>
-              <Text style={styles.caption}>
-                The review shows the exact amount, fees and minimum before you confirm.
-              </Text>
-            </View>
-
-            <View style={styles.panel}>
-              <DetailRow
-                label="Slippage"
-                value={`${Number(slippage) / 100}%`}
-                onPress={() => setSettingsOpen(true)}
-              />
-              <DetailRow label="Sift fee" value={`${PLATFORM_FEE_RATE * 100}%`} />
-              <DetailRow label="Network fee" value="~0.000005 SOL + priority" />
-              <DetailRow label="Price impact" value="Shown in review" last />
+              <View style={styles.summaryRows}>
+                <DetailRow
+                  label="Slippage"
+                  value={`${Number(slippage) / 100}%`}
+                  onPress={() => setSettingsOpen(true)}
+                />
+                <DetailRow label="Sift fee" value={`${PLATFORM_FEE_RATE * 100}%`} />
+                <DetailRow label="Network fee" value="~0.000005 SOL + priority" />
+                <DetailRow label="Price impact" value="Shown in review" last />
+              </View>
             </View>
 
             {flags.length > 0 ? (
@@ -724,10 +732,12 @@ function PresetButton({
       }}
       accessibilityRole="button"
       accessibilityState={{ selected }}
-      style={({ pressed }) => [
+      style={({ pressed, hovered }: { pressed: boolean; hovered?: boolean }) => [
         styles.preset,
+        hovered && !selected && { backgroundColor: colors.surface2 },
         selected && styles.presetOn,
         pressed && styles.pressed,
+        transition,
       ]}
     >
       <Text mono style={[styles.presetText, selected && { color: colors.text }]}>
@@ -939,15 +949,25 @@ const styles = StyleSheet.create({
     paddingHorizontal: space.screen,
     paddingBottom: space.sm,
   },
-  headerTitle: { flex: 1, textAlign: 'center', fontSize: 17, fontWeight: '600' },
+  headerCenter: { flex: 1, alignItems: 'center', gap: 4 },
+  headerTitle: { textAlign: 'center', fontSize: 17, fontWeight: '600' },
+  networkPill: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    paddingHorizontal: 8,
+    paddingVertical: 2,
+    borderRadius: 999,
+    backgroundColor: colors.surface,
+  },
+  networkDot: { width: 6, height: 6, borderRadius: 3, backgroundColor: colors.caution },
+  networkText: { fontSize: 11, fontWeight: '500', color: colors.muted },
   pressed: { opacity: 0.7 },
   sides: {
     flexDirection: 'row',
     gap: 4,
     padding: 4,
     borderRadius: radius.card,
-    borderWidth: 1,
-    borderColor: colors.border,
     backgroundColor: colors.surface,
   },
   side: {
@@ -958,11 +978,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   sideBuy: { backgroundColor: colors.accent },
-  sideSell: {
-    backgroundColor: tint(colors.down, 0.22),
-    borderWidth: 1,
-    borderColor: tint(colors.down, 0.5),
-  },
+  sideSell: { backgroundColor: tint(colors.down, 0.2) },
   sideText: { fontSize: 15, fontWeight: '600', color: colors.text2 },
   field: { gap: space.sm },
   fieldHead: {
@@ -980,8 +996,6 @@ const styles = StyleSheet.create({
     minHeight: 56,
     paddingHorizontal: 14,
     borderRadius: radius.card,
-    borderWidth: 1,
-    borderColor: colors.border,
     backgroundColor: colors.surface,
   },
   payWith: { fontSize: 16, fontWeight: '600' },
@@ -991,8 +1005,6 @@ const styles = StyleSheet.create({
     padding: 16,
     gap: 8,
     borderRadius: radius.card,
-    borderWidth: 1,
-    borderColor: colors.border,
     backgroundColor: colors.surface,
   },
   amountFoot: { flexDirection: 'row', alignItems: 'center', gap: 16 },
@@ -1002,9 +1014,15 @@ const styles = StyleSheet.create({
     padding: 16,
     gap: 6,
     borderRadius: radius.card,
-    borderWidth: 1,
-    borderColor: colors.border,
     backgroundColor: colors.surface,
+  },
+  summary: { borderRadius: radius.card, backgroundColor: colors.surface, overflow: 'hidden' },
+  summaryTop: { padding: 16, gap: 6 },
+  summaryRows: {
+    paddingHorizontal: 16,
+    paddingVertical: 4,
+    borderTopWidth: StyleSheet.hairlineWidth,
+    borderTopColor: colors.border,
   },
   estimate: { fontSize: 24, fontWeight: '700', letterSpacing: -0.4 },
   preset: {
@@ -1012,16 +1030,16 @@ const styles = StyleSheet.create({
     minHeight: 44,
     borderRadius: radius.input,
     borderWidth: 1,
-    borderColor: colors.border,
+    borderColor: 'transparent',
     backgroundColor: colors.surface,
     alignItems: 'center',
     justifyContent: 'center',
   },
   presetOn: { backgroundColor: colors.surface2, borderColor: colors.borderStrong },
   presetText: { fontSize: 15, fontWeight: '600', color: colors.text2 },
-  detail: { flexDirection: 'row', alignItems: 'center', gap: 6, minHeight: 40 },
-  detailDivider: { borderBottomWidth: 1, borderBottomColor: colors.divider },
-  detailLabel: { fontSize: 14, color: colors.text2 },
+  detail: { flexDirection: 'row', alignItems: 'center', gap: 6, minHeight: 44 },
+  detailDivider: { borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: colors.border },
+  detailLabel: { fontSize: 14, color: colors.muted },
   detailValue: { fontSize: 14, color: colors.text },
   flagsBox: {
     padding: 14,
@@ -1044,7 +1062,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: space.screen,
     paddingTop: space.md,
     backgroundColor: colors.bg,
-    borderTopWidth: 1,
+    borderTopWidth: StyleSheet.hairlineWidth,
     borderTopColor: colors.border,
   },
   footNote: { fontSize: 12, textAlign: 'center', color: colors.muted },

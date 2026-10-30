@@ -133,8 +133,6 @@ const styles = StyleSheet.create({
     width: 44,
     height: 44,
     borderRadius: radius.input,
-    borderWidth: 1,
-    borderColor: colors.borderStrong,
     backgroundColor: colors.surface,
     alignItems: 'center',
     justifyContent: 'center',

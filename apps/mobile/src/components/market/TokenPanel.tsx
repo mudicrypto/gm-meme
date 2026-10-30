@@ -5,7 +5,7 @@ import { ExternalLink } from 'lucide-react-native';
 import { useState } from 'react';
 import { Pressable, ScrollView, StyleSheet, View } from 'react-native';
 import { api } from '../../lib/api';
-import { formatCompact, formatSolPrice, shortAddress } from '../../lib/format';
+import { formatCompact, shortAddress } from '../../lib/format';
 import { CHART_WINDOWS, type MarketToken } from '../../lib/market';
 import { useTokenStats } from '../../lib/market-hooks';
 import { useSiftWallet } from '../../lib/social-hooks';
@@ -17,6 +17,7 @@ import { TokenAvatar } from '../TokenAvatar';
 import { CandleChart } from './CandleChart';
 import { Change } from './Change';
 import { Tabs } from './Tabs';
+import { SolPrice } from './SolPrice';
 import { Metrics, RiskSignals } from './TokenPanels';
 
 const BUY_PRESETS = ['0.1', '0.5', '1', '5'];
@@ -106,7 +107,12 @@ export function TokenPanel({
   return (
     <ScrollView style={styles.panel} contentContainerStyle={styles.content}>
       <View style={styles.identity}>
-        <TokenAvatar uri={token.imageUrl} label={token.name ?? symbol} seed={mint} size={40} />
+        <TokenAvatar
+          uri={token.imageUrl}
+          label={token.symbol ?? token.name}
+          seed={mint}
+          size={40}
+        />
         <View style={styles.flex}>
           <Text style={styles.symbol} numberOfLines={1}>
             {symbol} <Text style={styles.pair}>/ SOL</Text>
@@ -129,11 +135,9 @@ export function TokenPanel({
         </Pressable>
       </View>
 
-      <View style={styles.priceRow}>
-        <Text mono style={styles.price}>
-          {price !== undefined ? `${formatSolPrice(price)} SOL` : 'No trades yet'}
-        </Text>
-        <Change pct={stats?.changePct} size={15} arrow />
+      <View style={styles.priceBlock}>
+        <SolPrice price={price} size={28} />
+        <Change pct={stats?.changePct} size={14} arrow />
       </View>
 
       <Tabs
@@ -150,7 +154,11 @@ export function TokenPanel({
       )}
 
       <Metrics stats={stats} token={token} windowLabel={windowLabel} />
-      <RiskSignals risk={risk.data} />
+      <RiskSignals
+        risk={risk.data}
+        unavailable={risk.isError}
+        onRetry={() => void risk.refetch()}
+      />
 
       <View style={styles.form}>
         <View style={styles.sides} accessibilityRole="tablist">
@@ -329,9 +337,10 @@ function Line({ label, value }: { label: string; value: string }) {
 const styles = StyleSheet.create({
   flex: { flex: 1, minWidth: 0 },
   panel: { flex: 1 },
-  content: { padding: space.lg, gap: space.lg },
+  // Room below the form so the last control scrolls clear of the window edge.
+  content: { padding: space.lg, paddingBottom: space.xl * 2, gap: space.lg },
   identity: { flexDirection: 'row', alignItems: 'center', gap: space.md },
-  symbol: { fontSize: 18, fontWeight: '700' },
+  symbol: { fontSize: 18, fontWeight: '600' },
   pair: { fontSize: 14, fontWeight: '500', color: colors.muted },
   name: { fontSize: 13, color: colors.muted, marginTop: 2 },
   open: {
@@ -341,19 +350,15 @@ const styles = StyleSheet.create({
     minHeight: 36,
     paddingHorizontal: 12,
     borderRadius: radius.chip,
-    borderWidth: 1,
-    borderColor: colors.border,
+    backgroundColor: colors.surface,
   },
   openText: { fontSize: 13, fontWeight: '600' },
-  priceRow: { flexDirection: 'row', alignItems: 'baseline', gap: space.md, flexWrap: 'wrap' },
-  price: { fontSize: 24, fontWeight: '700', letterSpacing: -0.4 },
+  priceBlock: { gap: 4 },
   note: { fontSize: 12, color: colors.muted, lineHeight: 17 },
   form: {
     gap: space.md,
     padding: space.lg,
     borderRadius: radius.card,
-    borderWidth: 1,
-    borderColor: colors.border,
     backgroundColor: colors.surface,
   },
   sides: {
@@ -362,8 +367,6 @@ const styles = StyleSheet.create({
     gap: 4,
     borderRadius: radius.input,
     backgroundColor: colors.bg,
-    borderWidth: 1,
-    borderColor: colors.border,
   },
   side: {
     flex: 1,
@@ -380,7 +383,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 14,
     borderRadius: radius.input,
     borderWidth: 1,
-    borderColor: colors.border,
+    borderColor: colors.divider,
     backgroundColor: colors.bg,
   },
   input: { flex: 1, fontSize: 20, fontWeight: '600', color: colors.text, minWidth: 0 },
@@ -391,11 +394,12 @@ const styles = StyleSheet.create({
     minHeight: 44,
     borderRadius: radius.chip,
     borderWidth: 1,
-    borderColor: colors.border,
+    borderColor: 'transparent',
+    backgroundColor: colors.bg,
     alignItems: 'center',
     justifyContent: 'center',
   },
-  presetOn: { borderColor: colors.accent, backgroundColor: tint(colors.accent, 0.1) },
+  presetOn: { borderColor: colors.borderStrong, backgroundColor: colors.surface2 },
   presetText: { fontSize: 14, fontWeight: '600', color: colors.text2 },
   lines: { gap: 10 },
   line: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 12 },

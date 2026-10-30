@@ -1,4 +1,4 @@
-import type { RiskLevel, TokenStats } from '@sift/shared';
+import type { TokenStats } from '@sift/shared';
 import { router } from 'expo-router';
 import { Pressable, StyleSheet, View } from 'react-native';
 import {
@@ -9,23 +9,20 @@ import {
   shortAddress,
 } from '../../lib/format';
 import type { MarketToken, SortKey } from '../../lib/market';
-import { RISK_COLORS, colors, radius, tint } from '../../lib/theme';
+import { transition } from '../../lib/motion';
+import { colors, radius, tint } from '../../lib/theme';
 import { Text } from '../Text';
 import { TokenAvatar } from '../TokenAvatar';
 import { Change } from './Change';
+import { RISK_TAGS, RiskTag } from './RiskTag';
 import { Sparkline } from './Sparkline';
-
-const SHORT_RISK: Record<RiskLevel | 'unknown', string> = {
-  green: 'No red flags',
-  amber: 'Caution',
-  red: 'Risky',
-  unknown: 'Not checked',
-};
 
 interface Column {
   key: string;
   label: string;
   flex: number;
+  /** A fixed width instead of a share (sparkline, action). */
+  width?: number;
   align?: 'right' | 'center';
   sort?: SortKey;
   /** Hidden below this table width. */
@@ -64,9 +61,9 @@ export function MarketTable({
       { key: 'volume', label: 'Volume', flex: 1.1, align: 'right', sort: 'volume' },
       { key: 'txns', label: 'Buys / sells', flex: 1, align: 'right', minWidth: 1050 },
       { key: 'mcap', label: 'Mkt cap', flex: 1.3, align: 'right', sort: 'marketCap' },
-      { key: 'risk', label: 'Risk', flex: 1.3, minWidth: 820 },
-      { key: 'trend', label: 'Trend', flex: 1.3, align: 'center', minWidth: 900 },
-      { key: 'action', label: 'Action', flex: 0.9, align: 'right' },
+      { key: 'risk', label: 'Risk', flex: 1, minWidth: 640 },
+      { key: 'trend', label: 'Trend', flex: 0, width: 128, align: 'center', minWidth: 900 },
+      { key: 'action', label: '', flex: 0, width: 92, align: 'right' },
     ] satisfies Column[]
   ).filter((c) => !c.minWidth || width >= c.minWidth);
 
@@ -80,7 +77,13 @@ export function MarketTable({
               onPress={() => sortBy(column.sort!)}
               accessibilityRole="button"
               accessibilityLabel={`Sort by ${column.label}`}
-              style={[styles.cell, { flex: column.flex }, alignStyle(column.align)]}
+              style={({ hovered }: { pressed: boolean; hovered?: boolean }) => [
+                styles.cell,
+                cellSize(column),
+                alignStyle(column.align),
+                hovered && styles.headHover,
+                transition,
+              ]}
             >
               <Text style={styles.headText} numberOfLines={1}>
                 {column.label}
@@ -90,7 +93,7 @@ export function MarketTable({
           ) : (
             <View
               key={column.key}
-              style={[styles.cell, { flex: column.flex }, alignStyle(column.align)]}
+              style={[styles.cell, cellSize(column), alignStyle(column.align)]}
             >
               <Text style={styles.headText} numberOfLines={1}>
                 {column.label}
@@ -101,7 +104,6 @@ export function MarketTable({
       </View>
       {tokens.map((token, index) => {
         const s = stats.get(token.mint);
-        const level = token.riskLevel ?? 'unknown';
         const isSelected = selected === token.mint;
         const symbol = (token.symbol ?? token.name ?? shortAddress(token.mint)).slice(0, 12);
         const age = formatAge(token.launchedAt ?? token.firstSeenAt);
@@ -112,7 +114,7 @@ export function MarketTable({
             onPress={() => (onSelect ? onSelect(token.mint) : router.push(`/token/${token.mint}`))}
             accessibilityRole="button"
             accessibilityState={{ selected: isSelected }}
-            accessibilityLabel={`${token.name ?? symbol}, ${SHORT_RISK[level]}`}
+            accessibilityLabel={`${token.name ?? symbol}, ${RISK_TAGS[token.riskLevel ?? 'unknown']}`}
             style={({
               hovered,
               focused,
@@ -125,12 +127,13 @@ export function MarketTable({
               hovered && styles.rowHover,
               isSelected && styles.rowSelected,
               focused && styles.rowFocus,
+              transition,
             ]}
           >
             {columns.map((column) => (
               <View
                 key={column.key}
-                style={[styles.cell, { flex: column.flex }, alignStyle(column.align)]}
+                style={[styles.cell, cellSize(column), alignStyle(column.align)]}
               >
                 {column.key === 'rank' ? (
                   <Text mono style={styles.muted}>
@@ -174,15 +177,7 @@ export function MarketTable({
                     {s?.marketCapSol ? `${formatCompact(s.marketCapSol)} SOL` : '–'}
                   </Text>
                 ) : column.key === 'risk' ? (
-                  <View style={[styles.risk, { backgroundColor: RISK_COLORS[level].bg }]}>
-                    <View style={[styles.dot, { backgroundColor: RISK_COLORS[level].fg }]} />
-                    <Text
-                      style={[styles.riskText, { color: RISK_COLORS[level].fg }]}
-                      numberOfLines={1}
-                    >
-                      {SHORT_RISK[level]}
-                    </Text>
-                  </View>
+                  <RiskTag level={token.riskLevel} />
                 ) : column.key === 'trend' ? (
                   <Sparkline
                     points={s?.sparkline ?? []}
@@ -198,6 +193,7 @@ export function MarketTable({
                     style={({ hovered }: { pressed: boolean; hovered?: boolean }) => [
                       styles.trade,
                       hovered && styles.tradeHover,
+                      transition,
                     ]}
                   >
                     <Text style={styles.tradeText}>Trade</Text>
@@ -212,6 +208,10 @@ export function MarketTable({
   );
 }
 
+function cellSize(column: Column) {
+  return column.width ? { width: column.width } : { flex: column.flex };
+}
+
 function alignStyle(align?: 'right' | 'center') {
   return align === 'right' ? styles.right : align === 'center' ? styles.center : null;
 }
@@ -220,57 +220,45 @@ const styles = StyleSheet.create({
   flex: { flex: 1, minWidth: 0 },
   table: {
     borderRadius: radius.card,
-    borderWidth: 1,
-    borderColor: colors.border,
     backgroundColor: colors.surface,
     overflow: 'hidden',
   },
   head: {
     flexDirection: 'row',
     alignItems: 'center',
-    height: 44,
+    height: 40,
     paddingHorizontal: 12,
-    borderBottomWidth: 1,
+    borderBottomWidth: StyleSheet.hairlineWidth,
     borderBottomColor: colors.border,
   },
-  headText: { fontSize: 12, fontWeight: '500', color: colors.muted },
+  headText: { fontSize: 12, fontWeight: '500', color: colors.faint },
+  headHover: { backgroundColor: colors.surface2, borderRadius: 6 },
   row: {
     flexDirection: 'row',
     alignItems: 'center',
-    minHeight: 64,
+    minHeight: 60,
     paddingHorizontal: 12,
-    borderBottomWidth: 1,
-    borderBottomColor: colors.divider,
-    borderLeftWidth: 3,
+    borderBottomWidth: StyleSheet.hairlineWidth,
+    borderBottomColor: colors.border,
+    borderLeftWidth: 2,
     borderLeftColor: 'transparent',
   },
   rowHover: { backgroundColor: colors.surface2 },
   rowSelected: { backgroundColor: tint(colors.accent, 0.06), borderLeftColor: colors.accent },
   rowFocus: { outlineColor: colors.accent, outlineWidth: 1, outlineStyle: 'solid' } as object,
-  cell: { paddingHorizontal: 6, justifyContent: 'center', minWidth: 0 },
+  cell: { paddingHorizontal: 8, justifyContent: 'center', minWidth: 0, minHeight: 36 },
   right: { alignItems: 'flex-end' },
   center: { alignItems: 'center' },
   tokenCell: { flexDirection: 'row', alignItems: 'center', gap: 10 },
-  symbol: { fontSize: 14, fontWeight: '600' },
+  symbol: { fontSize: 14, fontWeight: '500' },
   small: { fontSize: 12, color: colors.muted, marginTop: 2 },
   value: { fontSize: 14, fontWeight: '500' },
   muted: { fontSize: 13, color: colors.muted },
-  risk: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 6,
-    alignSelf: 'flex-start',
-    height: 24,
-    paddingHorizontal: 8,
-    borderRadius: 999,
-  },
-  dot: { width: 6, height: 6, borderRadius: 3 },
-  riskText: { fontSize: 12, fontWeight: '600' },
   trade: {
     minHeight: 36,
     minWidth: 72,
     paddingHorizontal: 14,
-    borderRadius: radius.input - 2,
+    borderRadius: radius.chip,
     borderWidth: 1,
     borderColor: colors.borderStrong,
     alignItems: 'center',

@@ -13,7 +13,7 @@ export function hueFor(seed: string): string {
   return TILE_HUES[h % TILE_HUES.length]!;
 }
 
-/** A token's image, or its initials on a coloured tile (rounded square, per the design). */
+/** A token's image, or a monogram on a muted colour, in a circle. Same everywhere. */
 export function TokenAvatar({
   uri,
   label,
@@ -27,13 +27,13 @@ export function TokenAvatar({
   size?: number;
 }) {
   const [failed, setFailed] = useState(false);
-  const box = { width: size, height: size, borderRadius: Math.round(size * 0.32) };
+  const box = { width: size, height: size, borderRadius: size / 2 };
   if (uri && !failed) {
     return <Image source={{ uri }} style={[box, styles.image]} onError={() => setFailed(true)} />;
   }
   return (
     <View style={[box, styles.tile, { backgroundColor: hueFor(seed ?? label ?? '?') }]}>
-      <Text style={[styles.initials, { fontSize: Math.round(size / 3.1) }]}>{initials(label)}</Text>
+      <Text style={[styles.initials, { fontSize: Math.round(size / 2.9) }]}>{initials(label)}</Text>
     </View>
   );
 }
@@ -57,5 +57,5 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: tint(colors.text, 0.08),
   },
-  initials: { fontWeight: '800', color: colors.text },
+  initials: { fontWeight: '700', color: colors.text, letterSpacing: 0.3 },
 });

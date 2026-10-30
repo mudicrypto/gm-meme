@@ -2,6 +2,7 @@ import { router } from 'expo-router';
 import { Bell, ListOrdered, MoreHorizontal, SlidersHorizontal, Trophy } from 'lucide-react-native';
 import { Pressable, StyleSheet, View } from 'react-native';
 import { colors, space } from '../../lib/theme';
+import { transition } from '../../lib/motion';
 import { Text } from '../Text';
 
 /** Secondary tools beside the table (the header holds the main navigation). */
@@ -63,6 +64,7 @@ export function Sidebar({
               styles.item,
               item.active && styles.active,
               hovered && !item.active && styles.hover,
+              transition,
             ]}
           >
             <Icon size={20} color={item.active ? colors.accent : colors.muted} strokeWidth={2} />

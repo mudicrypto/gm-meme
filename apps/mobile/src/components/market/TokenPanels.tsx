@@ -1,16 +1,20 @@
 import type { RiskScore, TokenStats, TokenTrade } from '@sift/shared';
 import {
-  AlertTriangle,
+  ArrowDown,
   ArrowLeftRight,
+  ArrowUp,
   ChevronDown,
   ChevronRight,
-  CircleHelp,
+  ShieldAlert,
   ShieldCheck,
+  ShieldQuestionMark,
+  ShieldX,
 } from 'lucide-react-native';
 import { useState } from 'react';
 import { Pressable, StyleSheet, View } from 'react-native';
 import { formatAgo, formatAge, formatCompact, formatSol, formatSolPrice } from '../../lib/format';
 import type { MarketToken } from '../../lib/market';
+import { transition } from '../../lib/motion';
 import { RISK_COLORS, RISK_LABELS, colors, radius, tint } from '../../lib/theme';
 import { Text } from '../Text';
 
@@ -59,53 +63,82 @@ function ageText(age: string): string {
 }
 
 /**
- * Risk signals: a row with the number of flags, opening to every check and its reason.
- * Text and an icon always say the level; never "safe".
+ * Risk checks: one row with the result, opening to every check and its reason. A check
+ * that couldn't get its data comes back amber (a flag), so "0 flags detected" only ever
+ * means every check completed clean; a failed load says so rather than looking clean.
+ * Text and an icon always carry the level; never "safe".
  */
 export function RiskSignals({
   risk,
   defaultOpen = false,
+  unavailable = false,
+  onRetry,
 }: {
   risk: RiskScore | undefined;
   defaultOpen?: boolean;
+  /** The checks couldn't be loaded. */
+  unavailable?: boolean;
+  onRetry?: () => void;
 }) {
   const [open, setOpen] = useState(defaultOpen);
-  if (!risk) {
+  if (unavailable || !risk) {
     return (
-      <View style={styles.risk}>
-        <CircleHelp size={18} color={colors.muted} strokeWidth={2} />
-        <Text style={styles.riskTitle}>Checking this token…</Text>
+      <View style={[styles.riskBox, styles.risk]}>
+        <ShieldQuestionMark size={20} color={colors.muted} strokeWidth={2} />
+        <View style={styles.flex}>
+          <Text style={styles.riskTitle}>Risk checks</Text>
+          <Text style={styles.riskSub}>
+            {unavailable
+              ? 'Couldn’t load the checks. Nothing is known yet.'
+              : 'Checking this token…'}
+          </Text>
+        </View>
+        {unavailable && onRetry ? (
+          <Pressable onPress={onRetry} accessibilityRole="button" style={styles.retry}>
+            <Text style={styles.retryText}>Retry</Text>
+          </Pressable>
+        ) : null}
       </View>
     );
   }
   const flags = risk.reasons.filter((r) => r.level !== 'green');
   const tone = RISK_COLORS[risk.level];
-  const Icon = risk.level === 'green' ? ShieldCheck : AlertTriangle;
+  const Icon = risk.level === 'green' ? ShieldCheck : risk.level === 'red' ? ShieldX : ShieldAlert;
+  const total = Object.keys(CHECK_NAMES).length;
+  const ran = risk.reasons.length;
+  const flagText =
+    flags.length === 0
+      ? '0 flags detected'
+      : `${flags.length} ${flags.length === 1 ? 'flag' : 'flags'}`;
   return (
     <View style={styles.riskBox}>
       <Pressable
         onPress={() => setOpen((v) => !v)}
         accessibilityRole="button"
         accessibilityState={{ expanded: open }}
-        accessibilityLabel={`Risk signals: ${RISK_LABELS[risk.level]}, ${flags.length} ${flags.length === 1 ? 'flag' : 'flags'}`}
-        style={({ pressed }) => [styles.risk, pressed && { opacity: 0.8 }]}
+        accessibilityLabel={`Risk checks: ${RISK_LABELS[risk.level]}, ${flagText}, ${ran} of ${total} checks`}
+        style={({ pressed, hovered }: { pressed: boolean; hovered?: boolean }) => [
+          styles.risk,
+          (pressed || hovered) && { backgroundColor: colors.surface2 },
+          transition,
+        ]}
       >
-        <Icon size={18} color={tone.fg} strokeWidth={2} />
-        <Text style={styles.riskTitle}>Risk signals</Text>
-        <Text style={[styles.level, { color: tone.fg }]}>{RISK_LABELS[risk.level]}</Text>
-        <View style={styles.flex} />
-        <View
-          style={[
-            styles.flagChip,
-            { borderColor: flags.length ? tint(tone.fg, 0.5) : colors.border },
-          ]}
-        >
-          <Text style={[styles.flagText, { color: flags.length ? tone.fg : colors.muted }]}>
-            {flags.length === 0
-              ? 'No flags'
-              : `${flags.length} ${flags.length === 1 ? 'flag' : 'flags'}`}
+        <Icon size={20} color={tone.fg} strokeWidth={2} />
+        <View style={styles.flex}>
+          <Text style={styles.riskTitle}>Risk checks</Text>
+          <Text style={styles.riskSub} numberOfLines={2}>
+            <Text style={[styles.level, { color: tone.fg }]}>{RISK_LABELS[risk.level]}</Text>
+            {' · '}
+            {ran < total
+              ? `${ran} of ${total} checks returned`
+              : flags.length === 0
+                ? `nothing found in ${total} checks`
+                : `${total} automated checks`}
           </Text>
         </View>
+        <Text style={[styles.flagText, { color: flags.length ? tone.fg : colors.text2 }]}>
+          {flagText}
+        </Text>
         {open ? (
           <ChevronDown size={18} color={colors.muted} strokeWidth={2} />
         ) : (
@@ -161,8 +194,14 @@ export function ActivityList({
         const color = buy ? colors.up : sell ? colors.down : colors.muted;
         return (
           <View key={`${trade.at}-${i}`} style={styles.trade}>
-            <View style={[styles.tradeIcon, { backgroundColor: tint(color, 0.14) }]}>
-              <ArrowLeftRight size={16} color={color} strokeWidth={2} />
+            <View style={[styles.tradeIcon, { backgroundColor: tint(color, 0.12) }]}>
+              {buy ? (
+                <ArrowUp size={16} color={color} strokeWidth={2.2} />
+              ) : sell ? (
+                <ArrowDown size={16} color={color} strokeWidth={2.2} />
+              ) : (
+                <ArrowLeftRight size={16} color={color} strokeWidth={2} />
+              )}
             </View>
             <View style={styles.flex}>
               <Text style={styles.tradeSide}>
@@ -197,44 +236,38 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     flexWrap: 'wrap',
     borderRadius: radius.card,
-    borderWidth: 1,
-    borderColor: colors.border,
     backgroundColor: colors.surface,
-    paddingVertical: 4,
+    paddingVertical: 6,
   },
-  metric: { width: '50%', paddingHorizontal: 16, paddingVertical: 10, gap: 2 },
-  metricRight: { borderLeftWidth: 1, borderLeftColor: colors.border },
-  metricLabel: { fontSize: 13, color: colors.muted },
+  metric: { width: '50%', paddingHorizontal: 16, paddingVertical: 8, gap: 2 },
+  metricRight: { borderLeftWidth: StyleSheet.hairlineWidth, borderLeftColor: colors.border },
+  metricLabel: { fontSize: 12, color: colors.muted },
   metricValue: { fontSize: 17, fontWeight: '600' },
   riskBox: {
     borderRadius: radius.card,
-    borderWidth: 1,
-    borderColor: colors.border,
     backgroundColor: colors.surface,
+    overflow: 'hidden',
   },
   risk: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 10,
-    minHeight: 52,
+    gap: 12,
+    minHeight: 60,
     paddingHorizontal: 16,
+    paddingVertical: 10,
   },
   riskTitle: { fontSize: 15, fontWeight: '600' },
-  level: { fontSize: 13, fontWeight: '600' },
-  flagChip: {
-    minHeight: 28,
-    paddingHorizontal: 10,
-    borderRadius: radius.chip,
-    borderWidth: 1,
-    justifyContent: 'center',
-  },
+  riskSub: { fontSize: 12, color: colors.muted, marginTop: 2 },
+  level: { fontSize: 12, fontWeight: '600' },
   flagText: { fontSize: 13, fontWeight: '600' },
+  retry: { minHeight: 44, justifyContent: 'center', paddingHorizontal: 8 },
+  retryText: { fontSize: 14, fontWeight: '600', color: colors.accent },
   checks: {
     gap: 12,
     paddingHorizontal: 16,
     paddingBottom: 14,
     paddingTop: 4,
-    borderTopWidth: 1,
+    borderTopWidth: StyleSheet.hairlineWidth,
     borderTopColor: colors.border,
   },
   check: { flexDirection: 'row', gap: 10, alignItems: 'flex-start', paddingTop: 8 },
@@ -251,8 +284,8 @@ const styles = StyleSheet.create({
     gap: 12,
     minHeight: 60,
     paddingVertical: 8,
-    borderBottomWidth: 1,
-    borderBottomColor: colors.divider,
+    borderBottomWidth: StyleSheet.hairlineWidth,
+    borderBottomColor: colors.border,
   },
   tradeIcon: {
     width: 36,

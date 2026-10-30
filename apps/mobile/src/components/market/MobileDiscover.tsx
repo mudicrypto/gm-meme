@@ -4,6 +4,7 @@ import { useState } from 'react';
 import { FlatList, Pressable, RefreshControl, StyleSheet, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { LIST_WINDOWS, activeFilterCount } from '../../lib/market';
+import { transition } from '../../lib/motion';
 import { colors, radius, space } from '../../lib/theme';
 import { IconButton } from '../Button';
 import { Sheet } from '../Sheet';
@@ -70,7 +71,11 @@ export function MobileDiscover({ state }: { state: DiscoverState }) {
           onPress={() => setFiltersOpen(true)}
           accessibilityRole="button"
           accessibilityLabel={`Filters${filterCount ? `, ${filterCount} on` : ''}`}
-          style={({ pressed }) => [styles.filters, pressed && styles.pressed]}
+          style={({ pressed, hovered }: { pressed: boolean; hovered?: boolean }) => [
+            styles.filters,
+            (pressed || hovered) && { backgroundColor: colors.surface2 },
+            transition,
+          ]}
         >
           <SlidersHorizontal size={16} color={colors.text} strokeWidth={2} />
           <Text style={styles.filtersText}>Filters</Text>
@@ -107,7 +112,7 @@ export function MobileDiscover({ state }: { state: DiscoverState }) {
           accessibilityRole="button"
           accessibilityLabel="Sort by price"
         >
-          <Text style={styles.colText}>Price (SOL){state.sortMark('price')}</Text>
+          <Text style={styles.colText}>Price · SOL{state.sortMark('price')}</Text>
         </Pressable>
         <Pressable
           onPress={() => state.sortBy('change')}
@@ -130,7 +135,7 @@ export function MobileDiscover({ state }: { state: DiscoverState }) {
   return (
     <View style={styles.screen}>
       {market.list.isError ? (
-        <View style={{ paddingTop: insets.top + space.lg, paddingHorizontal: space.screen }}>
+        <View style={{ paddingTop: insets.top + space.md, paddingHorizontal: space.screen }}>
           {header}
           <ErrorState message={market.list.error.message} onRetry={() => market.list.refetch()} />
         </View>
@@ -147,7 +152,7 @@ export function MobileDiscover({ state }: { state: DiscoverState }) {
           )}
           ListHeaderComponent={header}
           ListFooterComponent={<StatusLine state={state} />}
-          contentContainerStyle={{ paddingTop: insets.top + space.lg, paddingBottom: space.xl }}
+          contentContainerStyle={{ paddingTop: insets.top + space.md, paddingBottom: space.xl * 2 }}
           ListEmptyComponent={
             market.list.isPending ? <LoadingRows /> : <Empty message={emptyMessage(state)} />
           }
@@ -195,12 +200,12 @@ export function LoadingRows({ count = 8 }: { count?: number }) {
 const styles = StyleSheet.create({
   screen: { flex: 1, backgroundColor: colors.bg },
   flex: { flex: 1 },
-  header: { gap: space.md, paddingHorizontal: space.screen, paddingBottom: space.sm },
+  header: { gap: space.md, paddingHorizontal: space.screen, paddingBottom: 0 },
   top: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
   topRight: { flexDirection: 'row', alignItems: 'center', gap: space.sm },
-  brand: { fontSize: 18, fontWeight: '700', letterSpacing: 2.5 },
+  brand: { fontSize: 16, fontWeight: '700', letterSpacing: 3 },
   title: { fontSize: 26, fontWeight: '700', letterSpacing: -0.6 },
-  subtitle: { fontSize: 15, color: colors.muted, marginTop: 2 },
+  subtitle: { fontSize: 14, color: colors.muted, marginTop: 2 },
   openAddress: {
     minHeight: 44,
     justifyContent: 'center',
@@ -216,11 +221,9 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 6,
-    minHeight: 46,
+    minHeight: 44,
     paddingHorizontal: 14,
     borderRadius: radius.input,
-    borderWidth: 1,
-    borderColor: colors.border,
     backgroundColor: colors.surface,
   },
   filtersText: { fontSize: 14, fontWeight: '600' },
@@ -236,18 +239,18 @@ const styles = StyleSheet.create({
   badgeText: { fontSize: 11, fontWeight: '700', color: colors.onAccent },
   hidden: { fontSize: 12, color: colors.muted },
   link: { fontSize: 12, fontWeight: '600', color: colors.accent },
-  columns: { flexDirection: 'row', alignItems: 'center', gap: 10, marginTop: 4 },
+  columns: { flexDirection: 'row', alignItems: 'center', gap: 12, marginTop: 2 },
   colToken: { flex: 1, minHeight: 32, justifyContent: 'center' },
-  colPrice: { width: 96, minHeight: 32, alignItems: 'flex-end', justifyContent: 'center' },
+  colPrice: { width: 92, minHeight: 32, alignItems: 'flex-end', justifyContent: 'center' },
   colChange: {
-    width: 70,
+    width: 68,
     minHeight: 32,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'flex-end',
     gap: 2,
   },
-  colText: { fontSize: 12, color: colors.muted, fontWeight: '500' },
+  colText: { fontSize: 12, color: colors.faint, fontWeight: '500' },
   skeleton: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -257,7 +260,7 @@ const styles = StyleSheet.create({
     borderBottomWidth: 1,
     borderBottomColor: colors.divider,
   },
-  skAvatar: { width: 40, height: 40, borderRadius: 13, backgroundColor: colors.surface2 },
+  skAvatar: { width: 40, height: 40, borderRadius: 20, backgroundColor: colors.surface2 },
   skLines: { flex: 1, gap: 6 },
   skLine: { height: 11, borderRadius: 4, backgroundColor: colors.surface2 },
 });

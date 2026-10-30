@@ -59,7 +59,7 @@ export default function WalletScreen() {
       onRefresh={() => void query.refetch()}
     >
       {session.status !== 'signed-in' ? (
-        <SignInCard reason="Sign in to create your Sift wallet and run orders while your phone is off." />
+        <SignInCard reason="Create your Sift wallet. It runs your orders even when you’re offline." />
       ) : query.isPending ? (
         <Loading />
       ) : wallet ? (

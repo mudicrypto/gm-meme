@@ -22,11 +22,8 @@ export function BrowserConnect() {
   });
   const found = wallet.browserWallets;
   return (
-    <Card title="Connect your wallet">
-      <Text style={styles.body}>
-        Sift on the web works with your browser wallet. Your keys stay in the extension: Sift shows
-        the full cost, then your wallet asks you to approve.
-      </Text>
+    <Card title="Connect a wallet">
+      <Text style={styles.body}>Your keys stay in your wallet. It approves every trade.</Text>
       {found.length > 0 ? (
         <View style={styles.list}>
           {found.map((w) => (
@@ -59,9 +56,7 @@ export function BrowserConnect() {
         </View>
       ) : (
         <View style={styles.none}>
-          <Text style={styles.body}>
-            No wallet extension found in this browser. Install one, then reload this page:
-          </Text>
+          <Text style={styles.body}>No wallet extension found. Install one, then reload.</Text>
           <View style={styles.links}>
             {[
               ['Phantom', 'https://phantom.com/download'],

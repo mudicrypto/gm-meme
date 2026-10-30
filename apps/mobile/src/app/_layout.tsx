@@ -10,8 +10,10 @@ import { useFonts } from 'expo-font';
 import { Stack } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import { useState } from 'react';
+import { useWindowDimensions } from 'react-native';
 import { ModeProvider } from '../lib/mode';
-import { colors, fonts } from '../lib/theme';
+import { TerminalHeader } from '../components/market/TerminalHeader';
+import { breakpoints, colors, fonts } from '../lib/theme';
 import { WalletProvider } from '../lib/wallet';
 import { PushRegistration } from '../components/PushRegistration';
 import { SessionProvider } from '../lib/session';
@@ -24,6 +26,8 @@ export default function RootLayout() {
     Inter_700Bold,
     Inter_800ExtraBold,
   });
+  // Tablets and desktops: every screen sits under Sift's own header.
+  const wide = useWindowDimensions().width >= breakpoints.tablet;
   const [queryClient] = useState(
     () => new QueryClient({ defaultOptions: { queries: { staleTime: 10_000, retry: 1 } } }),
   );
@@ -44,23 +48,27 @@ export default function RootLayout() {
                 headerShadowVisible: false,
                 headerTitleStyle: { fontFamily: fonts.ui[700], fontSize: 16 },
                 contentStyle: { backgroundColor: colors.bg },
+                ...(wide ? { header: () => <TerminalHeader /> } : {}),
               }}
             >
               <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
-              <Stack.Screen name="token/[mint]" options={{ headerShown: false }} />
-              <Stack.Screen name="wallet" options={{ headerShown: false }} />
-              <Stack.Screen name="orders" options={{ headerShown: false }} />
-              <Stack.Screen name="leaderboard" options={{ headerShown: false }} />
+              <Stack.Screen name="token/[mint]" options={{ headerShown: wide }} />
+              <Stack.Screen name="wallet" options={{ headerShown: wide }} />
+              <Stack.Screen name="orders" options={{ headerShown: wide }} />
+              <Stack.Screen name="leaderboard" options={{ headerShown: wide }} />
               <Stack.Screen
                 name="order/[mint]"
-                options={{ headerShown: false, presentation: 'modal' }}
+                options={{ headerShown: wide, presentation: wide ? 'card' : 'modal' }}
               />
               <Stack.Screen
                 name="trade/[mint]"
-                options={{ title: 'Trade', presentation: 'modal' }}
+                options={{ title: 'Trade', presentation: wide ? 'card' : 'modal' }}
               />
               <Stack.Screen name="phantom-callback/[action]" options={{ title: 'Phantom' }} />
-              <Stack.Screen name="u/[handle]" options={{ title: 'Profile' }} />
+              <Stack.Screen
+                name="u/[handle]"
+                options={wide ? { headerShown: true } : { title: 'Profile' }}
+              />
             </Stack>
             <StatusBar style="light" />
           </SessionProvider>

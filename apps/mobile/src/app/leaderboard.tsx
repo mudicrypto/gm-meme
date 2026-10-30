@@ -1,13 +1,15 @@
 import type { LeaderboardEntry } from '@sift/shared';
 import { useQuery } from '@tanstack/react-query';
 import { router } from 'expo-router';
+import { Trophy } from 'lucide-react-native';
 import { useState } from 'react';
 import { Pressable, StyleSheet, View } from 'react-native';
 import { BackHeader } from '../components/BackHeader';
 import { Tabs } from '../components/market/Tabs';
 import { PersonAvatar } from '../components/PersonAvatar';
 import { Screen } from '../components/Screen';
-import { Empty, ErrorState } from '../components/States';
+import { EmptyState } from '../components/EmptyState';
+import { ErrorState } from '../components/States';
 import { Text } from '../components/Text';
 import { api } from '../lib/api';
 import { formatCompact } from '../lib/format';
@@ -52,7 +54,12 @@ export default function LeaderboardScreen() {
           ))}
         </View>
       ) : board.data.entries.length === 0 ? (
-        <Empty message="No shared sells in this period yet. Traders appear here once they share a trade and sell." />
+        <EmptyState
+          icon={Trophy}
+          title="No traders ranked yet"
+          body="Traders appear here once they share their trades and sell."
+          action={days < 30 ? { label: 'Try 30 days', onPress: () => setDays(30) } : undefined}
+        />
       ) : (
         <View style={styles.list}>
           {board.data.entries.map((entry, i) => (

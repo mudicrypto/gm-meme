@@ -26,7 +26,7 @@ export default function WatchlistScreen() {
   if (session.status === 'signed-out') {
     return (
       <Screen title="Watchlist">
-        <SignInCard reason="Sign in to keep a watchlist and get price alerts." />
+        <SignInCard reason="Keep a watchlist and get price alerts." />
       </Screen>
     );
   }

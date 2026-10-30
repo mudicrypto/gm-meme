@@ -175,7 +175,11 @@ export default function TokenScreen() {
         {chart.isError ? (
           <ErrorState message="Couldn’t load the chart." onRetry={() => chart.refetch()} />
         ) : (
-          <CandleChart points={chart.data?.points ?? []} windowMinutes={windowMinutes} />
+          <CandleChart
+            points={chart.data?.points ?? []}
+            emptyHeight={140}
+            windowMinutes={windowMinutes}
+          />
         )}
 
         <Metrics stats={stats.data} token={info} windowLabel={windowLabel} />

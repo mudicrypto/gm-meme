@@ -33,7 +33,7 @@ export default function FriendsScreen() {
   if (session.status === 'signed-out') {
     return (
       <Screen title="Friends" subtitle="Trades your friends chose to share" right={<TopTraders />}>
-        <SignInCard reason="Sign in to follow friends and see the trades they share." />
+        <SignInCard reason="Follow friends and see the trades they share." />
         <LegalLinks />
       </Screen>
     );

@@ -13,7 +13,7 @@ import {
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { Stack, router, useLocalSearchParams } from 'expo-router';
 import { useState } from 'react';
-import { Pressable, ScrollView, StyleSheet, View } from 'react-native';
+import { Pressable, ScrollView, StyleSheet, View, useWindowDimensions } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { BackHeader } from '../../components/BackHeader';
 import { Button } from '../../components/Button';
@@ -27,7 +27,7 @@ import { rawToTokens } from '../../lib/amounts';
 import { formatCompact, shortAddress } from '../../lib/format';
 import { useSession } from '../../lib/session';
 import { useSiftBalance, useSiftWallet } from '../../lib/social-hooks';
-import { colors, radius, space, tint } from '../../lib/theme';
+import { breakpoints, colors, radius, space, tint } from '../../lib/theme';
 
 type Tab = 'market' | OrderKind;
 
@@ -56,6 +56,7 @@ const EXPIRIES = [1, 7, 30];
 const SLIPPAGES = [500, 1000, 2000];
 
 export default function OrderScreen() {
+  const wideScreen = useWindowDimensions().width >= breakpoints.tablet;
   const insets = useSafeAreaInsets();
   const session = useSession();
   const queryClient = useQueryClient();
@@ -164,7 +165,7 @@ export default function OrderScreen() {
 
   return (
     <View style={styles.root}>
-      <Stack.Screen options={{ headerShown: false }} />
+      <Stack.Screen options={{ headerShown: wideScreen }} />
       <ScrollView
         contentContainerStyle={[styles.content, { paddingTop: insets.top + 16 }]}
         keyboardShouldPersistTaps="handled"
@@ -218,7 +219,7 @@ export default function OrderScreen() {
         ) : null}
 
         {session.status !== 'signed-in' ? (
-          <SignInCard reason="Sign in to place orders from your Sift wallet." />
+          <SignInCard reason="Place orders from your Sift wallet." />
         ) : wallet.isPending ? (
           <Loading />
         ) : !info && kind ? (

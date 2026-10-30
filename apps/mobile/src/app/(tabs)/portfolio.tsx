@@ -420,7 +420,7 @@ function WatchWallet({ onWatch }: { onWatch: (address: string) => void }) {
   return (
     <Card title="Or watch a wallet">
       <Text style={{ color: palette.muted }}>
-        Paste any Solana address to see its tokens and their risk levels. Read-only.
+        Paste any Solana address to see its tokens. Read-only.
       </Text>
       <TextInput
         value={draft}

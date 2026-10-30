@@ -9,7 +9,7 @@ import {
   isSolanaAddress,
 } from '@sift/shared';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { Link, Stack, router, useLocalSearchParams } from 'expo-router';
+import { Stack, router, useLocalSearchParams } from 'expo-router';
 import { type ReactNode, useEffect, useState } from 'react';
 import {
   AlertTriangle,
@@ -19,6 +19,7 @@ import {
   Settings,
   ShieldCheck,
   ShieldX,
+  Wallet as WalletIcon,
 } from 'lucide-react-native';
 import {
   ActivityIndicator,
@@ -37,6 +38,7 @@ import { NATIVE, haptic, transition, useReduceMotion } from '../../lib/motion';
 import { Button, IconButton } from '../../components/Button';
 import { Card } from '../../components/Card';
 import { Confetti } from '../../components/Confetti';
+import { EmptyState } from '../../components/EmptyState';
 import { SolanaMark } from '../../components/market/Network';
 import { useTokenInfo } from '../../components/market/useTokenInfo';
 import { Segmented } from '../../components/Segmented';
@@ -51,7 +53,7 @@ import { costLines, secondsLeft } from '../../lib/costs';
 import { formatCompact, shortAddress } from '../../lib/format';
 import { useTokenStats } from '../../lib/market-hooks';
 import { useMode } from '../../lib/mode';
-import { RISK_COLORS, colors, radius, space, tint } from '../../lib/theme';
+import { breakpoints, RISK_COLORS, colors, radius, space, tint } from '../../lib/theme';
 import { createRpcReader, onChainProblems } from '../../lib/chain-check';
 import { mwaErrorMessage } from '../../lib/mwa-results';
 import { checkQuote } from '../../lib/trade-check';
@@ -112,6 +114,7 @@ function SuccessCheck() {
 }
 
 export default function TradeScreen() {
+  const wideScreen = useWindowDimensions().width >= breakpoints.tablet;
   const { mode } = useMode();
   const { cluster, isDevnet, isMainnet } = useNetwork();
   const wallet = useWallet();
@@ -222,18 +225,20 @@ export default function TradeScreen() {
   if (wallet.status === 'loading') return <ActivityIndicator style={{ marginTop: 40 }} />;
   if (!wallet.address) {
     return (
-      <View style={styles.screen}>
-        <Card title="Set up a wallet to trade">
-          <Text style={styles.muted}>
-            Create a wallet on this phone or connect your wallet app. Either way, your key never
-            leaves your device.
-          </Text>
-          <Link href="/portfolio" asChild>
-            <Pressable style={StyleSheet.flatten(styles.linkButton)}>
-              <Text style={styles.linkButtonText}>Set up wallet</Text>
-            </Pressable>
-          </Link>
-        </Card>
+      <View style={styles.root}>
+        <EmptyState
+          icon={WalletIcon}
+          title={Platform.OS === 'web' ? 'Connect a wallet to trade' : 'Set up a wallet to trade'}
+          body="Your keys stay with you. Sift shows the full cost before anything is signed."
+          action={{
+            label: Platform.OS === 'web' ? 'Connect wallet' : 'Set up wallet',
+            onPress: () => router.navigate('/portfolio'),
+          }}
+          secondary={{
+            label: 'Back',
+            onPress: () => (router.canGoBack() ? router.back() : router.replace('/')),
+          }}
+        />
       </View>
     );
   }
@@ -353,7 +358,7 @@ export default function TradeScreen() {
       style={styles.root}
       behavior={Platform.OS === 'ios' ? 'padding' : undefined}
     >
-      <Stack.Screen options={{ headerShown: false }} />
+      <Stack.Screen options={{ headerShown: wideScreen }} />
       <View
         style={[styles.header, { paddingTop: insets.top + space.sm, paddingHorizontal: gutter }]}
       >

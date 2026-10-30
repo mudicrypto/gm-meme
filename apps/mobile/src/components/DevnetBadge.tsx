@@ -1,12 +1,14 @@
-import { StyleSheet, View } from 'react-native';
-import { colors, tint } from '../lib/theme';
+import { StyleSheet, View, useWindowDimensions } from 'react-native';
+import { breakpoints, colors, tint } from '../lib/theme';
 import { Text } from './Text';
 import { useNetwork } from '../lib/network';
 
 /** Shown on trade and portfolio screens while Sift runs on devnet; hidden on mainnet. */
 export function DevnetBadge() {
   const { isDevnet } = useNetwork();
-  if (!isDevnet) return null;
+  // Wide screens show DEVNET in the header already.
+  const wide = useWindowDimensions().width >= breakpoints.tablet;
+  if (!isDevnet || wide) return null;
   return (
     <View style={styles.badge} accessibilityLabel="Devnet: test network, test SOL only">
       <Text style={styles.text}>DEVNET</Text>

@@ -51,7 +51,7 @@ export default function OrdersScreen() {
       onRefresh={() => void orders.refetch()}
     >
       {session.status !== 'signed-in' ? (
-        <SignInCard reason="Sign in to see your Sift wallet orders." />
+        <SignInCard reason="See and manage your Sift wallet orders." />
       ) : wallet.isPending ? (
         <Loading />
       ) : !info ? (

@@ -6,9 +6,9 @@
     <title>Sift · Meme coins, checked first</title>
     <meta
       name="description"
-      content="Sift is a Solana meme coin app built around safety: a risk check with plain-language reasons on every token, the full cost before every trade, and friends' trades."
+      content="Sift is a Solana meme coin app built around safety: a risk check with plain-language reasons on every token, the full cost before every trade, and your keys stay with you."
     />
-    <meta name="theme-color" content="#0B0E12" />
+    <meta name="theme-color" content="#07080A" />
     <meta property="og:title" content="Sift · Meme coins, checked first" />
     <meta
       property="og:description"
@@ -22,24 +22,25 @@
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link
-      href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap"
+      href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap"
       rel="stylesheet"
     />
     <style>
       :root {
-        --bg: #0b0e12;
-        --surface: #12171d;
-        --surface2: #1b222b;
-        --border: #252b34;
-        --text: #f3f5f7;
-        --text2: #c9d0db;
-        --muted: #98a2b3;
-        --faint: #8590a1;
-        --accent: #72e5c0;
-        --on-accent: #06130f;
-        --down: #ff786e;
-        --caution: #f5b544;
-        color-scheme: dark;
+        --bg: #07080a;
+        --panel: rgba(255, 255, 255, 0.03);
+        --panel-2: rgba(255, 255, 255, 0.05);
+        --line: rgba(255, 255, 255, 0.08);
+        --line-2: rgba(255, 255, 255, 0.14);
+        --text: #f2f3f5;
+        --muted: #9aa1ac;
+        --faint: #858c97;
+        --lime: #c8f04b;
+        --green: #2ebd85;
+        --amber: #f0b44c;
+        --red: #f6465d;
+        --ink: #0b0d10;
+        --radius: 20px;
       }
       * {
         box-sizing: border-box;
@@ -47,471 +48,706 @@
       html {
         scroll-behavior: smooth;
       }
-      @media (prefers-reduced-motion: reduce) {
-        html {
-          scroll-behavior: auto;
-        }
-      }
       body {
         margin: 0;
         background: var(--bg);
         color: var(--text);
         font:
-          16px/1.6 Inter,
+          400 16px/1.6 Inter,
+          system-ui,
           -apple-system,
-          BlinkMacSystemFont,
           'Segoe UI',
           sans-serif;
-        font-feature-settings: 'tnum';
         -webkit-font-smoothing: antialiased;
+        overflow-x: hidden;
       }
       a {
-        color: var(--accent);
+        color: inherit;
         text-decoration: none;
       }
-      a:hover {
-        text-decoration: underline;
-      }
-      a:focus-visible,
-      .btn:focus-visible {
-        outline: 2px solid var(--accent);
-        outline-offset: 3px;
-        border-radius: 8px;
+      img {
+        display: block;
+        max-width: 100%;
+        height: auto;
       }
       .wrap {
-        max-width: 1120px;
+        width: min(1180px, 100% - 40px);
         margin: 0 auto;
-        padding: 0 16px;
       }
+
+      /* Soft light behind the hero: lime and green glows, a faint grid. */
+      .glow {
+        position: absolute;
+        inset: 0 0 auto;
+        height: 1100px;
+        pointer-events: none;
+        z-index: 0;
+        background:
+          radial-gradient(600px 380px at 18% 8%, rgba(200, 240, 75, 0.16), transparent 70%),
+          radial-gradient(720px 460px at 82% 22%, rgba(46, 189, 133, 0.16), transparent 70%),
+          radial-gradient(900px 520px at 50% 85%, rgba(255, 255, 255, 0.04), transparent 70%);
+      }
+      .grid-lines {
+        position: absolute;
+        inset: 0 0 auto;
+        height: 900px;
+        pointer-events: none;
+        z-index: 0;
+        background-image:
+          linear-gradient(var(--line) 1px, transparent 1px),
+          linear-gradient(90deg, var(--line) 1px, transparent 1px);
+        background-size: 64px 64px;
+        mask-image: radial-gradient(ellipse 70% 60% at 50% 0%, #000 30%, transparent 75%);
+        -webkit-mask-image: radial-gradient(ellipse 70% 60% at 50% 0%, #000 30%, transparent 75%);
+        opacity: 0.5;
+      }
+
+      /* Header: glass bar. */
       header {
         position: sticky;
         top: 0;
-        z-index: 10;
-        background: rgba(11, 14, 18, 0.92);
-        backdrop-filter: blur(8px);
-        border-bottom: 1px solid var(--border);
+        z-index: 20;
+        backdrop-filter: blur(14px);
+        -webkit-backdrop-filter: blur(14px);
+        background: rgba(7, 8, 10, 0.6);
+        border-bottom: 1px solid var(--line);
       }
       .bar {
         display: flex;
         align-items: center;
-        gap: 24px;
-        height: 64px;
+        gap: 32px;
+        height: 68px;
       }
       .brand {
         display: flex;
         align-items: center;
         gap: 10px;
-        color: var(--text);
         font-weight: 700;
-        letter-spacing: -0.4px;
-        font-size: 20px;
+        letter-spacing: 0.22em;
+        font-size: 17px;
       }
-      .brand img {
-        width: 28px;
-        height: 28px;
-        border-radius: 8px;
+      .brand svg {
+        width: 15px;
+        height: 21px;
       }
-      nav.links {
+      .links {
         display: flex;
-        gap: 20px;
+        gap: 28px;
         margin-left: auto;
-      }
-      nav.links a {
-        color: var(--muted);
         font-size: 14px;
-        font-weight: 500;
+        color: var(--muted);
       }
-      nav.links a:hover {
+      .links a:hover {
         color: var(--text);
-        text-decoration: none;
       }
       .btn {
         display: inline-flex;
         align-items: center;
         justify-content: center;
         gap: 8px;
-        min-height: 48px;
-        padding: 0 20px;
-        border-radius: 10px;
+        height: 44px;
+        padding: 0 22px;
+        border-radius: 999px;
         font-weight: 600;
         font-size: 15px;
         transition:
-          background-color 0.15s ease-out,
-          border-color 0.15s ease-out;
+          transform 0.15s ease,
+          background 0.15s ease,
+          border-color 0.15s ease;
+        white-space: nowrap;
       }
-      .btn.primary {
-        background: var(--accent);
-        color: var(--on-accent);
+      .btn:hover {
+        transform: translateY(-1px);
       }
-      .btn.primary:hover {
-        text-decoration: none;
-        background: #7beccb;
+      .btn.lime {
+        background: var(--lime);
+        color: var(--ink);
+        box-shadow: 0 8px 30px rgba(200, 240, 75, 0.25);
       }
-      .btn.quiet {
-        background: var(--surface);
-        color: var(--text);
+      .btn.ghost {
+        border: 1px solid var(--line-2);
+        background: var(--panel);
       }
-      .btn.quiet:hover {
-        text-decoration: none;
-        background: var(--surface2);
+      .btn.ghost:hover {
+        border-color: rgba(255, 255, 255, 0.3);
       }
-      .btn[aria-disabled='true'] {
+      .btn.soon {
+        border: 1px solid var(--line);
+        color: var(--faint);
         cursor: default;
       }
-      @media (prefers-reduced-motion: reduce) {
-        .btn {
-          transition: none;
-        }
+      .btn.soon:hover {
+        transform: none;
       }
 
+      /* Hero */
       .hero {
-        display: grid;
-        grid-template-columns: 1.1fr 0.9fr;
-        gap: 48px;
-        align-items: center;
-        padding: 72px 0 56px;
+        position: relative;
+        z-index: 1;
+        padding: 96px 0 40px;
+        text-align: center;
       }
-      .eyebrow {
+      .pill {
         display: inline-flex;
-        gap: 8px;
         align-items: center;
-        color: var(--muted);
-        font-size: 13px;
-        font-weight: 500;
-        background: var(--surface);
-        padding: 6px 12px;
+        gap: 10px;
+        padding: 6px 14px 6px 8px;
+        border: 1px solid var(--line-2);
         border-radius: 999px;
+        background: var(--panel);
+        font-size: 13px;
+        color: var(--muted);
       }
-      .eyebrow i {
-        width: 6px;
-        height: 6px;
-        border-radius: 50%;
-        background: var(--accent);
-        display: inline-block;
+      .pill b {
+        padding: 2px 8px;
+        border-radius: 999px;
+        background: rgba(240, 180, 76, 0.16);
+        color: var(--amber);
+        font-weight: 600;
+        font-size: 11px;
+        letter-spacing: 0.08em;
       }
       h1 {
-        font-size: clamp(40px, 6vw, 64px);
-        line-height: 1.04;
-        letter-spacing: -0.03em;
-        margin: 20px 0 16px;
+        margin: 26px auto 0;
+        max-width: 900px;
+        font-size: clamp(44px, 7.4vw, 92px);
+        line-height: 1.02;
+        letter-spacing: -0.045em;
+        font-weight: 600;
       }
       h1 span {
-        color: var(--accent);
+        background: linear-gradient(100deg, var(--lime) 0%, #7fe3a9 45%, var(--green) 100%);
+        -webkit-background-clip: text;
+        background-clip: text;
+        color: transparent;
       }
       .lead {
-        font-size: 18px;
-        color: var(--text2);
-        max-width: 520px;
-        margin: 0 0 28px;
+        margin: 24px auto 0;
+        max-width: 620px;
+        font-size: 19px;
+        line-height: 1.6;
+        color: var(--muted);
+        font-weight: 300;
       }
       .ctas {
         display: flex;
         flex-wrap: wrap;
-        gap: 12px;
-      }
-      .ctas small {
-        display: block;
-        width: 100%;
-        color: var(--faint);
-        font-size: 13px;
-        margin-top: 4px;
-      }
-      .phones {
-        position: relative;
-        display: flex;
         justify-content: center;
-        gap: 16px;
+        gap: 12px;
+        margin-top: 36px;
+      }
+      .stores {
+        display: flex;
+        flex-wrap: wrap;
+        justify-content: center;
+        gap: 10px;
+        margin-top: 14px;
+      }
+      .stores .btn {
+        height: 38px;
+        font-size: 13px;
+        font-weight: 500;
+      }
+
+      /* Product: desktop in a glass frame, phone over its corner. */
+      .stage {
+        position: relative;
+        z-index: 1;
+        margin: 72px auto 0;
+        max-width: 1080px;
+        animation: rise 1s cubic-bezier(0.2, 0.8, 0.2, 1) both 0.1s;
+      }
+      .frame {
+        padding: 10px;
+        border-radius: 26px;
+        background: linear-gradient(180deg, rgba(255, 255, 255, 0.12), rgba(255, 255, 255, 0.02));
+        box-shadow:
+          0 40px 120px rgba(0, 0, 0, 0.6),
+          0 0 0 1px var(--line);
+      }
+      .frame img {
+        border-radius: 18px;
+        width: 100%;
+      }
+      .stage .phone {
+        position: absolute;
+        right: -36px;
+        bottom: -56px;
+        width: 23%;
+        animation: rise 1s cubic-bezier(0.2, 0.8, 0.2, 1) both 0.35s;
       }
       .phone {
-        width: 46%;
-        max-width: 260px;
-        border-radius: 28px;
-        border: 1px solid var(--border);
-        background: var(--surface);
-        overflow: hidden;
+        padding: 7px;
+        border-radius: 34px;
+        background: linear-gradient(180deg, #2a2d33, #121418);
+        box-shadow:
+          0 30px 80px rgba(0, 0, 0, 0.7),
+          0 0 0 1px rgba(255, 255, 255, 0.1);
       }
       .phone img {
-        display: block;
+        border-radius: 28px;
         width: 100%;
-        height: auto;
       }
-      .phone.offset {
-        margin-top: 48px;
+      .stage::after {
+        content: '';
+        position: absolute;
+        left: 10%;
+        right: 10%;
+        bottom: -40px;
+        height: 80px;
+        background: radial-gradient(closest-side, rgba(46, 189, 133, 0.25), transparent);
+        filter: blur(20px);
+        z-index: -1;
+      }
+      @keyframes rise {
+        from {
+          opacity: 0;
+          transform: translateY(24px);
+        }
+        to {
+          opacity: 1;
+          transform: none;
+        }
+      }
+      @media (prefers-reduced-motion: reduce) {
+        .stage,
+        .stage .phone {
+          animation: none;
+        }
+        html {
+          scroll-behavior: auto;
+        }
+      }
+
+      /* Facts: big numbers, all of them true today. */
+      .facts {
+        position: relative;
+        z-index: 1;
+        display: grid;
+        grid-template-columns: repeat(4, 1fr);
+        margin-top: 140px;
+        border-top: 1px solid var(--line);
+        border-bottom: 1px solid var(--line);
+      }
+      .fact {
+        padding: 40px 28px;
+        text-align: center;
+      }
+      .fact + .fact {
+        border-left: 1px solid var(--line);
+      }
+      .fact b {
+        display: block;
+        font-size: clamp(40px, 5vw, 60px);
+        font-weight: 500;
+        letter-spacing: -0.04em;
+        line-height: 1;
+      }
+      .fact span {
+        display: block;
+        margin-top: 12px;
+        font-size: 14px;
+        color: var(--muted);
       }
 
       section {
-        padding: 64px 0;
-        border-top: 1px solid var(--border);
+        position: relative;
+        z-index: 1;
+        padding: 120px 0 0;
+      }
+      .kicker {
+        font-size: 13px;
+        font-weight: 500;
+        letter-spacing: 0.16em;
+        text-transform: uppercase;
+        color: var(--green);
       }
       h2 {
-        font-size: clamp(28px, 4vw, 40px);
-        letter-spacing: -0.02em;
-        line-height: 1.15;
-        margin: 0 0 12px;
+        margin: 14px 0 0;
+        font-size: clamp(34px, 4.6vw, 56px);
+        line-height: 1.05;
+        letter-spacing: -0.035em;
+        font-weight: 600;
       }
       .sub {
-        color: var(--muted);
+        margin: 18px 0 0;
+        max-width: 560px;
         font-size: 17px;
-        max-width: 640px;
-        margin: 0 0 36px;
-      }
-      .grid {
-        display: grid;
-        grid-template-columns: repeat(4, 1fr);
-        gap: 16px;
-      }
-      .grid.two {
-        grid-template-columns: repeat(2, 1fr);
-      }
-      .card {
-        background: var(--surface);
-        border-radius: 12px;
-        padding: 20px;
-      }
-      .card h3 {
-        font-size: 16px;
-        margin: 12px 0 6px;
-      }
-      .card p {
         color: var(--muted);
-        font-size: 14px;
-        margin: 0;
-      }
-      .ico {
-        width: 36px;
-        height: 36px;
-        border-radius: 10px;
-        background: rgba(114, 229, 192, 0.12);
-        display: grid;
-        place-items: center;
-        color: var(--accent);
-      }
-      .ico svg {
-        width: 20px;
-        height: 20px;
+        font-weight: 300;
       }
 
+      /* Why Sift: glass tiles. */
+      .tiles {
+        display: grid;
+        grid-template-columns: repeat(2, 1fr);
+        gap: 16px;
+        margin-top: 56px;
+      }
+      .tile {
+        position: relative;
+        padding: 32px;
+        border-radius: var(--radius);
+        background: var(--panel);
+        border: 1px solid var(--line);
+        overflow: hidden;
+        transition:
+          border-color 0.2s ease,
+          background 0.2s ease;
+      }
+      .tile:hover {
+        border-color: var(--line-2);
+        background: var(--panel-2);
+      }
+      .tile::before {
+        content: '';
+        position: absolute;
+        inset: -1px -1px auto auto;
+        width: 220px;
+        height: 220px;
+        background: radial-gradient(closest-side, rgba(200, 240, 75, 0.08), transparent);
+        pointer-events: none;
+      }
+      .ico {
+        display: grid;
+        place-items: center;
+        width: 52px;
+        height: 52px;
+        border-radius: 14px;
+        background: linear-gradient(180deg, rgba(255, 255, 255, 0.1), rgba(255, 255, 255, 0.03));
+        border: 1px solid var(--line-2);
+        color: var(--lime);
+      }
+      .ico svg {
+        width: 24px;
+        height: 24px;
+      }
+      .tile h3 {
+        margin: 24px 0 0;
+        font-size: 22px;
+        font-weight: 600;
+        letter-spacing: -0.02em;
+      }
+      .tile p {
+        margin: 8px 0 0;
+        color: var(--muted);
+        font-weight: 300;
+      }
+
+      /* Split sections: copy beside a product shot. */
       .split {
         display: grid;
         grid-template-columns: 1fr 1fr;
-        gap: 48px;
+        gap: 72px;
         align-items: center;
       }
+      .duo {
+        position: relative;
+        display: flex;
+        justify-content: center;
+        gap: 20px;
+      }
+      .duo .phone {
+        width: 46%;
+        max-width: 280px;
+      }
+      .duo .phone.low {
+        margin-top: 64px;
+      }
+
+      /* Risk checks */
       .checks {
+        margin: 36px 0 0;
+        padding: 8px;
         list-style: none;
-        padding: 0;
-        margin: 0;
-        background: var(--surface);
-        border-radius: 12px;
+        border-radius: var(--radius);
+        border: 1px solid var(--line);
+        background: var(--panel);
       }
       .checks li {
         display: flex;
-        gap: 12px;
-        padding: 14px 18px;
-        border-bottom: 1px solid var(--border);
+        align-items: center;
+        gap: 16px;
+        padding: 14px 16px;
+        border-radius: 14px;
       }
-      .checks li:last-child {
-        border-bottom: 0;
+      .checks li + li {
+        border-top: 1px solid var(--line);
       }
-      .checks b {
-        display: block;
-        font-size: 15px;
-      }
-      .checks span {
-        color: var(--muted);
-        font-size: 14px;
-      }
-      .mark {
-        flex: none;
-        width: 22px;
-        height: 22px;
-        border-radius: 50%;
-        background: rgba(114, 229, 192, 0.12);
-        color: var(--accent);
+      .checks .n {
         display: grid;
         place-items: center;
-        font-size: 12px;
-        font-weight: 700;
-        margin-top: 2px;
+        width: 30px;
+        height: 30px;
+        flex: none;
+        border-radius: 9px;
+        background: rgba(46, 189, 133, 0.12);
+        color: var(--green);
+        font-size: 13px;
+        font-weight: 600;
+      }
+      .checks b {
+        font-weight: 500;
+      }
+      .checks span {
+        display: block;
+        font-size: 14px;
+        color: var(--muted);
       }
       .levels {
         display: flex;
         flex-wrap: wrap;
         gap: 8px;
-        margin-top: 20px;
+        margin-top: 24px;
       }
       .tag {
-        font-size: 13px;
-        font-weight: 600;
-        padding: 4px 10px;
+        padding: 5px 12px;
         border-radius: 999px;
-        background: var(--surface);
+        font-size: 13px;
+        font-weight: 500;
+        border: 1px solid;
       }
       .tag.g {
-        color: var(--accent);
+        color: var(--green);
+        border-color: rgba(46, 189, 133, 0.35);
       }
       .tag.a {
-        color: var(--caution);
+        color: var(--amber);
+        border-color: rgba(240, 180, 76, 0.35);
       }
       .tag.r {
-        color: var(--down);
+        color: var(--red);
+        border-color: rgba(246, 70, 93, 0.35);
       }
       .tag.u {
         color: var(--muted);
+        border-color: var(--line-2);
       }
 
+      /* Cost */
       .cost {
-        background: var(--surface);
-        border-radius: 12px;
+        margin-top: 32px;
+        border-radius: var(--radius);
+        border: 1px solid var(--line);
+        background: var(--panel);
         overflow: hidden;
       }
       .cost div {
         display: flex;
         justify-content: space-between;
         gap: 16px;
-        padding: 14px 18px;
-        border-bottom: 1px solid var(--border);
+        padding: 18px 22px;
         font-size: 15px;
       }
-      .cost div:last-child {
-        border-bottom: 0;
+      .cost div + div {
+        border-top: 1px solid var(--line);
       }
       .cost span {
         color: var(--muted);
       }
-      .desktop {
-        margin-top: 8px;
-        border-radius: 12px;
-        border: 1px solid var(--border);
-        overflow: hidden;
-      }
-      .desktop img {
-        display: block;
-        width: 100%;
-        height: auto;
+      .cost b {
+        font-weight: 500;
       }
 
+      /* Desktop band */
+      .band {
+        margin-top: 56px;
+      }
+
+      /* FAQ */
+      .faq {
+        display: grid;
+        grid-template-columns: repeat(2, 1fr);
+        gap: 16px;
+        margin-top: 48px;
+      }
+      .faq .tile h3 {
+        margin: 0;
+        font-size: 18px;
+      }
+
+      /* Closing call to action */
+      .closing {
+        position: relative;
+        margin-top: 120px;
+        padding: 80px 32px;
+        border-radius: 32px;
+        text-align: center;
+        border: 1px solid var(--line);
+        background:
+          radial-gradient(500px 260px at 30% 0%, rgba(200, 240, 75, 0.14), transparent 70%),
+          radial-gradient(500px 260px at 75% 100%, rgba(46, 189, 133, 0.14), transparent 70%),
+          var(--panel);
+        overflow: hidden;
+      }
+      .closing h2 {
+        margin: 0 auto;
+        max-width: 720px;
+      }
+      .closing .sub {
+        margin: 16px auto 0;
+      }
       .fineprint {
-        color: var(--faint);
-        font-size: 14px;
+        margin: 56px auto 0;
         max-width: 760px;
+        font-size: 13px;
+        line-height: 1.7;
+        color: var(--faint);
+        text-align: center;
       }
       footer {
-        border-top: 1px solid var(--border);
-        padding: 32px 0 48px;
-        color: var(--faint);
+        margin-top: 80px;
+        border-top: 1px solid var(--line);
+        padding: 28px 0 40px;
         font-size: 14px;
+        color: var(--faint);
       }
       footer .row {
         display: flex;
-        flex-wrap: wrap;
-        gap: 20px;
-        align-items: center;
         justify-content: space-between;
+        gap: 16px;
+        flex-wrap: wrap;
       }
       footer nav {
         display: flex;
-        gap: 20px;
+        gap: 22px;
       }
-      footer nav a {
-        color: var(--muted);
+      footer a:hover {
+        color: var(--text);
       }
 
       @media (max-width: 900px) {
-        .hero,
-        .split {
-          grid-template-columns: 1fr;
-          gap: 40px;
+        .links {
+          display: none;
+        }
+        .bar {
+          justify-content: space-between;
         }
         .hero {
-          padding-top: 48px;
+          padding-top: 64px;
         }
-        .grid {
+        .stage .phone {
+          right: -8px;
+          bottom: -40px;
+          width: 30%;
+        }
+        .facts {
           grid-template-columns: repeat(2, 1fr);
+          margin-top: 100px;
         }
-        nav.links {
-          display: none;
+        .fact:nth-child(3) {
+          border-left: 0;
         }
-      }
-      @media (max-width: 520px) {
-        .grid,
-        .grid.two {
+        .fact:nth-child(n + 3) {
+          border-top: 1px solid var(--line);
+        }
+        .tiles,
+        .faq,
+        .split {
           grid-template-columns: 1fr;
         }
-        .bar .btn {
-          display: none;
+        .split {
+          gap: 48px;
         }
-        .phone {
-          border-radius: 20px;
-        }
-        .phone.offset {
-          margin-top: 32px;
+        .split.flip > :first-child {
+          order: 2;
         }
         section {
-          padding: 48px 0;
+          padding-top: 88px;
+        }
+      }
+      @media (max-width: 560px) {
+        .fact {
+          padding: 28px 12px;
+        }
+        .tile {
+          padding: 24px;
+        }
+        .closing {
+          padding: 56px 20px;
+        }
+        .lead {
+          font-size: 17px;
         }
       }
     </style>
   </head>
   <body>
+    <div class="glow" aria-hidden="true"></div>
+    <div class="grid-lines" aria-hidden="true"></div>
+
     <header>
       <div class="wrap bar">
-        <a class="brand" href="/about/" aria-label="About Sift"
-          ><img src="/about/img/icon-180.png" alt="" />Sift</a
-        >
+        <a class="brand" href="/about/" aria-label="About Sift">
+          <svg viewBox="0 0 18 25" aria-hidden="true">
+            <path d="M12.6 0 1 14.2h6.6L5.3 25 17 10.6h-6.7L12.6 0Z" fill="currentColor" />
+          </svg>
+          SIFT
+        </a>
         <nav class="links" aria-label="Sections">
-          <a href="#features">Features</a>
+          <a href="#why">Why Sift</a>
           <a href="#risk">Risk checks</a>
           <a href="#cost">Full cost</a>
           <a href="#faq">FAQ</a>
         </nav>
-        <a class="btn primary" href="/">Open Sift</a>
+        <a class="btn lime" href="/">Launch app</a>
       </div>
     </header>
 
     <main>
       <div class="wrap hero">
-        <div>
-          <span class="eyebrow"><i></i>Solana meme coins</span>
-          <h1>Meme coins,<br /><span>checked first.</span></h1>
-          <p class="lead">
-            Every token gets an automatic risk check with plain-language reasons before you see it.
-            Every trade shows its full cost before you sign. And your keys stay with you.
-          </p>
-          <div class="ctas" id="get">
-            <a class="btn primary" href="/">Open Sift on the web</a>
-            <a class="btn quiet" aria-disabled="true" role="link">App Store · coming soon</a>
-            <a class="btn quiet" aria-disabled="true" role="link">Google Play · coming soon</a>
-            <small
-              >Use Sift in your browser with your wallet extension. iOS and Android apps are on the
-              way.</small
-            >
+        <span class="pill"><b>DEVNET</b>Live on Solana devnet · test SOL only</span>
+        <h1>Meme coins,<br /><span>checked first.</span></h1>
+        <p class="lead">
+          Every token gets an automatic risk check with plain-language reasons. Every trade shows
+          its full cost before you sign. Your keys stay with you.
+        </p>
+        <div class="ctas">
+          <a class="btn lime" href="/">Launch app</a>
+          <a class="btn ghost" href="#why">How it works</a>
+        </div>
+        <div class="stores">
+          <span class="btn soon" role="link" aria-disabled="true">App Store · coming soon</span>
+          <span class="btn soon" role="link" aria-disabled="true">Google Play · coming soon</span>
+        </div>
+
+        <div class="stage">
+          <div class="frame">
+            <img
+              src="/about/img/desktop-markets.webp"
+              alt="Sift on desktop: overview cards, a table of tokens with price, change, volume, market cap and risk, and a token panel with chart and trade form."
+              width="1440"
+              height="900"
+            />
+          </div>
+          <div class="phone" aria-hidden="true">
+            <img src="/about/img/phone-home.webp" alt="" width="560" height="1212" />
           </div>
         </div>
-        <div class="phones" aria-hidden="true">
-          <div class="phone">
-            <img src="/about/img/discover.webp" alt="" width="560" height="1217" />
-          </div>
-          <div class="phone offset">
-            <img src="/about/img/token.webp" alt="" width="560" height="1217" />
-          </div>
+
+        <div class="facts">
+          <div class="fact"><b>7</b><span>automatic risk checks on every token</span></div>
+          <div class="fact"><b>0</b><span>keys Sift ever sees from your phone wallet</span></div>
+          <div class="fact"><b>0.5%</b><span>Sift fee, shown before you sign</span></div>
+          <div class="fact"><b>1 tap</b><span>to open your account</span></div>
         </div>
       </div>
 
-      <section id="features">
+      <section id="why">
         <div class="wrap">
-          <h2>Built for safety, not speed.</h2>
+          <div class="kicker">Why Sift</div>
+          <h2>Built for safety,<br />not speed.</h2>
           <p class="sub">
             Other terminals race to be first. Sift helps you see what you're buying.
           </p>
-          <div class="grid">
-            <div class="card">
+          <div class="tiles">
+            <div class="tile">
               <div class="ico">
                 <svg
                   viewBox="0 0 24 24"
                   fill="none"
                   stroke="currentColor"
-                  stroke-width="2"
+                  stroke-width="1.8"
                   stroke-linecap="round"
                   stroke-linejoin="round"
                 >
@@ -521,36 +757,37 @@
               </div>
               <h3>A risk check on every token</h3>
               <p>
-                Seven automatic checks with a reason for each, in plain words. Missing data is never
-                shown as clean.
+                Seven checks, each with a reason in plain words. Missing data is never shown as
+                clean.
               </p>
             </div>
-            <div class="card">
+            <div class="tile">
               <div class="ico">
                 <svg
                   viewBox="0 0 24 24"
                   fill="none"
                   stroke="currentColor"
-                  stroke-width="2"
+                  stroke-width="1.8"
                   stroke-linecap="round"
                   stroke-linejoin="round"
                 >
-                  <path d="M3 3v18h18" />
-                  <path d="m7 15 4-4 3 3 5-6" />
+                  <path d="M12 1v22" />
+                  <path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6" />
                 </svg>
               </div>
-              <h3>Charts and live activity</h3>
+              <h3>The full cost, up front</h3>
               <p>
-                Candles, volume, buys and sells, market cap and the latest trades, for every window.
+                Sift fee, network fee, slippage and the minimum you receive, before anything is
+                signed.
               </p>
             </div>
-            <div class="card">
+            <div class="tile">
               <div class="ico">
                 <svg
                   viewBox="0 0 24 24"
                   fill="none"
                   stroke="currentColor"
-                  stroke-width="2"
+                  stroke-width="1.8"
                   stroke-linecap="round"
                   stroke-linejoin="round"
                 >
@@ -560,17 +797,17 @@
               </div>
               <h3>Your keys stay with you</h3>
               <p>
-                The phone wallet's key lives only in your phone's secure storage. Or connect
-                Phantom.
+                Your phone wallet's key lives only in its secure storage. Or connect the wallet you
+                already use.
               </p>
             </div>
-            <div class="card">
+            <div class="tile">
               <div class="ico">
                 <svg
                   viewBox="0 0 24 24"
                   fill="none"
                   stroke="currentColor"
-                  stroke-width="2"
+                  stroke-width="1.8"
                   stroke-linecap="round"
                   stroke-linejoin="round"
                 >
@@ -591,69 +828,82 @@
       </section>
 
       <section id="risk">
-        <div class="wrap split">
+        <div class="wrap split flip">
+          <div class="duo" aria-hidden="true">
+            <div class="phone">
+              <img
+                src="/about/img/phone-markets.webp"
+                alt=""
+                width="560"
+                height="1212"
+                loading="lazy"
+              />
+            </div>
+            <div class="phone low">
+              <img
+                src="/about/img/phone-token.webp"
+                alt=""
+                width="560"
+                height="1212"
+                loading="lazy"
+              />
+            </div>
+          </div>
           <div>
+            <div class="kicker">Risk checks</div>
             <h2>What Sift checks.</h2>
             <p class="sub">
-              Each check is our own code, and each result comes with its reason. A token with no
-              flags can still lose its value: the checks look for known warning signs, they don't
-              promise anything.
+              Our own code, with a reason for every result. A token with no flags can still lose its
+              value: the checks look for known warning signs; they don't promise anything.
             </p>
             <div class="levels" aria-label="Risk levels">
               <span class="tag g">0 flags</span><span class="tag a">Caution</span
               ><span class="tag r">Risky</span><span class="tag u">Not checked</span>
             </div>
+            <ul class="checks">
+              <li>
+                <span class="n">1</span>
+                <div><b>Minting</b><span>Can anyone create more of the token?</span></div>
+              </li>
+              <li>
+                <span class="n">2</span>
+                <div><b>Freezing</b><span>Can anyone freeze your tokens?</span></div>
+              </li>
+              <li>
+                <span class="n">3</span>
+                <div>
+                  <b>Transfer rules</b><span>Hidden taxes or hooks that block transfers.</span>
+                </div>
+              </li>
+              <li>
+                <span class="n">4</span>
+                <div><b>Holders</b><span>How much the largest wallets hold.</span></div>
+              </li>
+              <li>
+                <span class="n">5</span>
+                <div><b>Liquidity</b><span>Is there enough to sell?</span></div>
+              </li>
+              <li>
+                <span class="n">6</span>
+                <div><b>Creator history</b><span>What else the creator launched.</span></div>
+              </li>
+              <li>
+                <span class="n">7</span>
+                <div><b>Selling</b><span>Does a test sell go through?</span></div>
+              </li>
+            </ul>
           </div>
-          <ul class="checks">
-            <li>
-              <span class="mark">1</span>
-              <div><b>Minting</b><span>Can anyone create more of the token?</span></div>
-            </li>
-            <li>
-              <span class="mark">2</span>
-              <div><b>Freezing</b><span>Can anyone freeze your tokens?</span></div>
-            </li>
-            <li>
-              <span class="mark">3</span>
-              <div>
-                <b>Transfer rules</b><span>Hidden taxes or hooks that block transfers.</span>
-              </div>
-            </li>
-            <li>
-              <span class="mark">4</span>
-              <div><b>Holders</b><span>How much the largest wallets hold.</span></div>
-            </li>
-            <li>
-              <span class="mark">5</span>
-              <div><b>Liquidity</b><span>Is there enough to sell?</span></div>
-            </li>
-            <li>
-              <span class="mark">6</span>
-              <div><b>Creator history</b><span>What else the creator launched.</span></div>
-            </li>
-            <li>
-              <span class="mark">7</span>
-              <div><b>Selling</b><span>Does a test sell go through?</span></div>
-            </li>
-          </ul>
         </div>
       </section>
 
       <section id="cost">
         <div class="wrap split">
-          <div class="phones" aria-hidden="true">
-            <div class="phone">
-              <img src="/about/img/trade.webp" alt="" width="560" height="1217" loading="lazy" />
-            </div>
-            <div class="phone offset">
-              <img src="/about/img/risk.webp" alt="" width="560" height="1217" loading="lazy" />
-            </div>
-          </div>
           <div>
-            <h2>The full cost, before you sign.</h2>
+            <div class="kicker">Full cost</div>
+            <h2>Know the cost<br />before you sign.</h2>
             <p class="sub">
-              No surprises after the fact. You review every line and confirm before anything is
-              signed.
+              Buy and Sell slide up over the coin. You review every line, then confirm: nothing is
+              signed before that.
             </p>
             <div class="cost">
               <div><span>Sift fee</span><b>0.5% of the trade</b></div>
@@ -662,65 +912,70 @@
               <div><span>Minimum you receive</span><b>shown in review</b></div>
             </div>
           </div>
-        </div>
-      </section>
-
-      <section>
-        <div class="wrap">
-          <h2>On tablet and desktop too.</h2>
-          <p class="sub">
-            A full terminal on bigger screens: sortable table, risk at a glance, and the selected
-            token beside it.
-          </p>
-          <div class="desktop">
-            <img
-              src="/about/img/desktop.webp"
-              alt="Sift on desktop: a table of tokens with price, change, volume, market cap, risk and trend, and a token panel with chart and trade form."
-              width="1200"
-              height="750"
-              loading="lazy"
-            />
+          <div class="duo" aria-hidden="true">
+            <div class="phone">
+              <img
+                src="/about/img/phone-sheet.webp"
+                alt=""
+                width="560"
+                height="1212"
+                loading="lazy"
+              />
+            </div>
           </div>
         </div>
       </section>
 
       <section id="faq">
         <div class="wrap">
+          <div class="kicker">FAQ</div>
           <h2>Questions.</h2>
-          <div class="grid two">
-            <div class="card">
+          <div class="faq">
+            <div class="tile">
               <h3>Does Sift tell me what to buy?</h3>
               <p>
                 No. Sift shows facts and red flags. It never tells you to buy or sell, and nothing
                 in it is financial advice.
               </p>
             </div>
-            <div class="card">
+            <div class="tile">
               <h3>Can Sift access my wallet?</h3>
               <p>
-                Not your phone wallet or Phantom: those keys never leave your device or wallet app.
-                The optional Sift wallet's keys are held by our wallet infrastructure provider, with
-                limits and a freeze switch you control.
+                Not your phone wallet or one you connect: those keys never leave your device or
+                wallet app. The optional Sift wallet's keys are held by our wallet infrastructure
+                provider, with limits and a freeze switch you control.
               </p>
             </div>
-            <div class="card">
+            <div class="tile">
               <h3>Can Sift recover a lost phone wallet?</h3>
               <p>
                 No. Only you have the key, so back it up in the app. That's also why nobody else can
                 move your funds.
               </p>
             </div>
-            <div class="card">
+            <div class="tile">
               <h3>How do I delete my account?</h3>
               <p>
                 In the app: Friends → Delete account. It removes everything Sift keeps about you.
               </p>
             </div>
           </div>
-          <p class="fineprint" style="margin-top: 32px">
-            Meme coins are extremely risky and most lose most or all of their value. Only trade what
-            you can afford to lose. Sift doesn't give financial, investment or legal advice.
-            Availability depends on where you live.
+
+          <div class="closing">
+            <h2>See what you're buying.</h2>
+            <p class="sub">
+              Open Sift in your browser now. The iOS and Android apps are on the way.
+            </p>
+            <div class="ctas">
+              <a class="btn lime" href="/">Launch app</a>
+            </div>
+          </div>
+
+          <p class="fineprint">
+            Sift runs on Solana devnet with test SOL, which has no real value. Meme coins are
+            extremely risky and most lose most or all of their value. Only trade what you can afford
+            to lose. Sift doesn't give financial, investment or legal advice. Availability depends
+            on where you live.
           </p>
         </div>
       </section>

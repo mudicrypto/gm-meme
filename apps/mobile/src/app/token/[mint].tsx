@@ -39,7 +39,7 @@ import { api } from '../../lib/api';
 import { formatSolPrice, shortAddress } from '../../lib/format';
 import { CHART_WINDOWS } from '../../lib/market';
 import { useTokenStats } from '../../lib/market-hooks';
-import { breakpoints, colors, dark, radius, space } from '../../lib/theme';
+import { breakpoints, colors, trade, radius, space } from '../../lib/theme';
 import { solscanUrl, useNetwork } from '../../lib/network';
 
 type Section = 'activity' | 'holders' | 'info';
@@ -375,10 +375,10 @@ function MoreRow({
 
 const styles = StyleSheet.create({
   columns: { flex: 1, flexDirection: 'row' },
-  side: { width: 400, backgroundColor: dark.bg },
+  side: { width: 400, backgroundColor: trade.bg },
   sideContent: { padding: space.lg, gap: space.md },
-  sideTitle: { fontSize: 12, fontWeight: '600', letterSpacing: 2, color: dark.muted },
-  sideFoot: { padding: space.lg, borderTopWidth: 1, borderTopColor: dark.border },
+  sideTitle: { fontSize: 12, fontWeight: '600', letterSpacing: 2, color: trade.muted },
+  sideFoot: { padding: space.lg, borderTopWidth: 1, borderTopColor: trade.border },
   root: { flex: 1, backgroundColor: colors.bg },
   flex: { flex: 1, minWidth: 0 },
   header: {

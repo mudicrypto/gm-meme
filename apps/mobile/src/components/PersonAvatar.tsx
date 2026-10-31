@@ -42,5 +42,5 @@ export function PersonAvatar({
 const styles = StyleSheet.create({
   ring: { alignItems: 'center', justifyContent: 'center', borderColor: 'transparent' },
   tile: { alignItems: 'center', justifyContent: 'center' },
-  initials: { fontWeight: '800', color: colors.text },
+  initials: { fontWeight: '700', color: '#FFFFFF' },
 });

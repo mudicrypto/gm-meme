@@ -4,88 +4,87 @@ import { scheme } from './appearance';
 // Sift's design system, light and dark. Every colour, size and font the screens use comes
 // from here; screens never hard-code them.
 
+// Neutral, exchange-style palettes: graphite or white surfaces, Sift green for actions,
+// lime for the one call to action on a trade.
 const light = {
-  /** Warm off-white page. */
-  bg: '#F6F7F2',
+  /** The page. */
+  bg: '#FFFFFF',
   /** Panels, cards, inputs, sheets. */
-  surface: '#FFFFFF',
+  surface: '#FAFAFA',
   /** Quiet fills: segmented tracks, hover, selected chips. */
-  surface2: '#EFF1EB',
+  surface2: '#F2F3F5',
   /** Panel and table borders. */
-  border: '#E3E6DE',
+  border: '#EAECEF',
   /** Button and input borders. */
-  borderStrong: '#D2D7CC',
+  borderStrong: '#DCDFE4',
   /** Hairlines between table rows. */
-  divider: '#ECEEE8',
+  divider: '#F2F3F5',
   tabBar: '#FFFFFF',
   /** Off state of a switch track. */
-  track: '#D2D7CC',
-  text: '#0F1712',
+  track: '#DCDFE4',
+  text: '#1E2329',
   /** Body text on panels. */
-  text2: '#2B3730',
+  text2: '#32373F',
   /** Long-form body text (summaries, notes). */
-  body: '#25302A',
+  body: '#2B3139',
   /** Secondary text: labels, column headers. */
-  muted: '#5C675F',
-  /** Captions and disclaimers (4.5:1 on the page). */
-  faint: '#6B756E',
+  muted: '#707A8A',
+  /** Captions and disclaimers (4.5:1 on white). */
+  faint: '#6B7480',
   /** Sift green: primary actions, active tabs, links. */
-  accent: '#0B7A4F',
+  accent: '#0B8A57',
   /** Shadows (never shown as a surface). */
   shadow: '#000000',
   /** Text and icons on an accent background. */
   onAccent: '#FFFFFF',
   /** Links and accent labels. */
-  link: '#0B7A4F',
-  up: '#108A4E',
-  caution: '#A86200',
-  down: '#D13A3A',
-  /** Filled change badges, with white text (4.5:1 in both themes). */
-  upFill: '#138A55',
-  downFill: '#D13A4A',
+  link: '#0B8A57',
+  up: '#0B8A57',
+  caution: '#B26A00',
+  down: '#D12F45',
+  /** Filled change badges, with white text. */
+  upFill: '#0E9F67',
+  downFill: '#E0394F',
   onFill: '#FFFFFF',
   /** The header's Connect button. */
-  cta: '#0F3B2A',
+  cta: '#1E2329',
   onCta: '#FFFFFF',
-  /** The bright call to action on dark trade surfaces. */
-  lime: '#D5F25B',
-  onLime: '#0F1712',
+  /** The bright call to action on a trade. */
+  lime: '#C8F04B',
+  onLime: '#14161A',
 };
 
 export type Colors = typeof light;
 
-/**
- * Dark mode: near-black green, an exchange look. The same palette paints the dark trade
- * surfaces in light mode (see `dark`), so both read as one design.
- */
+/** Dark mode: neutral graphite, the exchange look. */
 const darkColors: Colors = {
-  bg: '#0B120F',
-  surface: '#131D18',
-  surface2: '#1B2721',
-  border: '#24322B',
-  borderStrong: '#33433B',
-  divider: '#1A2520',
-  tabBar: '#0F1713',
-  track: '#33433B',
-  text: '#F2F5F3',
-  text2: '#D5DDD8',
-  body: '#DCE3DE',
-  muted: '#9AA79F',
-  faint: '#83908A',
-  accent: '#3DD68C',
+  bg: '#0F1114',
+  surface: '#181A1F',
+  surface2: '#22252B',
+  border: '#262A30',
+  borderStrong: '#363B43',
+  divider: '#1D2025',
+  tabBar: '#121418',
+  track: '#363B43',
+  text: '#EAECEF',
+  text2: '#C7CCD3',
+  body: '#D4D8DE',
+  muted: '#848E9C',
+  faint: '#7D8694',
+  accent: '#2EBD85',
   shadow: '#000000',
-  onAccent: '#0B120F',
-  link: '#3DD68C',
-  up: '#3DD68C',
-  caution: '#F5B544',
-  down: '#FF6B6B',
-  upFill: '#138A55',
-  downFill: '#D13A4A',
+  onAccent: '#0F1114',
+  link: '#2EBD85',
+  up: '#2EBD85',
+  caution: '#F0B44C',
+  down: '#F6465D',
+  upFill: '#1FA672',
+  downFill: '#E5404F',
   onFill: '#FFFFFF',
-  cta: '#D5F25B',
-  onCta: '#0F1712',
-  lime: '#D5F25B',
-  onLime: '#0F1712',
+  cta: '#C8F04B',
+  onCta: '#14161A',
+  lime: '#C8F04B',
+  onLime: '#14161A',
 };
 
 /** Dark mode is on for this session (the choice applies at startup). */
@@ -95,24 +94,42 @@ export const isDark = scheme === 'dark';
 export const colors: Colors = isDark ? darkColors : light;
 
 /**
- * The dark trade surfaces (the phone Trade screen, the desktop token panel): near-black
- * green with a lime call to action, in both modes.
+ * Trade surfaces (the trade screen, the desktop token panel, the trade sheet): a panel
+ * one step off the page, with lime marking the selected side, preset and slippage.
+ * They follow the theme.
  */
-export const dark = {
-  bg: '#0F1915',
-  surface: '#16231D',
-  surface2: '#1E2C26',
-  border: '#28372F',
-  text: darkColors.text,
-  muted: darkColors.muted,
-  faint: darkColors.faint,
-  up: darkColors.up,
-  down: darkColors.down,
-  caution: darkColors.caution,
-  accent: darkColors.accent,
-  lime: darkColors.lime,
-  onLime: darkColors.onLime,
-};
+export const trade = isDark
+  ? {
+      bg: '#14161A',
+      surface: '#1C1F24',
+      surface2: '#262A31',
+      border: '#2A2E35',
+      text: darkColors.text,
+      muted: darkColors.muted,
+      faint: darkColors.faint,
+      up: darkColors.up,
+      down: darkColors.down,
+      caution: darkColors.caution,
+      accent: darkColors.accent,
+      lime: darkColors.lime,
+      onLime: darkColors.onLime,
+    }
+  : {
+      bg: '#FAFAFA',
+      surface: '#FFFFFF',
+      surface2: '#F2F3F5',
+      border: '#E6E8EB',
+      text: light.text,
+      muted: light.muted,
+      faint: light.faint,
+      up: light.up,
+      down: light.down,
+      caution: light.caution,
+      accent: light.accent,
+      // Lime can't be read on white: the selection mark is Sift green in light mode.
+      lime: light.accent,
+      onLime: '#FFFFFF',
+    };
 
 /** A colour at `alpha` opacity: tinted badge backgrounds (~0.12) and borders (~0.3). */
 export function tint(hex: string, alpha: number): string {

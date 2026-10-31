@@ -7,8 +7,9 @@ export type Scheme = 'light' | 'dark';
 
 const KEY = 'sift.appearance';
 
+/** Sift opens dark, like an exchange, until the user picks Light or System. */
 export function parseMode(value: string | null | undefined): AppearanceMode {
-  return value === 'light' || value === 'dark' ? value : 'system';
+  return value === 'light' || value === 'system' ? value : 'dark';
 }
 
 /** The scheme to draw: the choice, or the phone's setting (light when it has none). */
@@ -24,11 +25,11 @@ export function resolveScheme(mode: AppearanceMode, system: string | null | unde
 export function readMode(): AppearanceMode {
   try {
     if (Platform.OS === 'web') {
-      return typeof localStorage === 'undefined' ? 'system' : parseMode(localStorage.getItem(KEY));
+      return typeof localStorage === 'undefined' ? 'dark' : parseMode(localStorage.getItem(KEY));
     }
     return parseMode(SecureStore.getItem(KEY));
   } catch {
-    return 'system';
+    return 'dark';
   }
 }
 
@@ -37,7 +38,7 @@ export function saveMode(mode: AppearanceMode): void {
     if (Platform.OS === 'web') localStorage.setItem(KEY, mode);
     else SecureStore.setItem(KEY, mode);
   } catch {
-    // Not saved: the app keeps following the phone.
+    // Not saved: the app opens dark next time.
   }
 }
 

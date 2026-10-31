@@ -3,8 +3,7 @@ import { Image, StyleSheet, View } from 'react-native';
 import { colors, tint } from '../lib/theme';
 import { Text } from './Text';
 
-// Muted tile colours for tokens without an image, picked from the mint so a token keeps
-// the same colour everywhere.
+// Muted colours for people without a photo (PersonAvatar), picked from a stable seed.
 const TILE_HUES = ['#3B3F8F', '#1F5E4A', '#6B3A2E', '#4A2E6B', '#2E4F6B', '#5E6B2E', '#7A3E5E'];
 
 export function hueFor(seed: string): string {
@@ -13,7 +12,7 @@ export function hueFor(seed: string): string {
   return TILE_HUES[h % TILE_HUES.length]!;
 }
 
-/** A token's image, or a monogram on a muted colour, in a circle. Same everywhere. */
+/** A token's image, or its first letter on a quiet neutral circle. Same everywhere. */
 export function TokenAvatar({
   uri,
   label,
@@ -22,7 +21,7 @@ export function TokenAvatar({
 }: {
   uri?: string;
   label?: string;
-  /** Usually the mint; picks the tile colour. */
+  /** Usually the mint (kept for callers; the fallback is neutral). */
   seed?: string;
   size?: number;
 }) {
@@ -32,16 +31,18 @@ export function TokenAvatar({
     return <Image source={{ uri }} style={[box, styles.image]} onError={() => setFailed(true)} />;
   }
   return (
-    <View style={[box, styles.tile, { backgroundColor: hueFor(seed ?? label ?? '?') }]}>
-      <Text style={[styles.initials, { fontSize: Math.round(size / 2.9) }]}>{initials(label)}</Text>
+    <View style={[box, styles.tile]} accessibilityLabel={label}>
+      <Text style={[styles.initials, { fontSize: Math.round(size / 2.4) }]}>
+        {initials(label ?? seed)}
+      </Text>
     </View>
   );
 }
 
+/** The first letter or digit of a token's name, for its fallback avatar. */
 export function initials(label?: string): string {
-  const words = (label ?? '?').trim().split(/\s+/);
-  const text = words.length > 1 ? `${words[0]![0]}${words[1]![0]}` : (words[0] ?? '?').slice(0, 2);
-  return text.toUpperCase();
+  const match = (label ?? '').match(/[\p{L}\p{N}]/u);
+  return (match?.[0] ?? '?').toUpperCase();
 }
 
 const styles = StyleSheet.create({
@@ -54,8 +55,9 @@ const styles = StyleSheet.create({
   tile: {
     alignItems: 'center',
     justifyContent: 'center',
+    backgroundColor: colors.surface2,
     borderWidth: 1,
-    borderColor: tint(colors.text, 0.08),
+    borderColor: tint(colors.text, 0.06),
   },
-  initials: { fontWeight: '700', color: colors.text, letterSpacing: 0.3 },
+  initials: { fontWeight: '600', color: colors.muted },
 });

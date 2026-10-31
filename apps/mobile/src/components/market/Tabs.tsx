@@ -1,6 +1,6 @@
 import { Pressable, StyleSheet, View } from 'react-native';
 import { haptic, transition } from '../../lib/motion';
-import { colors, dark, radius, tint } from '../../lib/theme';
+import { colors, trade, radius, tint } from '../../lib/theme';
 import { Text, useInk } from '../Text';
 
 /**
@@ -22,16 +22,16 @@ export function Tabs<T extends string | number>({
   label: string;
 }) {
   // On the dark trade surfaces: lime indicator, light text.
-  const onDark = useInk() === dark.text;
-  const accent = onDark ? dark.lime : colors.accent;
-  const text = onDark ? dark.text : colors.text;
-  const muted = onDark ? dark.muted : colors.muted;
+  const onDark = useInk() === trade.text;
+  const accent = onDark ? trade.lime : colors.accent;
+  const text = onDark ? trade.text : colors.text;
+  const muted = onDark ? trade.muted : colors.muted;
   return (
     <View
       style={[
         compact ? styles.segments : styles.underlineRow,
         onDark &&
-          (compact ? { backgroundColor: dark.surface } : { borderBottomColor: dark.border }),
+          (compact ? { backgroundColor: trade.surface } : { borderBottomColor: trade.border }),
       ]}
       accessibilityRole="tablist"
       accessibilityLabel={label}
@@ -62,7 +62,7 @@ export function Tabs<T extends string | number>({
               compact && selected && styles.segmentSelected,
               compact && !selected && (pressed || hovered) && styles.segmentHover,
               !compact && { borderBottomColor: selected ? accent : 'transparent' },
-              compact && selected && onDark && { backgroundColor: dark.surface2 },
+              compact && selected && onDark && { backgroundColor: trade.surface2 },
               focused && styles.focus,
               transition,
             ]}
@@ -76,7 +76,7 @@ export function Tabs<T extends string | number>({
                   {
                     color: selected ? (compact || onDark ? text : accent) : hovered ? text : muted,
                   },
-                  !compact && selected && { fontWeight: '700' },
+                  !compact && selected && { fontWeight: '600' },
                   transition,
                 ]}
               >
@@ -103,7 +103,7 @@ const styles = StyleSheet.create({
     borderBottomWidth: 2,
     marginBottom: -StyleSheet.hairlineWidth,
   },
-  tabLabel: { fontSize: 16, fontWeight: '500' },
+  tabLabel: { fontSize: 15, fontWeight: '500' },
   segments: {
     flexDirection: 'row',
     padding: 3,

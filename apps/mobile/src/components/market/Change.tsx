@@ -1,7 +1,7 @@
 import { ArrowDownRight, ArrowUpRight } from 'lucide-react-native';
 import { StyleSheet, View } from 'react-native';
 import { formatChange } from '../../lib/market';
-import { colors, dark } from '../../lib/theme';
+import { colors, trade } from '../../lib/theme';
 import { Text, useInk } from '../Text';
 
 /** A % change with its sign and an arrow, so it never relies on colour alone. */
@@ -20,7 +20,7 @@ export function Change({
   const known = pct !== undefined && Number.isFinite(pct);
   const up = known && pct >= 0;
   // Brighter tones on the dark trade surfaces.
-  const pal = useInk() === dark.text ? dark : colors;
+  const pal = useInk() === trade.text ? trade : colors;
   const color = !known ? pal.muted : up ? pal.up : pal.down;
   const Icon = up ? ArrowUpRight : ArrowDownRight;
   if (badge)

@@ -10,6 +10,7 @@ import {
   matchesSearch,
   nextSort,
   searchAddress,
+  overviewLists,
   pickHighlights,
   sortTokens,
   type MarketToken,
@@ -147,5 +148,44 @@ describe('pickHighlights', () => {
     const picks = pickHighlights(tokens, stats as never);
     expect(picks.some((p) => p.token.mint === 'scam')).toBe(false);
     expect(picks.map((p) => p.key)).toEqual(['newest']);
+  });
+});
+
+describe('overviewLists', () => {
+  const at = (h: number) => new Date(Date.UTC(2026, 9, 30, h)).toISOString();
+  const tok = (mint: string, riskLevel: 'green' | 'amber' | 'red', hour: number) =>
+    ({ mint, name: mint, riskLevel, launchedAt: at(hour), firstSeenAt: at(hour) }) as MarketToken;
+  const st = (mint: string, changePct: number, volumeSol: number, trades: number) =>
+    [
+      mint,
+      { mint, changePct, volumeSol, buys: trades, sells: 0, priceSol: 1, sparkline: [] },
+    ] as const;
+
+  it('ranks three tokens per card and leaves out red-flagged ones', () => {
+    const tokens = [
+      tok('a', 'green', 1),
+      tok('b', 'amber', 2),
+      tok('c', 'green', 3),
+      tok('d', 'green', 4),
+      tok('scam', 'red', 9),
+    ];
+    const stats = new Map([
+      st('a', 50, 10, 4),
+      st('b', 20, 40, 9),
+      st('c', -5, 30, 1),
+      st('d', 10, 20, 6),
+      st('scam', 999, 999, 999),
+    ]);
+    const lists = overviewLists(tokens, stats as never);
+    const by = Object.fromEntries(lists.map((l) => [l.key, l.tokens.map((t) => t.mint)]));
+    expect(by.hot).toEqual(['b', 'd', 'a']);
+    expect(by.new).toEqual(['d', 'c', 'b']);
+    expect(by.gainers).toEqual(['a', 'b', 'd']);
+    expect(by.volume).toEqual(['b', 'c', 'd']);
+  });
+
+  it('drops a card with nothing to show', () => {
+    const lists = overviewLists([tok('x', 'green', 1)], new Map([st('x', -1, 0, 0)]) as never);
+    expect(lists.map((l) => l.key)).toEqual(['new']);
   });
 });

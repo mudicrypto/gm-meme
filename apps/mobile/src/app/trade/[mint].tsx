@@ -56,7 +56,7 @@ import { costLines, secondsLeft } from '../../lib/costs';
 import { formatCompact, shortAddress } from '../../lib/format';
 import { useTokenStats } from '../../lib/market-hooks';
 import { useMode } from '../../lib/mode';
-import { breakpoints, RISK_COLORS, colors, radius, space, tint, dark } from '../../lib/theme';
+import { breakpoints, RISK_COLORS, colors, radius, space, tint, trade } from '../../lib/theme';
 import { createRpcReader, onChainProblems } from '../../lib/chain-check';
 import { mwaErrorMessage } from '../../lib/mwa-results';
 import { checkQuote } from '../../lib/trade-check';
@@ -367,7 +367,7 @@ export default function TradeScreen() {
       style={[styles.root, editing && styles.rootDark]}
       behavior={Platform.OS === 'ios' ? 'padding' : undefined}
     >
-      <Ink color={editing ? dark.text : colors.text}>
+      <Ink color={editing ? trade.text : colors.text}>
         <Stack.Screen options={{ headerShown: wideScreen }} />
         <View
           style={[styles.header, { paddingTop: insets.top + space.sm, paddingHorizontal: gutter }]}
@@ -376,11 +376,11 @@ export default function TradeScreen() {
             label="Back"
             onPress={() => (router.canGoBack() ? router.back() : router.replace(`/token/${mint}`))}
           >
-            <ChevronLeft size={26} color={editing ? dark.text : colors.text} strokeWidth={2} />
+            <ChevronLeft size={26} color={editing ? trade.text : colors.text} strokeWidth={2} />
           </IconButton>
           <View style={styles.headerCenter}>
             {editing && !wideScreen ? (
-              <Logo size={24} color={dark.text} />
+              <Logo size={24} color={trade.text} />
             ) : (
               <Text style={styles.headerTitle} numberOfLines={1}>
                 {stage.name === 'review' ? `Review ${title.toLowerCase()}` : `Trade ${symbol}`}
@@ -389,11 +389,11 @@ export default function TradeScreen() {
           </View>
           {isDevnet ? (
             <View style={[styles.devPill, editing && styles.devPillDark]}>
-              <Text style={[styles.devPillText, editing && { color: dark.up }]}>Devnet</Text>
+              <Text style={[styles.devPillText, editing && { color: trade.up }]}>Devnet</Text>
             </View>
           ) : null}
           <IconButton label="Trade settings" onPress={() => setSettingsOpen(true)}>
-            <Settings size={24} color={editing ? dark.text : colors.text} strokeWidth={2} />
+            <Settings size={24} color={editing ? trade.text : colors.text} strokeWidth={2} />
           </IconButton>
         </View>
 
@@ -425,7 +425,7 @@ export default function TradeScreen() {
                       accessibilityState={{ selected: active }}
                       style={[styles.tTab, active && styles.tTabOn]}
                     >
-                      <Text style={[styles.tTabText, active && { color: dark.lime }]}>
+                      <Text style={[styles.tTabText, active && { color: trade.lime }]}>
                         {value === 'buy' ? 'Buy' : 'Sell'}
                       </Text>
                     </Pressable>
@@ -456,7 +456,7 @@ export default function TradeScreen() {
                       }
                       keyboardType="decimal-pad"
                       placeholder="0.00"
-                      placeholderTextColor={dark.faint}
+                      placeholderTextColor={trade.faint}
                       accessibilityLabel="Amount to spend in SOL"
                       style={styles.swapInput}
                     />
@@ -495,7 +495,7 @@ export default function TradeScreen() {
                           : `No ${symbol} in this wallet`}
                 </Text>
                 {siftUsable && wallet.address ? (
-                  <ChevronDown size={14} color={dark.muted} strokeWidth={2} />
+                  <ChevronDown size={14} color={trade.muted} strokeWidth={2} />
                 ) : null}
               </Pressable>
 
@@ -531,7 +531,7 @@ export default function TradeScreen() {
               <View style={styles.arrowRow}>
                 <View style={styles.arrowLine} />
                 <View style={styles.arrowCircle}>
-                  <ArrowDown size={17} color={dark.text} strokeWidth={2} />
+                  <ArrowDown size={17} color={trade.text} strokeWidth={2} />
                 </View>
                 <View style={styles.arrowLine} />
               </View>
@@ -557,7 +557,7 @@ export default function TradeScreen() {
                 </View>
               </View>
               <View style={styles.infoLine}>
-                <Info size={16} color={dark.muted} strokeWidth={2} />
+                <Info size={16} color={trade.muted} strokeWidth={2} />
                 <Text style={styles.dMuted}>At the last price · exact quote in review</Text>
               </View>
 
@@ -772,13 +772,13 @@ function PresetButton({
       accessibilityState={{ selected }}
       style={({ pressed, hovered }: { pressed: boolean; hovered?: boolean }) => [
         styles.preset,
-        hovered && !selected && { backgroundColor: dark.surface2 },
+        hovered && !selected && { backgroundColor: trade.surface2 },
         selected && styles.presetOn,
         pressed && styles.pressed,
         transition,
       ]}
     >
-      <Text mono style={[styles.presetText, selected && { color: dark.lime }]}>
+      <Text mono style={[styles.presetText, selected && { color: trade.lime }]}>
         {label}
       </Text>
     </Pressable>
@@ -933,12 +933,12 @@ function DarkRow({
   const body = (
     <>
       <Text style={styles.dRowLabel}>{label}</Text>
-      <Info size={15} color={dark.muted} strokeWidth={2} />
+      <Info size={15} color={trade.muted} strokeWidth={2} />
       <View style={styles.flex} />
       <Text mono style={styles.dRowValue}>
         {value}
       </Text>
-      {onPress ? <ChevronRight size={16} color={dark.muted} strokeWidth={2} /> : null}
+      {onPress ? <ChevronRight size={16} color={trade.muted} strokeWidth={2} /> : null}
     </>
   );
   return onPress ? (
@@ -997,7 +997,7 @@ function ProtectCard({
   return (
     <View style={[styles.protect, on ? styles.protectOn : null]}>
       <View style={[styles.protectIcon, on ? styles.protectIconOn : null]}>
-        <ShieldCheck size={20} color={on ? dark.up : dark.muted} strokeWidth={2} />
+        <ShieldCheck size={20} color={on ? trade.up : trade.muted} strokeWidth={2} />
       </View>
       <View style={styles.flex}>
         <Text style={styles.protectTitle}>Protect this trade</Text>
@@ -1017,7 +1017,7 @@ function ProtectCard({
 
 const styles = StyleSheet.create({
   root: { flex: 1, backgroundColor: colors.bg },
-  rootDark: { backgroundColor: dark.bg },
+  rootDark: { backgroundColor: trade.bg },
   devPill: {
     height: 32,
     paddingHorizontal: 12,
@@ -1025,11 +1025,11 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     backgroundColor: tint(colors.accent, 0.1),
   },
-  devPillDark: { backgroundColor: tint(dark.up, 0.16) },
+  devPillDark: { backgroundColor: tint(trade.up, 0.16) },
   devPillText: { fontSize: 14, fontWeight: '600', color: colors.accent },
   tHead: { gap: 4, marginTop: space.sm },
   tTitle: { fontSize: 24, fontWeight: '700', letterSpacing: -0.5 },
-  tSub: { fontSize: 13, color: dark.muted },
+  tSub: { fontSize: 13, color: trade.muted },
   tTabs: { flexDirection: 'row', marginTop: space.sm },
   tTab: {
     flex: 1,
@@ -1037,11 +1037,11 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     borderBottomWidth: 2.5,
-    borderBottomColor: dark.border,
+    borderBottomColor: trade.border,
   },
-  tTabOn: { borderBottomColor: dark.lime },
-  tTabText: { fontSize: 15, fontWeight: '600', color: dark.text },
-  dLabel: { fontSize: 13, color: dark.muted, marginTop: space.xs },
+  tTabOn: { borderBottomColor: trade.lime },
+  tTabText: { fontSize: 15, fontWeight: '600', color: trade.text },
+  dLabel: { fontSize: 13, color: trade.muted, marginTop: space.xs },
   swapCard: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -1049,10 +1049,15 @@ const styles = StyleSheet.create({
     paddingHorizontal: 14,
     borderRadius: radius.card,
     borderWidth: 1,
-    borderColor: dark.border,
-    backgroundColor: dark.surface,
+    borderColor: trade.border,
+    backgroundColor: trade.surface,
   },
-  swapDivider: { width: 1, alignSelf: 'stretch', marginVertical: 14, backgroundColor: dark.border },
+  swapDivider: {
+    width: 1,
+    alignSelf: 'stretch',
+    marginVertical: 14,
+    backgroundColor: trade.border,
+  },
   swapAmount: { flex: 1, alignItems: 'flex-end', paddingLeft: space.md, gap: 2 },
   swapInput: {
     alignSelf: 'stretch',
@@ -1060,10 +1065,10 @@ const styles = StyleSheet.create({
     fontSize: 24,
     fontWeight: '700',
     padding: 0,
-    color: dark.text,
+    color: trade.text,
   },
   swapValue: { fontSize: 24, fontWeight: '700' },
-  swapSub: { fontSize: 12, color: dark.muted },
+  swapSub: { fontSize: 12, color: trade.muted },
   chip: { flexDirection: 'row', alignItems: 'center', gap: 10, width: 130 },
   solLogo: {
     width: 34,
@@ -1074,17 +1079,17 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   chipSymbol: { fontSize: 15, fontWeight: '700' },
-  chipName: { fontSize: 12, color: dark.muted },
+  chipName: { fontSize: 12, color: trade.muted },
   balanceRow: { flexDirection: 'row', alignItems: 'center', gap: 8, minHeight: 28 },
-  dMuted: { fontSize: 13, color: dark.muted, flexShrink: 1 },
+  dMuted: { fontSize: 13, color: trade.muted, flexShrink: 1 },
   arrowRow: { flexDirection: 'row', alignItems: 'center', gap: space.md, marginTop: space.sm },
-  arrowLine: { flex: 1, height: 1, backgroundColor: dark.border },
+  arrowLine: { flex: 1, height: 1, backgroundColor: trade.border },
   arrowCircle: {
     width: 38,
     height: 38,
     borderRadius: 19,
     borderWidth: 1,
-    borderColor: dark.border,
+    borderColor: trade.border,
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -1093,11 +1098,11 @@ const styles = StyleSheet.create({
     marginTop: space.sm,
     paddingTop: space.sm,
     borderTopWidth: 1,
-    borderTopColor: dark.border,
+    borderTopColor: trade.border,
   },
   dRow: { flexDirection: 'row', alignItems: 'center', gap: 8, minHeight: 38 },
   dRowLabel: { fontSize: 14 },
-  dRowValue: { fontSize: 14, color: dark.muted },
+  dRowValue: { fontSize: 14, color: trade.muted },
   screen: { padding: space.screen, gap: space.md, paddingBottom: 40 },
   header: {
     flexDirection: 'row',
@@ -1187,13 +1192,13 @@ const styles = StyleSheet.create({
     minHeight: 40,
     borderRadius: radius.input,
     borderWidth: 1,
-    borderColor: dark.border,
-    backgroundColor: dark.bg,
+    borderColor: trade.border,
+    backgroundColor: trade.bg,
     alignItems: 'center',
     justifyContent: 'center',
   },
-  presetOn: { backgroundColor: dark.surface2, borderColor: dark.lime },
-  presetText: { fontSize: 14, fontWeight: '600', color: dark.text },
+  presetOn: { backgroundColor: trade.surface2, borderColor: trade.lime },
+  presetText: { fontSize: 14, fontWeight: '600', color: trade.text },
   detail: { flexDirection: 'row', alignItems: 'center', gap: 6, minHeight: 44 },
   detailDivider: { borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: colors.border },
   detailLabel: { fontSize: 14, color: colors.muted },
@@ -1203,13 +1208,13 @@ const styles = StyleSheet.create({
     gap: 6,
     borderRadius: radius.card,
     borderWidth: 1,
-    borderColor: tint(dark.caution, 0.6),
-    backgroundColor: tint(dark.caution, 0.08),
+    borderColor: tint(trade.caution, 0.6),
+    backgroundColor: tint(trade.caution, 0.08),
   },
-  flagsRed: { borderColor: tint(dark.down, 0.6), backgroundColor: tint(dark.down, 0.08) },
+  flagsRed: { borderColor: tint(trade.down, 0.6), backgroundColor: tint(trade.down, 0.08) },
   flagsHead: { flexDirection: 'row', alignItems: 'center', gap: 10 },
   flagsTitle: { fontSize: 15, fontWeight: '600' },
-  flagsBody: { fontSize: 13, lineHeight: 19, color: dark.muted },
+  flagsBody: { fontSize: 13, lineHeight: 19, color: trade.muted },
   footer: {
     position: 'absolute',
     left: 0,
@@ -1222,7 +1227,7 @@ const styles = StyleSheet.create({
     borderTopWidth: StyleSheet.hairlineWidth,
     borderTopColor: colors.border,
   },
-  footerDark: { backgroundColor: dark.bg, borderTopColor: dark.border },
+  footerDark: { backgroundColor: trade.bg, borderTopColor: trade.border },
   footNote: { fontSize: 12, textAlign: 'center', color: colors.muted },
   flex: { flex: 1 },
   headerBadge: { marginRight: 12 },
@@ -1272,7 +1277,7 @@ const styles = StyleSheet.create({
   payingFrom: { fontSize: 13, color: colors.muted, textAlign: 'center' },
   payingStrong: { fontSize: 13, fontWeight: '700', color: colors.body },
   switchLink: { fontSize: 13, fontWeight: '700', color: colors.link },
-  darkLink: { fontSize: 14, fontWeight: '600', color: dark.lime },
+  darkLink: { fontSize: 14, fontWeight: '600', color: trade.lime },
   protect: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -1280,21 +1285,21 @@ const styles = StyleSheet.create({
     padding: 14,
     borderRadius: 16,
     borderWidth: 1,
-    borderColor: dark.border,
-    backgroundColor: dark.surface,
+    borderColor: trade.border,
+    backgroundColor: trade.surface,
   },
-  protectOn: { backgroundColor: tint(dark.up, 0.08), borderColor: tint(dark.up, 0.35) },
+  protectOn: { backgroundColor: tint(trade.up, 0.08), borderColor: tint(trade.up, 0.35) },
   protectIcon: {
     width: 40,
     height: 40,
     borderRadius: 12,
-    backgroundColor: dark.surface2,
+    backgroundColor: trade.surface2,
     alignItems: 'center',
     justifyContent: 'center',
   },
-  protectIconOn: { backgroundColor: tint(dark.up, 0.16) },
+  protectIconOn: { backgroundColor: tint(trade.up, 0.16) },
   protectTitle: { fontSize: 15, fontWeight: '800' },
-  protectBody: { fontSize: 12, lineHeight: 17, color: dark.muted, marginTop: 2, marginBottom: 4 },
+  protectBody: { fontSize: 12, lineHeight: 17, color: trade.muted, marginTop: 2, marginBottom: 4 },
   protectNote: { fontSize: 13, lineHeight: 19, color: colors.up, textAlign: 'center' },
   linkButton: {
     height: 54,

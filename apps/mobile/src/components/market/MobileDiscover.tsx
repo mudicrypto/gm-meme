@@ -1,5 +1,4 @@
 import { ChevronDown, Filter, Info } from 'lucide-react-native';
-import { router } from 'expo-router';
 import { useState } from 'react';
 import { Animated, FlatList, Pressable, RefreshControl, StyleSheet, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -8,13 +7,11 @@ import { transition } from '../../lib/motion';
 import { colors, radius, space } from '../../lib/theme';
 import { Sheet } from '../Sheet';
 import { ErrorState } from '../States';
-import { Logo } from '../Logo';
 import { usePulse } from '../Motion';
 import { Text } from '../Text';
 import { EmptyFeed } from './EmptyFeed';
-import { Highlights } from './Highlights';
 import { FiltersSheet } from './FiltersSheet';
-import { DevnetPill, NetworkChip, NetworkNote } from './Network';
+import { DevnetPill, NetworkNote } from './Network';
 import { SearchBar } from './SearchBar';
 import { Tabs } from './Tabs';
 import { TokenListRow } from './TokenListRow';
@@ -32,24 +29,22 @@ export function MobileDiscover({ state }: { state: DiscoverState }) {
   const header = (
     <View style={styles.header}>
       <View style={styles.top}>
-        <Logo size={26} />
-        <View style={styles.topRight}>
-          <NetworkChip onPress={() => setNetworkOpen(true)} />
-          <DevnetPill soft />
+        <View style={styles.flex}>
+          <SearchBar
+            value={state.query}
+            onChange={state.setQuery}
+            onSubmit={state.openAddress}
+            placeholder="Search token or address"
+          />
         </View>
+        <Pressable
+          onPress={() => setNetworkOpen(true)}
+          accessibilityRole="button"
+          accessibilityLabel="Network: Solana devnet"
+        >
+          <DevnetPill soft />
+        </Pressable>
       </View>
-      <View>
-        <Text style={styles.eyebrow}>ON-CHAIN DISCOVERY</Text>
-        <Text style={styles.title} accessibilityRole="header">
-          Markets
-        </Text>
-      </View>
-      <SearchBar value={state.query} onChange={state.setQuery} onSubmit={state.openAddress} />
-      <Highlights
-        tokens={rows}
-        stats={market.statsMap}
-        onOpen={(mint) => router.push(`/token/${mint}`)}
-      />
       {state.address ? (
         <Pressable
           onPress={state.openAddress}

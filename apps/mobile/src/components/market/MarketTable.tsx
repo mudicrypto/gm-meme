@@ -14,7 +14,7 @@ import {
 } from '../../lib/format';
 import type { MarketToken, SortKey } from '../../lib/market';
 import { transition } from '../../lib/motion';
-import { colors, radius, tint } from '../../lib/theme';
+import { colors, radius } from '../../lib/theme';
 import { HoverTip } from '../HoverTip';
 import { WatchStar } from '../WatchStar';
 import { Text } from '../Text';
@@ -173,16 +173,18 @@ export function MarketTable({
                       uri={token.imageUrl}
                       label={token.symbol ?? token.name}
                       seed={token.mint}
-                      size={36}
+                      size={30}
                     />
                     <View style={styles.flex}>
                       <Text style={styles.symbol} numberOfLines={1}>
-                        {symbol}
+                        {symbol} <Text style={styles.name}>{(token.name ?? '').slice(0, 24)}</Text>
                       </Text>
                       <Text style={styles.small} numberOfLines={1}>
                         {smart
                           ? `${smart} smart ${smart === 1 ? 'trader' : 'traders'}`
-                          : `${(token.name ?? 'Unnamed').slice(0, 24)} · ${age === 'just now' ? 'new' : age}`}
+                          : age === 'just now'
+                            ? 'New'
+                            : `${age} old`}
                       </Text>
                     </View>
                   </View>
@@ -195,7 +197,7 @@ export function MarketTable({
                     </Text>
                   )
                 ) : column.key === 'change' ? (
-                  <Change pct={s?.changePct} size={14} badge />
+                  <Change pct={s?.changePct} size={15} />
                 ) : column.key === 'volume' ? (
                   <Text mono style={styles.value} numberOfLines={1}>
                     {s ? formatSol(s.volumeSol) : '–'}
@@ -264,45 +266,36 @@ function alignStyle(align?: 'right' | 'center') {
 const styles = StyleSheet.create({
   flex: { flex: 1, minWidth: 0 },
   // No overflow clipping: price tooltips rise above the first row.
-  table: {
-    borderRadius: radius.card + 2,
-    borderWidth: 1,
-    borderColor: colors.border,
-    backgroundColor: colors.surface,
-  },
+  table: {},
   priceTap: { paddingVertical: 4, borderRadius: 4 },
   priceFocus: { outlineColor: colors.accent, outlineWidth: 1, outlineStyle: 'solid' } as object,
   head: {
     flexDirection: 'row',
     alignItems: 'center',
-    height: 48,
+    height: 44,
     paddingHorizontal: 12,
-    borderBottomWidth: 1,
-    borderBottomColor: colors.border,
   },
   headInner: { flexDirection: 'row', alignItems: 'center', gap: 4 },
   headRight: { justifyContent: 'flex-end' },
-  headText: { fontSize: 13, fontWeight: '500', color: colors.muted },
-  headOn: { color: colors.text, fontWeight: '600' },
+  headText: { fontSize: 13, fontWeight: '400', color: colors.muted },
+  headOn: { color: colors.text, fontWeight: '500' },
   headHover: { backgroundColor: colors.surface2, borderRadius: 6 },
   row: {
     flexDirection: 'row',
     alignItems: 'center',
-    minHeight: 68,
+    minHeight: 64,
     paddingHorizontal: 12,
-    borderBottomWidth: 1,
-    borderBottomColor: colors.divider,
-    borderLeftWidth: 3,
-    borderLeftColor: 'transparent',
+    borderRadius: radius.card,
   },
   rowHover: { backgroundColor: colors.surface2 },
-  rowSelected: { backgroundColor: tint(colors.accent, 0.07), borderLeftColor: colors.accent },
+  rowSelected: { backgroundColor: colors.surface2 },
   rowFocus: { outlineColor: colors.accent, outlineWidth: 1, outlineStyle: 'solid' } as object,
   cell: { paddingHorizontal: 8, justifyContent: 'center', minWidth: 0, minHeight: 36 },
   right: { alignItems: 'flex-end' },
   center: { alignItems: 'center' },
   tokenCell: { flexDirection: 'row', alignItems: 'center', gap: 10 },
-  symbol: { fontSize: 15, fontWeight: '700' },
+  symbol: { fontSize: 15, fontWeight: '600' },
+  name: { fontSize: 13, fontWeight: '400', color: colors.muted },
   small: { fontSize: 12, color: colors.muted, marginTop: 2 },
   value: { fontSize: 15, fontWeight: '500' },
 });

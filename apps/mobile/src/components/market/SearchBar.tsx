@@ -22,7 +22,7 @@ export function SearchBar({
 }) {
   return (
     <View style={styles.box}>
-      <Search size={20} color={colors.text} strokeWidth={2} />
+      <Search size={18} color={colors.muted} strokeWidth={2} />
       <TextInput
         ref={inputRef}
         value={value}
@@ -52,22 +52,19 @@ const styles = StyleSheet.create({
   box: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 10,
-    height: 48,
-    paddingHorizontal: 14,
+    gap: 8,
+    height: 40,
+    paddingHorizontal: 12,
     borderRadius: radius.input + 2,
-    borderWidth: 1,
-    borderColor: colors.border,
-    backgroundColor: colors.surface,
+    backgroundColor: colors.surface2,
   },
   hint: {
     paddingHorizontal: 7,
     paddingVertical: 2,
     borderRadius: 6,
     borderWidth: 1,
-    borderColor: colors.border,
-    backgroundColor: colors.surface2,
+    borderColor: colors.borderStrong,
   },
   hintText: { fontSize: 12, fontWeight: '600', color: colors.muted },
-  input: { flex: 1, fontSize: 16, height: 48, padding: 0, outlineStyle: 'none' } as object,
+  input: { flex: 1, fontSize: 15, height: 40, padding: 0, outlineStyle: 'none' } as object,
 });

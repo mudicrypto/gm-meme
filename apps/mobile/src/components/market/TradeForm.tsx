@@ -9,7 +9,7 @@ import { formatCompact } from '../../lib/format';
 import { transition } from '../../lib/motion';
 import { useNetwork } from '../../lib/network';
 import { useSiftWallet } from '../../lib/social-hooks';
-import { dark, radius, space } from '../../lib/theme';
+import { trade, radius, space } from '../../lib/theme';
 import { useWallet } from '../../lib/wallet';
 import { Button } from '../Button';
 import { Ink, Text, TextInput } from '../Text';
@@ -144,7 +144,7 @@ export function TradeFields({ form }: { form: TradeFormState }) {
           : '…'
         : `${formatCompact(held)} ${symbol}`;
   return (
-    <Ink color={dark.text}>
+    <Ink color={trade.text}>
       <View style={styles.fields}>
         <View style={styles.tabs} accessibilityRole="tablist" accessibilityLabel="Buy or sell">
           {(['buy', 'sell'] as const).map((value) => (
@@ -155,7 +155,7 @@ export function TradeFields({ form }: { form: TradeFormState }) {
               accessibilityState={{ selected: side === value }}
               style={[styles.tab, side === value && styles.tabOn]}
             >
-              <Text style={[styles.tabText, side !== value && { color: dark.muted }]}>
+              <Text style={[styles.tabText, side !== value && { color: trade.muted }]}>
                 {value === 'buy' ? 'Buy' : 'Sell'}
               </Text>
             </Pressable>
@@ -180,7 +180,7 @@ export function TradeFields({ form }: { form: TradeFormState }) {
                 accessibilityLabel="Amount in SOL"
                 style={styles.input}
                 placeholder="0.0"
-                placeholderTextColor={dark.faint}
+                placeholderTextColor={trade.faint}
               />
             ) : (
               <Text mono style={styles.amount} numberOfLines={1}>
@@ -213,11 +213,11 @@ export function TradeFields({ form }: { form: TradeFormState }) {
             accessibilityLabel={side === 'buy' ? 'Switch to sell' : 'Switch to buy'}
             style={({ hovered }: { pressed: boolean; hovered?: boolean }) => [
               styles.swap,
-              hovered && { borderColor: dark.lime },
+              hovered && { borderColor: trade.lime },
               transition,
             ]}
           >
-            <ArrowDown size={18} color={dark.text} strokeWidth={2} />
+            <ArrowDown size={18} color={trade.text} strokeWidth={2} />
           </Pressable>
           <View style={styles.swapLine} />
         </View>
@@ -249,7 +249,7 @@ export function TradeFields({ form }: { form: TradeFormState }) {
                 >
                   <Text
                     mono
-                    style={[styles.slipText, slippage === s.value && { color: dark.lime }]}
+                    style={[styles.slipText, slippage === s.value && { color: trade.lime }]}
                   >
                     {s.label}
                   </Text>
@@ -270,10 +270,10 @@ export function TradeAction({ form }: { form: TradeFormState }) {
   const { side, sellPercent, payer, solBalance, holding, amountOk, tooMuch, review, isDevnet } =
     form;
   return (
-    <Ink color={dark.text}>
+    <Ink color={trade.text}>
       <View style={styles.action}>
         {tooMuch ? (
-          <Text style={[styles.note, { color: dark.caution }]}>
+          <Text style={[styles.note, { color: trade.caution }]}>
             More than your balance of {formatCompact(solBalance ?? 0)} SOL (keep about{' '}
             {FEE_RESERVE_SOL} SOL for fees).
           </Text>
@@ -349,12 +349,12 @@ function Preset({
       hitSlop={4}
       style={({ hovered }: { pressed: boolean; hovered?: boolean }) => [
         styles.preset,
-        hovered && !selected && { backgroundColor: dark.surface2 },
+        hovered && !selected && { backgroundColor: trade.surface2 },
         selected && styles.presetOn,
         transition,
       ]}
     >
-      <Text mono style={[styles.presetText, selected && { color: dark.lime }]}>
+      <Text mono style={[styles.presetText, selected && { color: trade.lime }]}>
         {label}
       </Text>
     </Pressable>
@@ -382,21 +382,21 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     borderBottomWidth: 2.5,
-    borderBottomColor: dark.border,
+    borderBottomColor: trade.border,
   },
-  tabOn: { borderBottomColor: dark.lime },
+  tabOn: { borderBottomColor: trade.lime },
   tabText: { fontSize: 15, fontWeight: '600' },
   card: {
     gap: 10,
     padding: 14,
     borderRadius: radius.card,
     borderWidth: 1,
-    borderColor: dark.border,
-    backgroundColor: dark.surface,
+    borderColor: trade.border,
+    backgroundColor: trade.surface,
   },
   cardHead: { flexDirection: 'row', justifyContent: 'space-between', gap: 12 },
-  cardLabel: { fontSize: 13, color: dark.muted, flexShrink: 1 },
-  cardBalance: { fontSize: 13, color: dark.text, fontWeight: '500' },
+  cardLabel: { fontSize: 13, color: trade.muted, flexShrink: 1 },
+  cardBalance: { fontSize: 13, color: trade.text, fontWeight: '500' },
   cardBody: { flexDirection: 'row', alignItems: 'center', gap: 12 },
   chip: {
     flexDirection: 'row',
@@ -406,7 +406,7 @@ const styles = StyleSheet.create({
     paddingRight: 12,
     height: 40,
     borderRadius: 20,
-    backgroundColor: dark.surface2,
+    backgroundColor: trade.surface2,
     maxWidth: 150,
   },
   solLogo: {
@@ -429,33 +429,33 @@ const styles = StyleSheet.create({
   } as object,
   amount: { flex: 1, textAlign: 'right', fontSize: 26, fontWeight: '700' },
   swapRow: { flexDirection: 'row', alignItems: 'center', gap: space.sm, marginVertical: -6 },
-  swapLine: { flex: 1, height: 1, backgroundColor: dark.border },
+  swapLine: { flex: 1, height: 1, backgroundColor: trade.border },
   swap: {
     width: 40,
     height: 40,
     borderRadius: 20,
     borderWidth: 1,
-    borderColor: dark.border,
-    backgroundColor: dark.bg,
+    borderColor: trade.border,
+    backgroundColor: trade.bg,
     alignItems: 'center',
     justifyContent: 'center',
   },
-  note: { fontSize: 12, color: dark.muted, lineHeight: 17 },
+  note: { fontSize: 12, color: trade.muted, lineHeight: 17 },
   presets: { flexDirection: 'row', gap: space.sm },
   preset: {
     flex: 1,
     minHeight: 38,
     borderRadius: radius.chip,
     borderWidth: 1,
-    borderColor: dark.border,
+    borderColor: trade.border,
     alignItems: 'center',
     justifyContent: 'center',
   },
-  presetOn: { borderColor: dark.lime, backgroundColor: dark.surface2 },
+  presetOn: { borderColor: trade.lime, backgroundColor: trade.surface2 },
   presetText: { fontSize: 14, fontWeight: '600' },
   lines: { gap: 10 },
   line: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 12 },
-  lineLabel: { fontSize: 13, color: dark.muted },
+  lineLabel: { fontSize: 13, color: trade.muted },
   lineValue: { fontSize: 13, fontWeight: '500', flexShrink: 1 },
   slips: { flexDirection: 'row', gap: 4 },
   slip: {
@@ -464,10 +464,10 @@ const styles = StyleSheet.create({
     paddingHorizontal: 8,
     borderRadius: 6,
     borderWidth: 1,
-    borderColor: dark.border,
+    borderColor: trade.border,
     alignItems: 'center',
     justifyContent: 'center',
   },
-  slipOn: { borderColor: dark.lime },
-  slipText: { fontSize: 12, fontWeight: '600', color: dark.muted },
+  slipOn: { borderColor: trade.lime },
+  slipText: { fontSize: 12, fontWeight: '600', color: trade.muted },
 });

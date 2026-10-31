@@ -67,7 +67,7 @@ export function TerminalHeader({
         accessibilityLabel="Sift home"
         style={styles.brand}
       >
-        <Logo size={28} />
+        <Logo size={24} />
       </Pressable>
       <View style={styles.nav} accessibilityRole="tablist">
         {NAV.map((item) => {
@@ -147,14 +147,14 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: space.lg,
-    height: 72,
+    height: 64,
     paddingHorizontal: space.xl,
     borderBottomWidth: 1,
     borderBottomColor: colors.border,
     backgroundColor: colors.bg,
   },
   brand: { marginRight: space.sm },
-  nav: { flexDirection: 'row', alignItems: 'stretch', height: 72, gap: 4 },
+  nav: { flexDirection: 'row', alignItems: 'stretch', height: 64, gap: 4 },
   navItem: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -165,8 +165,8 @@ const styles = StyleSheet.create({
   },
   navActive: { borderBottomColor: colors.accent },
   navHover: { borderBottomColor: colors.borderStrong },
-  navText: { fontSize: 15, fontWeight: '500', color: colors.muted },
-  navTextActive: { color: colors.accent, fontWeight: '700' },
+  navText: { fontSize: 14, fontWeight: '500', color: colors.muted },
+  navTextActive: { color: colors.text, fontWeight: '600' },
   search: { flex: 1, maxWidth: 480, marginLeft: 'auto' },
   walletChip: {
     flexDirection: 'row',

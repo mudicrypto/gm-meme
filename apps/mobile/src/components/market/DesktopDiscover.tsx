@@ -5,15 +5,14 @@ import { useEffect, useState } from 'react';
 import { Pressable, ScrollView, StyleSheet, View, useWindowDimensions } from 'react-native';
 import { transition } from '../../lib/motion';
 import { DEFAULT_FILTERS, LIST_WINDOWS, activeFilterCount, filterChips } from '../../lib/market';
-import { colors, dark, radius, space } from '../../lib/theme';
+import { colors, trade, radius, space } from '../../lib/theme';
 import { ErrorState } from '../States';
 import { Text } from '../Text';
 import { EmptyFeed } from './EmptyFeed';
 import { FiltersBody } from './FiltersSheet';
-import { Highlights } from './Highlights';
+import { OverviewCards } from './OverviewCards';
 import { MarketTable } from './MarketTable';
 import { LoadingRows } from './MobileDiscover';
-import { Sidebar } from './Sidebar';
 import { StatusLine } from './StatusLine';
 import { Tabs } from './Tabs';
 import { TerminalHeader } from './TerminalHeader';
@@ -21,7 +20,6 @@ import { TokenPanel } from './TokenPanel';
 import { type DiscoverState, FEEDS } from './useDiscover';
 import { useNetwork } from '../../lib/network';
 
-const SIDEBAR = 64;
 /** The token panel: 400 on wide screens, 360 on smaller desktops. */
 const panelWidth = (width: number) => (width >= 1440 ? 420 : 380);
 const DRAWER = 320;
@@ -46,7 +44,7 @@ export function DesktopDiscover({
   const chips = filterChips(state.filters);
   const windowLabel = LIST_WINDOWS.find((w) => w.minutes === state.windowMinutes)?.label ?? '1h';
   const panel = panelWidth(width);
-  const tableWidth = width - SIDEBAR - (showPanel ? panel : 0) - space.xl * 2;
+  const tableWidth = width - (showPanel ? panel : 0) - space.xl * 2;
   const selectedToken = rows.find((t) => t.mint === state.selected) ?? rows[0];
   const toggleLevel = (level: RiskLevel | 'unknown') =>
     state.setFilters({
@@ -70,11 +68,9 @@ export function DesktopDiscover({
     <View style={styles.screen}>
       <TerminalHeader query={state.query} onQuery={state.setQuery} />
       <View style={styles.body}>
-        <Sidebar onScreener={() => setDrawerOpen((v) => !v)} screenerOn={drawerOpen} />
         <ScrollView style={styles.main} contentContainerStyle={styles.mainContent}>
           <View style={styles.titleRow}>
             <View>
-              <Text style={styles.eyebrow}>ON-CHAIN DISCOVERY</Text>
               <Text style={styles.title} accessibilityRole="header">
                 Markets
               </Text>
@@ -83,8 +79,7 @@ export function DesktopDiscover({
               <StatusLine state={state} inline />
             </View>
           </View>
-          <Highlights
-            row
+          <OverviewCards
             tokens={rows}
             stats={market.statsMap}
             onOpen={(mint) => (showPanel ? state.select(mint) : router.push(`/token/${mint}`))}
@@ -218,7 +213,7 @@ export function DesktopDiscover({
               />
             ) : (
               <View style={styles.panelEmpty}>
-                <Text style={[styles.subtitle, { color: dark.muted }]}>
+                <Text style={[styles.subtitle, { color: trade.muted }]}>
                   Select a token to see its chart and trade it.
                 </Text>
               </View>
@@ -285,17 +280,16 @@ const styles = StyleSheet.create({
   body: { flex: 1, flexDirection: 'row' },
   reset: { minHeight: 36, justifyContent: 'center', paddingHorizontal: 8 },
   main: { flex: 1 },
-  mainContent: { padding: space.xl, gap: space.lg },
+  mainContent: { paddingHorizontal: space.xl, paddingVertical: space.xl, gap: 20 },
   titleRow: {
     flexDirection: 'row',
-    alignItems: 'flex-end',
+    alignItems: 'center',
     justifyContent: 'space-between',
     flexWrap: 'wrap',
     gap: space.md,
   },
   status: { flexShrink: 1 },
-  eyebrow: { fontSize: 12, fontWeight: '600', letterSpacing: 2, color: colors.muted },
-  title: { fontSize: 40, fontWeight: '800', letterSpacing: -1, marginTop: 4 },
+  title: { fontSize: 26, fontWeight: '700', letterSpacing: -0.4 },
   subtitle: { fontSize: 14, color: colors.muted, marginTop: 2 },
   controls: {
     flexDirection: 'row',
@@ -357,12 +351,12 @@ const styles = StyleSheet.create({
     overflow: 'hidden',
   },
   footnote: { fontSize: 12, color: colors.faint, lineHeight: 18, maxWidth: 760 },
-  panel: { backgroundColor: dark.bg, borderLeftWidth: 1, borderLeftColor: dark.border },
+  panel: { backgroundColor: trade.bg, borderLeftWidth: 1, borderLeftColor: trade.border },
   backdrop: {
     position: 'absolute',
     top: 0,
     bottom: 0,
-    left: SIDEBAR,
+    left: 0,
     right: 0,
     backgroundColor: 'rgba(0,0,0,0.45)',
     zIndex: 30,
@@ -371,7 +365,7 @@ const styles = StyleSheet.create({
     position: 'absolute',
     top: 0,
     bottom: 0,
-    left: SIDEBAR,
+    left: 0,
     width: DRAWER,
     backgroundColor: colors.surface,
     borderRightWidth: StyleSheet.hairlineWidth,

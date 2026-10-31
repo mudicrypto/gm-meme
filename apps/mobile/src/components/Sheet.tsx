@@ -3,7 +3,7 @@ import { X } from 'lucide-react-native';
 import { Animated, Modal, Pressable, StyleSheet, View, useWindowDimensions } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { DURATION, EASE_OUT, NATIVE, useReduceMotion } from '../lib/motion';
-import { breakpoints, colors, dark, radius } from '../lib/theme';
+import { breakpoints, colors, trade, radius } from '../lib/theme';
 import { Ink, Text } from './Text';
 
 /**
@@ -67,7 +67,7 @@ export function Sheet({
             accessibilityViewIsModal
           >
             <View style={styles.dialogHead}>
-              <Text style={[styles.dialogTitle, dk && { color: dark.text }]}>{title ?? ''}</Text>
+              <Text style={[styles.dialogTitle, dk && { color: trade.text }]}>{title ?? ''}</Text>
               <Pressable
                 onPress={onClose}
                 accessibilityRole="button"
@@ -80,7 +80,7 @@ export function Sheet({
                 <X size={18} color={colors.muted} strokeWidth={2} />
               </Pressable>
             </View>
-            <Ink color={dk ? dark.text : colors.text}>{children}</Ink>
+            <Ink color={dk ? trade.text : colors.text}>{children}</Ink>
           </Animated.View>
         </View>
       ) : (
@@ -98,9 +98,9 @@ export function Sheet({
             },
           ]}
         >
-          <View style={[styles.handle, dk && { backgroundColor: dark.border }]} />
-          {title ? <Text style={[styles.title, dk && { color: dark.text }]}>{title}</Text> : null}
-          <Ink color={dk ? dark.text : colors.text}>{children}</Ink>
+          <View style={[styles.handle, dk && { backgroundColor: trade.border }]} />
+          {title ? <Text style={[styles.title, dk && { color: trade.text }]}>{title}</Text> : null}
+          <Ink color={dk ? trade.text : colors.text}>{children}</Ink>
         </Animated.View>
       )}
     </Modal>
@@ -117,7 +117,7 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgba(4,5,8,0.6)',
   },
   fill: { flex: 1 },
-  darkBox: { backgroundColor: dark.bg, borderColor: dark.border },
+  darkBox: { backgroundColor: trade.bg, borderColor: trade.border },
   sheet: {
     position: 'absolute',
     left: 0,

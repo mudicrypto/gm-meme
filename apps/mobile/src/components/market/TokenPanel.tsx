@@ -8,7 +8,7 @@ import { api } from '../../lib/api';
 import { formatAge, formatCompact, shortAddress } from '../../lib/format';
 import { CHART_WINDOWS, type MarketToken } from '../../lib/market';
 import { useTokenStats } from '../../lib/market-hooks';
-import { dark, radius, space } from '../../lib/theme';
+import { trade, radius, space } from '../../lib/theme';
 import { IconButton } from '../Button';
 import { Ink, Text } from '../Text';
 import { TokenAvatar } from '../TokenAvatar';
@@ -66,17 +66,17 @@ export function TokenPanel({
   ];
 
   return (
-    <Ink color={dark.text}>
+    <Ink color={trade.text}>
       <View style={styles.panel}>
         <ScrollView style={styles.flex} contentContainerStyle={styles.content}>
           <View style={styles.eyebrowRow}>
             <Text style={styles.eyebrow}>TOKEN OVERVIEW</Text>
-            <WatchStar mint={mint} size={18} color={dark.muted} />
+            <WatchStar mint={mint} size={18} color={trade.muted} />
             <IconButton
               label={`Open ${symbol} details`}
               onPress={() => router.push(`/token/${mint}`)}
             >
-              <ExternalLink size={18} color={dark.muted} strokeWidth={2} />
+              <ExternalLink size={18} color={trade.muted} strokeWidth={2} />
             </IconButton>
           </View>
 
@@ -149,7 +149,7 @@ export function TokenPanel({
                 label="Full trade screen and settings"
                 onPress={() => router.push(`/trade/${mint}?side=${form.side}`)}
               >
-                <Settings size={18} color={dark.muted} strokeWidth={2} />
+                <Settings size={18} color={trade.muted} strokeWidth={2} />
               </IconButton>
             </View>
             <TradeFields form={form} />
@@ -166,7 +166,7 @@ export function TokenPanel({
 
 const styles = StyleSheet.create({
   flex: { flex: 1, minWidth: 0 },
-  panel: { flex: 1, backgroundColor: dark.bg },
+  panel: { flex: 1, backgroundColor: trade.bg },
   // Room below the form so the last control scrolls clear of the window edge.
   content: { padding: space.lg, paddingBottom: space.xl, gap: space.md },
   footer: {
@@ -174,8 +174,8 @@ const styles = StyleSheet.create({
     paddingTop: space.md,
     paddingBottom: space.lg,
     borderTopWidth: 1,
-    borderTopColor: dark.border,
-    backgroundColor: dark.bg,
+    borderTopColor: trade.border,
+    backgroundColor: trade.bg,
   },
   eyebrowRow: { flexDirection: 'row', alignItems: 'center', gap: 2, marginVertical: -8 },
   eyebrow: {
@@ -183,29 +183,29 @@ const styles = StyleSheet.create({
     fontSize: 12,
     fontWeight: '600',
     letterSpacing: 2,
-    color: dark.muted,
+    color: trade.muted,
   },
   identity: { flexDirection: 'row', alignItems: 'center', gap: space.md },
   symbol: { fontSize: 20, fontWeight: '700' },
-  pair: { fontSize: 16, fontWeight: '400', color: dark.muted },
-  name: { fontSize: 13, color: dark.muted, marginTop: 2 },
+  pair: { fontSize: 16, fontWeight: '400', color: trade.muted },
+  name: { fontSize: 13, color: trade.muted, marginTop: 2 },
   priceBlock: { flexDirection: 'row', alignItems: 'baseline', gap: 10, flexWrap: 'wrap' },
-  note: { fontSize: 12, color: dark.muted, lineHeight: 17 },
+  note: { fontSize: 12, color: trade.muted, lineHeight: 17 },
   metrics: {
     flexDirection: 'row',
     borderRadius: radius.card,
     borderWidth: 1,
-    borderColor: dark.border,
-    backgroundColor: dark.surface,
+    borderColor: trade.border,
+    backgroundColor: trade.surface,
   },
   metric: { flex: 1, minWidth: 0, paddingVertical: 10, paddingHorizontal: 10, gap: 3 },
-  metricLabel: { fontSize: 11, color: dark.muted },
+  metricLabel: { fontSize: 11, color: trade.muted },
   metricValue: { fontSize: 14, fontWeight: '600' },
   // The trade controls, set off from the token details by one divider.
   form: {
     gap: space.md,
     paddingTop: space.lg,
     borderTopWidth: 1,
-    borderTopColor: dark.border,
+    borderTopColor: trade.border,
   },
 });

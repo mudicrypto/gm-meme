@@ -255,3 +255,58 @@ export function pickHighlights(
   ];
   return picks.flatMap(([key, label, token]) => (token ? [{ key, label, token }] : []));
 }
+
+export type OverviewKey = 'hot' | 'new' | 'gainers' | 'volume';
+export interface OverviewList {
+  key: OverviewKey;
+  label: string;
+  tokens: MarketToken[];
+}
+
+/**
+ * The overview cards above the table, three tokens each: most trades, newest, biggest
+ * gainers and most volume in the window. Facts, not picks; red-flagged tokens are left
+ * out, and a card with no candidates is dropped.
+ */
+export function overviewLists(
+  tokens: readonly MarketToken[],
+  stats: ReadonlyMap<string, TokenStats>,
+  size = 3,
+): OverviewList[] {
+  const pool = tokens.filter((t) => t.riskLevel !== 'red');
+  const top = (score: (t: MarketToken) => number | undefined) =>
+    pool
+      .map((t) => ({ t, s: score(t) }))
+      .filter((e): e is { t: MarketToken; s: number } => e.s !== undefined && Number.isFinite(e.s))
+      .sort((a, b) => b.s - a.s)
+      .slice(0, size)
+      .map((e) => e.t);
+  const lists: OverviewList[] = [
+    {
+      key: 'hot',
+      label: 'Hot',
+      tokens: top((t) => {
+        const s = stats.get(t.mint);
+        return s && s.buys + s.sells > 0 ? s.buys + s.sells : undefined;
+      }),
+    },
+    { key: 'new', label: 'New', tokens: top((t) => Date.parse(t.launchedAt ?? t.firstSeenAt)) },
+    {
+      key: 'gainers',
+      label: 'Top gainers',
+      tokens: top((t) => {
+        const c = stats.get(t.mint)?.changePct;
+        return c !== undefined && c > 0 ? c : undefined;
+      }),
+    },
+    {
+      key: 'volume',
+      label: 'Top volume',
+      tokens: top((t) => {
+        const v = stats.get(t.mint)?.volumeSol;
+        return v !== undefined && v > 0 ? v : undefined;
+      }),
+    },
+  ];
+  return lists.filter((l) => l.tokens.length > 0);
+}

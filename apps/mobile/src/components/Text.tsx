@@ -33,7 +33,7 @@ function fontStyle(style: TextStyle, mono: boolean): TextStyle {
 
 /**
  * The default text colour for a surface. Dark trade surfaces wrap their content in
- * `<Ink color={dark.text}>` so text reads light there without restyling every line.
+ * `<Ink color={trade.text}>` so text reads light there without restyling every line.
  */
 const InkContext = createContext<string>(colors.text);
 export function Ink({ color, children }: { color: string; children: ReactNode }) {

@@ -3,18 +3,18 @@ import { useState } from 'react';
 import { StyleSheet, View } from 'react-native';
 import Svg, { G, Line, Rect, Text as SvgText } from 'react-native-svg';
 import { formatSolPrice } from '../../lib/format';
-import { colors, dark, fonts } from '../../lib/theme';
+import { colors, trade, fonts } from '../../lib/theme';
 import { Text } from '../Text';
 
 const AXIS = 56;
 const X_AXIS = 18;
 const DARK = {
-  bg: dark.surface,
-  divider: dark.border,
-  up: dark.up,
-  down: dark.down,
-  muted: dark.muted,
-  faint: dark.faint,
+  bg: trade.surface,
+  divider: trade.border,
+  up: trade.up,
+  down: trade.down,
+  muted: trade.muted,
+  faint: trade.faint,
 };
 
 /**
@@ -164,7 +164,7 @@ export function CandleChart({
             y={y(last.priceSol) + 4}
             fontSize={10}
             fontFamily={fonts.ui[600]}
-            fill={tone === 'dark' ? dark.bg : '#FFFFFF'}
+            fill={tone === 'dark' ? trade.bg : '#FFFFFF'}
             textAnchor="end"
           >
             {formatSolPrice(last.priceSol)}

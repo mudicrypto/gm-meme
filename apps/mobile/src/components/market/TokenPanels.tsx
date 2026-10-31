@@ -18,7 +18,7 @@ import { useTokenStats } from '../../lib/market-hooks';
 import { formatAgo, formatAge, formatCompact, formatSol, formatSolPrice } from '../../lib/format';
 import type { MarketToken } from '../../lib/market';
 import { transition } from '../../lib/motion';
-import { RISK_COLORS, RISK_LABELS, colors, dark, radius, space, tint } from '../../lib/theme';
+import { RISK_COLORS, RISK_LABELS, colors, trade, radius, space, tint } from '../../lib/theme';
 import { Text } from '../Text';
 
 export const CHECK_NAMES: Record<string, string> = {
@@ -304,22 +304,22 @@ const LIGHT_PAL: Palette = {
   risk: RISK_COLORS,
 };
 const DARK_PAL: Palette = {
-  muted: dark.muted,
-  faint: dark.faint,
-  text2: dark.text,
-  hover: dark.surface2,
-  border: dark.border,
-  link: dark.lime,
+  muted: trade.muted,
+  faint: trade.faint,
+  text2: trade.text,
+  hover: trade.surface2,
+  border: trade.border,
+  link: trade.lime,
   risk: {
-    green: { fg: dark.up, bg: tint(dark.up, 0.16) },
-    amber: { fg: dark.caution, bg: tint(dark.caution, 0.16) },
-    red: { fg: dark.down, bg: tint(dark.down, 0.16) },
-    unknown: { fg: dark.muted, bg: dark.surface2 },
+    green: { fg: trade.up, bg: tint(trade.up, 0.16) },
+    amber: { fg: trade.caution, bg: tint(trade.caution, 0.16) },
+    red: { fg: trade.down, bg: tint(trade.down, 0.16) },
+    unknown: { fg: trade.muted, bg: trade.surface2 },
   },
 };
 
 const darkStyles = StyleSheet.create({
-  box: { backgroundColor: dark.surface, borderWidth: 1, borderColor: dark.border },
+  box: { backgroundColor: trade.surface, borderWidth: 1, borderColor: trade.border },
 });
 
 const styles = StyleSheet.create({

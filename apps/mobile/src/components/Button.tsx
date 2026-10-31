@@ -127,12 +127,13 @@ export function Chip({
 const styles = StyleSheet.create({
   button: {
     height: 48,
-    borderRadius: radius.input,
-    paddingHorizontal: 18,
+    // Pills, like the landing page.
+    borderRadius: 999,
+    paddingHorizontal: 22,
     alignItems: 'center',
     justifyContent: 'center',
   },
-  small: { height: 44, borderRadius: radius.input },
+  small: { height: 44 },
   primary: { backgroundColor: colors.accent },
   lime: { backgroundColor: colors.lime },
   secondary: { backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.borderStrong },

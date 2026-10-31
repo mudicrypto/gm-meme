@@ -3,7 +3,7 @@ import { Search } from 'lucide-react-native';
 import { StyleSheet, View, useWindowDimensions } from 'react-native';
 import { IconButton } from '../../components/Button';
 import { BalanceCard } from '../../components/home/BalanceCard';
-import { AssetsCard, QuickActions, TopMovers } from '../../components/home/HomeSections';
+import { AssetsCard, TopMovers } from '../../components/home/HomeSections';
 import { Logo } from '../../components/Logo';
 import { DevnetPill } from '../../components/market/Network';
 import { OverviewCards } from '../../components/market/OverviewCards';
@@ -18,7 +18,8 @@ import { breakpoints, colors, space } from '../../lib/theme';
  * day's top movers. Two columns on wide screens.
  */
 export default function HomeScreen() {
-  const wide = useWindowDimensions().width >= breakpoints.desktop;
+  const { width } = useWindowDimensions();
+  const wide = width >= breakpoints.desktop;
   const { isDevnet } = useNetwork();
   // Shares its query with Top movers, so the overview costs no extra request.
   const market = useMarket('trending', 1440);
@@ -36,7 +37,6 @@ export default function HomeScreen() {
   const account = (
     <>
       <BalanceCard />
-      <QuickActions />
       <AssetsCard />
     </>
   );
@@ -51,6 +51,7 @@ export default function HomeScreen() {
             </View>
           </View>
           <OverviewCards
+            width={Math.min(width, 1120) - space.xl * 2}
             tokens={market.tokens}
             stats={market.statsMap}
             onOpen={(mint) => router.push(`/token/${mint}`)}

@@ -7,11 +7,13 @@ import { useNetwork } from '../../lib/network';
 import { useActiveAddress, usePortfolio } from '../../lib/portfolio-hooks';
 import { useSession } from '../../lib/session';
 import { useSiftWallet } from '../../lib/social-hooks';
-import { colors, radius, space } from '../../lib/theme';
+import { colors, space } from '../../lib/theme';
 import { useWallet } from '../../lib/wallet';
 import { Button } from '../Button';
 import { FlashText } from '../FlashText';
+import { GlowPanel } from '../GlowPanel';
 import { Text } from '../Text';
+import { QuickActions } from './HomeSections';
 
 /**
  * The top of Home: your estimated total in SOL, or, before you have a wallet, a one-tap
@@ -25,7 +27,7 @@ export function BalanceCard() {
   const { isDevnet } = useNetwork();
   const [hidden, setHidden] = useState(false);
 
-  if (wallet.status === 'loading') return <View style={[styles.card, styles.loading]} />;
+  if (wallet.status === 'loading') return <GlowPanel style={[styles.card, styles.loading]} />;
   if (!address) return <CreateAccount />;
 
   const source =
@@ -38,7 +40,7 @@ export function BalanceCard() {
         : 'Your wallet';
   const mask = (text: string) => (hidden ? '••••' : text);
   return (
-    <View style={styles.card}>
+    <GlowPanel style={styles.card}>
       <View style={styles.row}>
         <Text style={styles.label}>Est. total value</Text>
         <Pressable
@@ -68,7 +70,10 @@ export function BalanceCard() {
         SOL {portfolio.sol !== undefined ? mask(formatCompact(portfolio.sol)) : '…'} · Tokens{' '}
         {portfolio.pricesPending ? '…' : mask(formatCompact(portfolio.tokenValue))}
       </Text>
-    </View>
+      <View style={styles.actions}>
+        <QuickActions />
+      </View>
+    </GlowPanel>
   );
 }
 
@@ -109,45 +114,47 @@ function CreateAccount() {
   };
 
   return (
-    <View style={[styles.card, styles.welcome]}>
+    <GlowPanel style={[styles.card, styles.welcome]}>
       <Text style={styles.welcomeTitle}>Welcome to Sift</Text>
       <Text style={styles.welcomeBody}>
         Solana meme coins with a risk check on every token and the full cost before every trade.
       </Text>
-      {canCreate ? (
-        <Button
-          variant="lime"
-          label={step === 'idle' ? 'Create your account' : 'Setting up…'}
-          onPress={() => void start()}
-          disabled={step !== 'idle'}
-        />
-      ) : null}
-      <Button
-        variant="secondary"
-        label="I already have a wallet"
-        onPress={() => router.push('/portfolio')}
-      />
+      <View style={styles.buttons}>
+        {canCreate ? (
+          <View style={styles.button}>
+            <Button
+              variant="lime"
+              label={step === 'idle' ? 'Create your account' : 'Setting up…'}
+              onPress={() => void start()}
+              disabled={step !== 'idle'}
+            />
+          </View>
+        ) : null}
+        <View style={styles.button}>
+          <Button
+            variant="secondary"
+            label="I already have a wallet"
+            onPress={() => router.push('/portfolio')}
+          />
+        </View>
+      </View>
       <Text style={styles.note}>
         {wallet.persistent
           ? 'Your wallet is made on this phone. Its key stays in secure storage and is never sent to Sift.'
           : 'Web test account: devnet only, and gone when you close this tab. Use the app for a real one.'}
       </Text>
       {error ? <Text style={[styles.note, { color: colors.down }]}>{error}</Text> : null}
-    </View>
+      <View style={styles.actions}>
+        <QuickActions />
+      </View>
+    </GlowPanel>
   );
 }
 
 const styles = StyleSheet.create({
   flex: { flex: 1 },
-  card: {
-    gap: 6,
-    padding: space.lg,
-    borderRadius: radius.card + 4,
-    borderWidth: 1,
-    borderColor: colors.border,
-    backgroundColor: colors.surface,
-  },
-  loading: { height: 128 },
+  card: { gap: 6, padding: space.xl },
+  loading: { height: 220 },
   row: { flexDirection: 'row', alignItems: 'center', gap: 8 },
   label: { fontSize: 13, color: colors.muted },
   source: {
@@ -158,11 +165,20 @@ const styles = StyleSheet.create({
   },
   sourceText: { fontSize: 11, fontWeight: '600', color: colors.muted },
   totalRow: { flexDirection: 'row', alignItems: 'baseline', gap: 8, marginTop: 2 },
-  total: { fontSize: 32, fontWeight: '700', letterSpacing: -0.8 },
+  total: { fontSize: 40, fontWeight: '600', letterSpacing: -1.2 },
   unit: { fontSize: 14, fontWeight: '600', color: colors.muted },
   split: { fontSize: 13, color: colors.muted },
   welcome: { gap: space.md },
-  welcomeTitle: { fontSize: 22, fontWeight: '700', letterSpacing: -0.4 },
-  welcomeBody: { fontSize: 14, lineHeight: 20, color: colors.text2 },
+  welcomeTitle: { fontSize: 28, fontWeight: '600', letterSpacing: -0.8 },
+  welcomeBody: { fontSize: 15, lineHeight: 22, color: colors.muted },
+  buttons: { flexDirection: 'row', flexWrap: 'wrap', gap: space.sm },
+  button: { flexGrow: 1, flexBasis: 200 },
+  // The quick actions sit in the same panel, under a hairline.
+  actions: {
+    marginTop: space.lg,
+    paddingTop: space.lg,
+    borderTopWidth: 1,
+    borderTopColor: colors.border,
+  },
   note: { fontSize: 12, lineHeight: 17, color: colors.muted },
 });

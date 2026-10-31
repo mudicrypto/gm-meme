@@ -1,12 +1,13 @@
 import type { LucideIcon } from 'lucide-react-native';
 import { StyleSheet, View } from 'react-native';
-import { colors, space, tint } from '../lib/theme';
+import { colors, space, trade } from '../lib/theme';
 import { Button } from './Button';
+import { GlowIcon, GlowPanel } from './GlowPanel';
 import { Text } from './Text';
 
 /**
- * The one empty / gated state used across Sift: an icon, a short title, one line of
- * context and at most two actions. Centred, quiet, never a wall of text.
+ * The one empty / gated state used across Sift: a lit panel with an icon, a short title,
+ * one line of context and at most two actions. Centred, never a wall of text.
  */
 export function EmptyState({
   icon: Icon,
@@ -25,10 +26,10 @@ export function EmptyState({
   note?: { text: string; tone?: 'muted' | 'down' };
 }) {
   return (
-    <View style={styles.box}>
-      <View style={styles.icon}>
-        <Icon size={22} color={colors.accent} strokeWidth={2} />
-      </View>
+    <GlowPanel style={styles.box}>
+      <GlowIcon>
+        <Icon size={24} color={trade.lime} strokeWidth={1.8} />
+      </GlowIcon>
       <View style={styles.copy}>
         <Text style={styles.title} accessibilityRole="header">
           {title}
@@ -41,6 +42,7 @@ export function EmptyState({
             <View style={styles.button}>
               <Button
                 small
+                variant="lime"
                 label={action.label}
                 onPress={action.onPress}
                 disabled={action.disabled}
@@ -64,7 +66,7 @@ export function EmptyState({
           {note.text}
         </Text>
       ) : null}
-    </View>
+    </GlowPanel>
   );
 }
 
@@ -72,20 +74,12 @@ const styles = StyleSheet.create({
   box: {
     alignItems: 'center',
     gap: space.lg,
-    paddingVertical: space.xl * 2,
-    paddingHorizontal: space.lg,
+    paddingVertical: 48,
+    paddingHorizontal: space.xl,
   },
-  icon: {
-    width: 52,
-    height: 52,
-    borderRadius: 26,
-    backgroundColor: tint(colors.accent, 0.1),
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  copy: { alignItems: 'center', gap: 6, maxWidth: 360 },
-  title: { fontSize: 18, fontWeight: '600', textAlign: 'center' },
-  body: { fontSize: 14, lineHeight: 20, color: colors.muted, textAlign: 'center' },
+  copy: { alignItems: 'center', gap: 8, maxWidth: 400 },
+  title: { fontSize: 22, fontWeight: '600', letterSpacing: -0.4, textAlign: 'center' },
+  body: { fontSize: 15, lineHeight: 22, color: colors.muted, textAlign: 'center' },
   actions: { flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'center', gap: space.sm },
   button: { minWidth: 168 },
   note: { fontSize: 12, lineHeight: 17, color: colors.faint, textAlign: 'center', maxWidth: 340 },

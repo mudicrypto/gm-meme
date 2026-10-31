@@ -80,6 +80,7 @@ export function DesktopDiscover({
             </View>
           </View>
           <OverviewCards
+            width={tableWidth}
             tokens={rows}
             stats={market.statsMap}
             onOpen={(mint) => (showPanel ? state.select(mint) : router.push(`/token/${mint}`))}

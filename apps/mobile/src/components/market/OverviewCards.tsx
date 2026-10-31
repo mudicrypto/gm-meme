@@ -8,6 +8,9 @@ import { Text } from '../Text';
 import { TokenAvatar } from '../TokenAvatar';
 import { Change } from './Change';
 
+/** Below this, a card's prices would be cut. */
+const MIN_CARD = 260;
+
 /**
  * The overview strip above the desktop table, exchange style: Hot, New, Top gainers and
  * Top volume, three tokens each with price and change.
@@ -16,12 +19,16 @@ export function OverviewCards({
   tokens,
   stats,
   onOpen,
+  width,
 }: {
   tokens: readonly MarketToken[];
   stats: ReadonlyMap<string, TokenStats>;
   onOpen: (mint: string) => void;
+  /** The space the strip has: it shows as many cards as fit (at least two). */
+  width?: number;
 }) {
-  const lists = overviewLists(tokens, stats);
+  const fit = width === undefined ? 4 : Math.max(2, Math.floor((width + 16) / (MIN_CARD + 16)));
+  const lists = overviewLists(tokens, stats).slice(0, fit);
   if (lists.length === 0) return null;
   return (
     <View style={styles.row}>
@@ -84,13 +91,14 @@ const styles = StyleSheet.create({
   item: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 10,
+    gap: 8,
     height: 40,
     paddingHorizontal: 8,
     borderRadius: 8,
   },
   itemHover: { backgroundColor: colors.surface2 },
+  // The symbol gives way; the price is never cut.
   symbol: { flex: 1, minWidth: 0, fontSize: 14, fontWeight: '600' },
-  price: { fontSize: 14, fontWeight: '500', textAlign: 'right' },
-  change: { width: 64, alignItems: 'flex-end' },
+  price: { flexShrink: 0, fontSize: 14, fontWeight: '500', textAlign: 'right' },
+  change: { width: 54, alignItems: 'flex-end' },
 });

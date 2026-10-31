@@ -6,7 +6,7 @@ import { formatCompact, shortAddress } from '../../lib/format';
 import { useMarket } from '../../lib/market-hooks';
 import { transition } from '../../lib/motion';
 import { useActiveAddress, usePortfolio } from '../../lib/portfolio-hooks';
-import { colors, radius, space, tint } from '../../lib/theme';
+import { colors, radius, space } from '../../lib/theme';
 import { Text } from '../Text';
 import { TokenAvatar } from '../TokenAvatar';
 import { Change } from '../market/Change';
@@ -38,7 +38,7 @@ export function QuickActions() {
           ]}
         >
           <View style={styles.actionIcon}>
-            <Icon size={20} color={colors.accent} strokeWidth={2.2} />
+            <Icon size={20} color={colors.text} strokeWidth={2} />
           </View>
           <Text style={styles.actionText}>{label}</Text>
         </Pressable>
@@ -206,7 +206,7 @@ const styles = StyleSheet.create({
     borderRadius: 14,
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: tint(colors.accent, 0.12),
+    backgroundColor: colors.surface2,
   },
   actionText: { fontSize: 12, fontWeight: '600' },
   card: {

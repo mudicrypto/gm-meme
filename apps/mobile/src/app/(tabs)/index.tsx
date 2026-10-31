@@ -6,8 +6,10 @@ import { BalanceCard } from '../../components/home/BalanceCard';
 import { AssetsCard, QuickActions, TopMovers } from '../../components/home/HomeSections';
 import { Logo } from '../../components/Logo';
 import { DevnetPill } from '../../components/market/Network';
+import { OverviewCards } from '../../components/market/OverviewCards';
 import { Screen } from '../../components/Screen';
 import { Text } from '../../components/Text';
+import { useMarket } from '../../lib/market-hooks';
 import { useNetwork } from '../../lib/network';
 import { breakpoints, colors, space } from '../../lib/theme';
 
@@ -18,6 +20,8 @@ import { breakpoints, colors, space } from '../../lib/theme';
 export default function HomeScreen() {
   const wide = useWindowDimensions().width >= breakpoints.desktop;
   const { isDevnet } = useNetwork();
+  // Shares its query with Top movers, so the overview costs no extra request.
+  const market = useMarket('trending', 1440);
   const header = (
     <View style={styles.header}>
       <Logo size={24} />
@@ -39,12 +43,19 @@ export default function HomeScreen() {
   return (
     <Screen header={wide ? <View /> : header} maxWidth={1120}>
       {wide ? (
-        <View style={styles.columns}>
-          <View style={styles.left}>{account}</View>
-          <View style={styles.right}>
-            <TopMovers limit={8} />
+        <>
+          <View style={styles.columns}>
+            <View style={styles.left}>{account}</View>
+            <View style={styles.right}>
+              <TopMovers limit={8} />
+            </View>
           </View>
-        </View>
+          <OverviewCards
+            tokens={market.tokens}
+            stats={market.statsMap}
+            onOpen={(mint) => router.push(`/token/${mint}`)}
+          />
+        </>
       ) : (
         <>
           {account}

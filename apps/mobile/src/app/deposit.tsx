@@ -8,6 +8,7 @@ import { BackHeader } from '../components/BackHeader';
 import { Button } from '../components/Button';
 import { EmptyState } from '../components/EmptyState';
 import { SolanaMark } from '../components/market/Network';
+import { GlowPanel } from '../components/GlowPanel';
 import { QrCode } from '../components/QrCode';
 import { Screen } from '../components/Screen';
 import { Segmented } from '../components/Segmented';
@@ -60,7 +61,7 @@ export default function DepositScreen() {
               onChange={setWhich}
             />
           ) : null}
-          <View style={styles.card}>
+          <GlowPanel style={styles.card}>
             <View style={styles.network}>
               <View style={styles.sol}>
                 <SolanaMark size={14} />
@@ -87,7 +88,7 @@ export default function DepositScreen() {
                 });
               }}
             />
-          </View>
+          </GlowPanel>
           <View style={styles.warn}>
             <Text style={styles.warnText}>
               {isDevnet
@@ -121,15 +122,7 @@ export default function DepositScreen() {
 }
 
 const styles = StyleSheet.create({
-  card: {
-    alignItems: 'center',
-    gap: space.md,
-    padding: space.lg,
-    borderRadius: radius.card + 4,
-    borderWidth: 1,
-    borderColor: colors.border,
-    backgroundColor: colors.surface,
-  },
+  card: { alignItems: 'center', gap: space.md, padding: space.xl },
   network: { flexDirection: 'row', alignItems: 'center', gap: 8, alignSelf: 'stretch' },
   sol: {
     width: 26,

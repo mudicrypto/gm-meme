@@ -7,6 +7,7 @@ import { Linking, Pressable, StyleSheet, View } from 'react-native';
 import { BackHeader } from '../components/BackHeader';
 import { Button } from '../components/Button';
 import { EmptyState } from '../components/EmptyState';
+import { GlowPanel } from '../components/GlowPanel';
 import { Screen } from '../components/Screen';
 import { Text, TextInput } from '../components/Text';
 import { parseSolToLamports } from '../lib/amounts';
@@ -130,7 +131,7 @@ export default function SendScreen() {
         </View>
       ) : (
         <>
-          <View style={styles.card}>
+          <GlowPanel style={styles.card}>
             <Text style={styles.label}>To</Text>
             <View style={styles.inputRow}>
               <TextInput
@@ -180,7 +181,7 @@ export default function SendScreen() {
               Available {sol !== undefined ? `${formatCompact(sol)} ${unit}` : '…'} · network fee
               about 0.000005 SOL
             </Text>
-          </View>
+          </GlowPanel>
           {stage.name === 'failed' ? <Text style={styles.error}>{stage.message}</Text> : null}
           <Button
             label={stage.name === 'building' ? 'Checking…' : 'Review send'}
@@ -247,8 +248,8 @@ function ReviewCard({
 const styles = StyleSheet.create({
   card: {
     gap: space.sm,
-    padding: space.lg,
-    borderRadius: radius.card + 4,
+    padding: space.xl,
+    borderRadius: radius.card + 8,
     borderWidth: 1,
     borderColor: colors.border,
     backgroundColor: colors.surface,

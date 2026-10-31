@@ -20,6 +20,7 @@ import {
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { IconButton } from '../../components/Button';
+import { GlowPanel } from '../../components/GlowPanel';
 import { FlashText } from '../../components/FlashText';
 import { CandleChart } from '../../components/market/CandleChart';
 import { Change } from '../../components/market/Change';
@@ -142,39 +143,44 @@ export default function TokenScreen() {
             },
           ]}
         >
-          <View style={styles.identity}>
-            <TokenAvatar
-              uri={info?.imageUrl}
-              label={info?.symbol ?? info?.name}
-              seed={mint}
-              size={exchange ? 44 : 48}
-            />
-            <View style={styles.flex}>
-              <Text style={styles.pairTitle} numberOfLines={1}>
-                {symbol}
-                <Text style={styles.pairQuote}> / SOL</Text>
-              </Text>
-              <Text style={styles.name} numberOfLines={1}>
-                {name}
-              </Text>
-            </View>
-          </View>
-
-          <View style={styles.priceRow} accessibilityLabel={`Change ${pastWindow(windowMinutes)}`}>
-            {price ? (
-              <View style={styles.priceValue}>
-                <FlashText value={price} style={styles.price}>
-                  {formatSolPrice(price)}
-                </FlashText>
-                <Text style={styles.priceUnit}>SOL</Text>
+          <GlowPanel style={styles.heroPanel}>
+            <View style={styles.identity}>
+              <TokenAvatar
+                uri={info?.imageUrl}
+                label={info?.symbol ?? info?.name}
+                seed={mint}
+                size={exchange ? 44 : 48}
+              />
+              <View style={styles.flex}>
+                <Text style={styles.pairTitle} numberOfLines={1}>
+                  {symbol}
+                  <Text style={styles.pairQuote}> / SOL</Text>
+                </Text>
+                <Text style={styles.name} numberOfLines={1}>
+                  {name}
+                </Text>
               </View>
-            ) : (
-              <Text style={styles.noPrice}>
-                {stats.isPending ? 'Loading price…' : 'No trades yet'}
-              </Text>
-            )}
-            <Change pct={stats.data?.changePct} size={16} />
-          </View>
+            </View>
+
+            <View
+              style={styles.priceRow}
+              accessibilityLabel={`Change ${pastWindow(windowMinutes)}`}
+            >
+              {price ? (
+                <View style={styles.priceValue}>
+                  <FlashText value={price} style={styles.price}>
+                    {formatSolPrice(price)}
+                  </FlashText>
+                  <Text style={styles.priceUnit}>SOL</Text>
+                </View>
+              ) : (
+                <Text style={styles.noPrice}>
+                  {stats.isPending ? 'Loading price…' : 'No trades yet'}
+                </Text>
+              )}
+              <Change pct={stats.data?.changePct} size={16} />
+            </View>
+          </GlowPanel>
 
           <View style={styles.chartControls}>
             <View style={styles.flex}>
@@ -393,6 +399,8 @@ const styles = StyleSheet.create({
   pairQuote: { color: colors.text2, fontWeight: '400' },
   content: { paddingHorizontal: space.screen, paddingTop: space.sm, gap: space.md },
   identity: { flexDirection: 'row', alignItems: 'center', gap: space.md },
+  // The coin's name and price lead the page in a lit panel.
+  heroPanel: { gap: 14, padding: 20 },
   name: { fontSize: 13, color: colors.muted, marginTop: 1 },
   copy: { flexDirection: 'row', alignItems: 'center', gap: 6, minHeight: 28 },
   address: { fontSize: 13, color: colors.muted },

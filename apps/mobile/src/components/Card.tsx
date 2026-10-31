@@ -29,13 +29,13 @@ export function Card({
 
 const styles = StyleSheet.create({
   card: {
-    borderRadius: radius.cardLarge,
+    borderRadius: radius.cardLarge + 4,
     borderWidth: 1,
     borderColor: colors.border,
     backgroundColor: colors.surface,
-    padding: space.card,
-    gap: 10,
+    padding: space.lg + 4,
+    gap: 12,
   },
   header: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
-  title: { fontSize: 16, fontWeight: '700' },
+  title: { fontSize: 16, fontWeight: '600' },
 });

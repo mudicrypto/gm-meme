@@ -3,9 +3,12 @@ import { Wallet } from 'lucide-react-native';
 import { Pressable, StyleSheet, View } from 'react-native';
 import { formatCompact, formatSol, formatSolPrice, shortAddress } from '../lib/format';
 import { transition } from '../lib/motion';
+import { useNetwork } from '../lib/network';
 import { usePortfolio } from '../lib/portfolio-hooks';
 import { colors, radius, space } from '../lib/theme';
 import { EmptyState } from './EmptyState';
+import { GlowPanel } from './GlowPanel';
+import { QuickActions } from './home/HomeSections';
 import { Change } from './market/Change';
 import { RiskTag } from './market/RiskTag';
 import { Text } from './Text';
@@ -18,23 +21,31 @@ import { TokenAvatar } from './TokenAvatar';
  */
 export function PortfolioDashboard({ address }: { address: string }) {
   const { holdings, items, rows, sol, tokenValue, priced, pricesPending } = usePortfolio(address);
+  const { isDevnet } = useNetwork();
 
   return (
     <View style={styles.wrap}>
-      <View style={styles.tiles}>
-        <Tile label="SOL balance" value={sol !== undefined ? formatSol(sol) : '…'} />
-        <Tile
-          label="Tokens (est.)"
-          value={pricesPending ? '…' : formatSol(tokenValue)}
-          hint={rows.length > priced ? `${rows.length - priced} without a price` : undefined}
-        />
-        <Tile
-          label="Total (est.)"
-          value={sol !== undefined ? formatSol(sol + tokenValue) : '…'}
-          strong
-        />
-        <Tile label="Tokens held" value={String(items.length)} />
-      </View>
+      <GlowPanel style={styles.hero}>
+        <View style={styles.heroMain}>
+          <Text style={styles.tileLabel}>Est. total value</Text>
+          <Text mono style={styles.total} numberOfLines={1}>
+            {sol !== undefined ? formatCompact(sol + tokenValue) : '…'}
+            <Text style={styles.unit}> {isDevnet ? 'test SOL' : 'SOL'}</Text>
+          </Text>
+          <View style={styles.stats}>
+            <Stat label="SOL" value={sol !== undefined ? formatCompact(sol) : '…'} />
+            <Stat
+              label="Tokens (est.)"
+              value={pricesPending ? '…' : formatCompact(tokenValue)}
+              hint={rows.length > priced ? `${rows.length - priced} without a price` : undefined}
+            />
+            <Stat label="Tokens held" value={String(items.length)} />
+          </View>
+        </View>
+        <View style={styles.heroActions}>
+          <QuickActions />
+        </View>
+      </GlowPanel>
 
       <View style={styles.table}>
         <View style={styles.tableHead}>
@@ -133,21 +144,11 @@ export function PortfolioDashboard({ address }: { address: string }) {
   );
 }
 
-function Tile({
-  label,
-  value,
-  hint,
-  strong = false,
-}: {
-  label: string;
-  value: string;
-  hint?: string;
-  strong?: boolean;
-}) {
+function Stat({ label, value, hint }: { label: string; value: string; hint?: string }) {
   return (
-    <View style={styles.tile}>
+    <View style={styles.stat}>
       <Text style={styles.tileLabel}>{label}</Text>
-      <Text mono style={[styles.tileValue, strong && { color: colors.accent }]} numberOfLines={1}>
+      <Text mono style={styles.statValue} numberOfLines={1}>
         {value}
       </Text>
       {hint ? <Text style={styles.tileHint}>{hint}</Text> : null}
@@ -158,19 +159,22 @@ function Tile({
 const styles = StyleSheet.create({
   wrap: { gap: space.lg },
   flex: { flex: 1, minWidth: 0 },
-  tiles: { flexDirection: 'row', gap: space.md, flexWrap: 'wrap' },
-  tile: {
-    flex: 1,
-    minWidth: 160,
-    padding: space.lg,
-    gap: 4,
-    borderRadius: radius.card,
+  hero: { flexDirection: 'row', alignItems: 'center', gap: space.xl, padding: space.xl },
+  heroMain: { flex: 1, minWidth: 0, gap: 4 },
+  heroActions: { width: 340 },
+  total: { fontSize: 40, fontWeight: '600', letterSpacing: -1.2 },
+  unit: { fontSize: 15, fontWeight: '600', color: colors.muted, letterSpacing: 0 },
+  stats: { flexDirection: 'row', gap: 40, marginTop: space.md },
+  stat: { gap: 2 },
+  statValue: { fontSize: 17, fontWeight: '600' },
+  tileLabel: { fontSize: 12, color: colors.muted },
+  tileHint: { fontSize: 11, color: colors.faint },
+  table: {
+    borderRadius: radius.card + 4,
+    borderWidth: 1,
+    borderColor: colors.border,
     backgroundColor: colors.surface,
   },
-  tileLabel: { fontSize: 12, color: colors.muted },
-  tileValue: { fontSize: 22, fontWeight: '700', letterSpacing: -0.3 },
-  tileHint: { fontSize: 11, color: colors.faint },
-  table: { borderRadius: radius.card, backgroundColor: colors.surface },
   tableHead: {
     flexDirection: 'row',
     alignItems: 'baseline',

@@ -8,7 +8,10 @@ import { Card } from '../../components/Card';
 import { DevnetBadge } from '../../components/DevnetBadge';
 import { ModeToggle } from '../../components/ModeToggle';
 import { PrivateKeyReveal } from '../../components/PrivateKeyReveal';
-import { RiskDot } from '../../components/RiskBadge';
+import { GlowPanel } from '../../components/GlowPanel';
+import { QuickActions } from '../../components/home/HomeSections';
+import { Change } from '../../components/market/Change';
+import { RiskTag } from '../../components/market/RiskTag';
 import { BrowserConnect } from '../../components/BrowserConnect';
 import { AppearanceCard } from '../../components/AppearanceCard';
 import { LegalLinks } from '../../components/LegalLinks';
@@ -22,7 +25,9 @@ import { api } from '../../lib/api';
 import { confirmOwner } from '../../lib/device-auth';
 import { formatCompact, shortAddress } from '../../lib/format';
 import { useMode } from '../../lib/mode';
-import { breakpoints, RISK_COLORS, RISK_LABELS, colors, radius, usePalette } from '../../lib/theme';
+import { useNetwork } from '../../lib/network';
+import { usePortfolio } from '../../lib/portfolio-hooks';
+import { breakpoints, RISK_COLORS, colors, radius, usePalette } from '../../lib/theme';
 import { mwaErrorMessage } from '../../lib/mwa-results';
 import { cancelPhantomRequest, isCancelled } from '../../lib/phantom';
 import { type WalletKind, useWallet } from '../../lib/wallet';
@@ -483,20 +488,19 @@ function Holdings({
 }: {
   address: string;
   title: string;
+  /** A watched wallet: "Change" instead of the quick actions. */
   onClear?: () => void;
 }) {
   const { mode } = useMode();
-  const holdings = useQuery({
-    queryKey: ['holdings', address],
-    queryFn: () => api.holdings(address),
-    refetchInterval: 20_000,
-  });
+  const { isDevnet } = useNetwork();
+  const portfolio = usePortfolio(address);
+  const unit = isDevnet ? 'test SOL' : 'SOL';
 
   return (
     <>
-      <View style={styles.hero}>
+      <GlowPanel style={styles.hero}>
         <View style={styles.heroTop}>
-          <Text style={styles.heroLabel}>{title}</Text>
+          <Text style={styles.heroLabel}>{title} · est. total</Text>
           {onClear ? (
             <Pressable onPress={onClear} hitSlop={12}>
               <Text style={styles.link}>Change</Text>
@@ -504,49 +508,79 @@ function Holdings({
           ) : null}
         </View>
         <Text mono style={styles.balance}>
-          {holdings.data ? formatCompact(holdings.data.solBalance) : '–'}
-          <Text mono style={styles.balanceUnit}>
-            {' '}
-            SOL
-          </Text>
+          {portfolio.total !== undefined ? formatCompact(portfolio.total) : '–'}
+          <Text style={styles.balanceUnit}> {unit}</Text>
+        </Text>
+        <Text mono style={styles.split}>
+          SOL {portfolio.sol !== undefined ? formatCompact(portfolio.sol) : '…'} · Tokens{' '}
+          {portfolio.pricesPending ? '…' : formatCompact(portfolio.tokenValue)}
         </Text>
         <Text mono selectable style={styles.address}>
           {mode === 'pro' ? address : shortAddress(address, 6)}
         </Text>
-      </View>
+        {onClear ? null : (
+          <View style={styles.heroActions}>
+            <QuickActions />
+          </View>
+        )}
+      </GlowPanel>
       <SectionTitle title="Holdings" />
-      {holdings.isPending ? (
+      {portfolio.holdings.isPending ? (
         <Loading label="Loading holdings…" />
-      ) : holdings.isError ? (
-        <ErrorState message={holdings.error.message} onRetry={() => holdings.refetch()} />
-      ) : holdings.data.holdings.length === 0 ? (
+      ) : portfolio.holdings.isError ? (
+        <ErrorState
+          message={portfolio.holdings.error.message}
+          onRetry={() => portfolio.holdings.refetch()}
+        />
+      ) : portfolio.rows.length === 0 ? (
         <Empty message="No tokens yet." />
       ) : (
-        holdings.data.holdings.map((item) => <HoldingRow key={item.mint} item={item} />)
+        <View style={styles.list}>
+          {portfolio.rows.map(({ h, s, value }) => (
+            <HoldingRow key={h.mint} item={h} value={value} change={s?.changePct} />
+          ))}
+        </View>
       )}
     </>
   );
 }
 
-function HoldingRow({ item }: { item: Holding }) {
-  const level = item.riskLevel ?? 'unknown';
+/** One holding: token and amount, its value in SOL now and the 24h change. */
+function HoldingRow({
+  item,
+  value,
+  change,
+}: {
+  item: Holding;
+  value: number | undefined;
+  change: number | undefined;
+}) {
+  const symbol = (item.symbol ?? item.name ?? shortAddress(item.mint)).slice(0, 12);
   return (
     <Link href={`/token/${item.mint}`} asChild>
       <Pressable style={StyleSheet.flatten(styles.row)}>
-        <TokenAvatar uri={item.imageUrl} label={item.symbol ?? item.name} seed={item.mint} />
+        <TokenAvatar
+          uri={item.imageUrl}
+          label={item.symbol ?? item.name}
+          seed={item.mint}
+          size={40}
+        />
         <View style={styles.flex}>
-          <Text style={styles.name} numberOfLines={1}>
-            {item.name ?? item.symbol ?? shortAddress(item.mint)}
-          </Text>
+          <View style={styles.symbolRow}>
+            <Text style={styles.name} numberOfLines={1}>
+              {symbol}
+            </Text>
+            <RiskTag level={item.riskLevel} size={12} iconOnly />
+          </View>
           <Text mono style={styles.amount} numberOfLines={1}>
             {formatCompact(item.amount)} {item.symbol ?? 'tokens'}
           </Text>
         </View>
-        <View style={styles.risk}>
-          <RiskDot level={item.riskLevel} />
-          <Text style={[styles.riskText, { color: RISK_COLORS[level].fg }]}>
-            {RISK_LABELS[level]}
+        <View style={styles.valueCol}>
+          <Text mono style={styles.value} numberOfLines={1}>
+            {value !== undefined ? `${formatCompact(value)} SOL` : '–'}
           </Text>
+          <Change pct={change} size={12} />
         </View>
       </Pressable>
     </Link>
@@ -584,16 +618,16 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     backgroundColor: colors.surface2,
   },
-  hero: {
-    padding: 20,
-    gap: 6,
-    borderRadius: radius.hero,
-    backgroundColor: colors.surface,
-    borderWidth: 1,
-    borderColor: colors.border,
+  hero: { padding: 24, gap: 6 },
+  heroActions: {
+    marginTop: 18,
+    paddingTop: 18,
+    borderTopWidth: 1,
+    borderTopColor: colors.border,
   },
+  split: { fontSize: 13, color: colors.muted },
   heroTop: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
-  heroLabel: { fontSize: 13, color: colors.muted, fontWeight: '600' },
+  heroLabel: { fontSize: 13, color: colors.muted, fontWeight: '500' },
   link: { fontSize: 13, color: colors.link, fontWeight: '700' },
   balance: { fontSize: 40, fontWeight: '600', letterSpacing: -1.5 },
   balanceUnit: { fontSize: 18, fontWeight: '600', color: colors.muted, letterSpacing: 0 },
@@ -609,18 +643,24 @@ const styles = StyleSheet.create({
   warning: { borderRadius: radius.input, padding: 14, gap: 10 },
   center: { textAlign: 'center', fontWeight: '700' },
   flex: { flex: 1 },
+  list: {
+    paddingVertical: 4,
+    borderRadius: radius.card + 4,
+    borderWidth: 1,
+    borderColor: colors.border,
+    backgroundColor: colors.surface,
+    overflow: 'hidden',
+  },
   row: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 12,
-    padding: 14,
-    borderRadius: radius.card,
-    borderWidth: 1,
-    borderColor: colors.border,
-    backgroundColor: colors.surface,
+    minHeight: 64,
+    paddingHorizontal: 16,
   },
-  name: { fontSize: 15, fontWeight: '700' },
-  amount: { fontSize: 12, color: colors.muted, marginTop: 2 },
-  risk: { flexDirection: 'row', alignItems: 'center', gap: 6 },
-  riskText: { fontSize: 12, fontWeight: '800' },
+  symbolRow: { flexDirection: 'row', alignItems: 'center', gap: 6 },
+  name: { fontSize: 15, fontWeight: '600' },
+  amount: { fontSize: 12, color: colors.muted, marginTop: 3 },
+  valueCol: { alignItems: 'flex-end', gap: 3 },
+  value: { fontSize: 15, fontWeight: '600' },
 });
